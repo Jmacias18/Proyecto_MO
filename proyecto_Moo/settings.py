@@ -39,8 +39,9 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'core',
-    'pages.apps.PagesConfig',
+    'usuarios',
     'ckeditor',
+    'procesos',
 ]
 
 MIDDLEWARE = [
@@ -55,10 +56,14 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'proyecto_Moo.urls'
 
+# settings.py
+import os
+BASE_DIR = Path(__file__).resolve().parent.parent
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],  # Asegúrate de que este directorio esté incluido
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -79,8 +84,16 @@ WSGI_APPLICATION = 'proyecto_Moo.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'mssql',
+        'NAME': 'SPF_HRS_MO',
+        'USER': '',
+        'PASSWORD': '',
+        'HOST': 'localhost\\SQLEXPRESS',
+        'PORT': '',
+        'OPTIONS': {
+            'driver': 'ODBC Driver 17 for SQL Server',
+            'extra_params': 'Trusted_Connection=yes;'
+        },
     }
 }
 

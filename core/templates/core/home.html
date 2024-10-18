@@ -2,10 +2,28 @@
 {% load static %}
 {% block title %}Inicio{% endblock %}
 {% block content %}
-<div class="container">
-  <div style="padding-top:50px; text-align:center;">
-    <h1>Web Playground</h1>
-    <p class="lead">CBV, autenticación, registros, perfiles y más</p>
+<header class="text-white" style="background-image: url('{% static 'core/assets/fondoHome.png' %}'); background-repeat: repeat; background-position: center;">
+  <div class="container px-4 text-center">
+      <h1 class="fw-bolder">SANA Realtime WebApp</h1>
+      <p class="lead">Aplicacion web oficial para uso del personal de calidad. </p>
+      <section id="about">
+        <div class="container px-4">
+            <div class="row gx-4 justify-content-center">
+                <div class="col-lg-8">
+                    <h2>Acerca de la app</h2>
+                    <p class="lead">
+                        Aplicación web diseñada para automatizar procesos de captura de información en procesos. Su funcionamiento se basa en la integración de tecnologías avanzadas que permiten recopilar, procesar y analizar datos en tiempo real.</p>
+    
+                        <p class="lead">Los operarios pueden ingresar datos fácilmente a través de una interfaz intuitiva 
+                        (tablet, laptop o pc), lo que reduce errores y optimiza el flujo de trabajo. La aplicación 
+                        genera reportes automáticos, proporciona visibilidad instantánea del estado de los procesos y 
+                        facilita la toma de decisiones informadas. Con Sana Realtime WebApp se puede mejorar su eficiencia 
+                        operativa y reducir costos, transformando la manera en que gestionan la información.</p>
+    
+                </div>
+            </div >
+        </div>
+    </section>
   </div>
-</div>
+</header>
 {% endblock %}

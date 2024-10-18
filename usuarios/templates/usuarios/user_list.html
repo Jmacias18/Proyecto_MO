@@ -1,0 +1,35 @@
+{% extends "core/base.html" %}
+{% block title %}Lista de usuarios{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">Lista de usuarios</h2>
+    <a href="{% url 'usuarios:user_add' %}" class="btn btn-primary mb-3">Agregar Usuario</a>
+    <div class="table-responsive">
+        <table class="table table-striped table-hover">
+            <thead class="thead-dark">
+                <tr>
+                    <th>Nombre de usuario</th>
+                    <th>Nombre</th>
+                    <th>Apellido</th>
+                    <th>Es staff</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td>{{ user.username }}</td>
+                    <td>{{ user.first_name }}</td>
+                    <td>{{ user.last_name }}</td>
+                    <td>{{ user.is_staff|yesno:"Sí,No" }}</td>
+                    <td>
+                        <a href="{% url 'usuarios:user_edit' user.pk %}" class="btn btn-sm btn-warning">Editar</a>
+                        <a href="{% url 'usuarios:user_delete' user.pk %}" class="btn btn-sm btn-danger">Eliminar</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

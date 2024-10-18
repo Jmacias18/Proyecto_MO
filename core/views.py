@@ -8,7 +8,7 @@ class HomePageView(TemplateView):
     template_name = "core/home.html"
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['title'] = "Captura de Horas de Mano de Obra"
+        context['title'] = "Sana Premium Foods"
         return context
 
     def get(self, request, *args, **kwargs):

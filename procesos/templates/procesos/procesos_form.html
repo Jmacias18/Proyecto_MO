@@ -1,0 +1,13 @@
+{% extends "core/base.html" %}
+{% block title %}Formulario de Proceso{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">{% if form.instance.pk %}Editar{% else %}Agregar{% endif %} Proceso</h2>
+    <form method="post" class="needs-validation" novalidate>
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn btn-primary">{% if form.instance.pk %}Guardar cambios{% else %}Agregar{% endif %}</button>
+        <a href="{% url 'procesos:procesos_list' %}" class="btn btn-secondary">Cancelar</a>
+    </form>
+</div>
+{% endblock %}

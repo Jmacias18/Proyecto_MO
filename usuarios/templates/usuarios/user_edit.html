@@ -1,0 +1,13 @@
+{% extends "core/base.html" %}
+{% block title %}Editar usuario{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">Editar usuario</h2>
+    <form method="post" class="needs-validation" novalidate>
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn btn-primary">Guardar cambios</button>
+        <a href="{% url 'usuarios:user_list' %}" class="btn btn-secondary">Cancelar</a>
+    </form>
+</div>
+{% endblock %}
