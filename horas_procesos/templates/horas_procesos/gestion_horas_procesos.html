@@ -1,0 +1,163 @@
+{% extends 'core/base.html' %}
+{% load static %}
+{% block title %}Gestión de Procesos y Horas Extras{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4 text-center">Gestión de Procesos y Horas Extras</h2>
+    <form method="post">
+        {% csrf_token %}
+        <p class="text-center">Reporte Diario de Coordinador</p>
+        <div class="mb-4">
+            <label for="fecha_hora" class="form-label">Fecha y Hora:</label>
+            <p id="fecha_hora" class="form-control-plaintext"></p>
+        </div>
+        <div class="mb-4">
+            <label for="depto_select" class="form-label">Selecciona un Departamento:</label>
+            <select id="depto_select" class="form-select" onchange="filtrarEmpleados()">
+                <option value="" selected>Todos los Departamentos</option>
+                {% for depto in departamentos %}
+                <option value="{{ depto }}">{{ depto }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover table-sm">
+                <thead class="thead-dark">
+                    <tr>
+                        <th>#</th>
+                        <th>No. Empleado</th>
+                        <th>Empleado</th>
+                        <th>Depto</th>
+                        <th>Asis</th>
+                        <th>
+                            <select class="form-select form-select-sm" name="proceso1_header">
+                                <option value="" disabled selected>Proceso 1</option>
+                                {% for proceso in procesos %}
+                                <option value="{{ proceso.id_pro }}">{{ proceso.nombre_pro }}</option>
+                                {% endfor %}
+                            </select>
+                        </th>
+                        <th>
+                            <select class="form-select form-select-sm" name="proceso2_header">
+                                <option value="" disabled selected>Proceso 2</option>
+                                {% for proceso in procesos %}
+                                <option value="{{ proceso.id_pro }}">{{ proceso.nombre_pro }}</option>
+                                {% endfor %}
+                            </select>
+                        </th>
+                        <th>
+                            <select class="form-select form-select-sm" name="proceso3_header">
+                                <option value="" disabled selected>Proceso 3</option>
+                                {% for proceso in procesos %}
+                                <option value="{{ proceso.id_pro }}">{{ proceso.nombre_pro }}</option>
+                                {% endfor %}
+                            </select>
+                        </th>
+                        <th>
+                            <select class="form-select form-select-sm" name="proceso4_header">
+                                <option value="" disabled selected>Proceso 4</option>
+                                {% for proceso in procesos %}
+                                <option value="{{ proceso.id_pro }}">{{ proceso.nombre_pro }}</option>
+                                {% endfor %}
+                            </select>
+                        </th>
+                        <th>
+                            <select class="form-select form-select-sm" name="proceso5_header">
+                                <option value="" disabled selected>Proceso 5</option>
+                                {% for proceso in procesos %}
+                                <option value="{{ proceso.id_pro }}">{{ proceso.nombre_pro }}</option>
+                                {% endfor %}
+                            </select>
+                        </th>
+                        <th>
+                            <select class="form-select form-select-sm" name="proceso6_header">
+                                <option value="" disabled selected>Proceso 6</option>
+                                {% for proceso in procesos %}
+                                <option value="{{ proceso.id_pro }}">{{ proceso.nombre_pro }}</option>
+                                {% endfor %}
+                            </select>
+                        </th>
+                        <th>Horas Extras</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody id="empleados_tbody">
+                    {% for empleado in empleados %}
+                    <tr data-depto="{{ empleado.depto_emp }}">
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ empleado.codigo_emp }}</td>
+                        <td>{{ empleado.nombre_emp }}</td>
+                        <td>{{ empleado.depto_emp }}</td>
+                        <td>
+                            <input type="checkbox" class="form-check-input" name="asistencia_{{ empleado.codigo_emp }}" onchange="toggleInputs('{{ empleado.codigo_emp }}')">
+                        </td>
+                        <td>
+                            <input type="time" class="form-control form-control-sm mb-2" name="inicio_proceso1_{{ empleado.codigo_emp }}" disabled>
+                            <input type="time" class="form-control form-control-sm mb-2" name="fin_proceso1_{{ empleado.codigo_emp }}" disabled>
+                        </td>
+                        <td>
+                            <input type="time" class="form-control form-control-sm mb-2" name="inicio_proceso2_{{ empleado.codigo_emp }}" disabled>
+                            <input type="time" class="form-control form-control-sm mb-2" name="fin_proceso2_{{ empleado.codigo_emp }}" disabled>
+                        </td>
+                        <td>
+                            <input type="time" class="form-control form-control-sm mb-2" name="inicio_proceso3_{{ empleado.codigo_emp }}" disabled>
+                            <input type="time" class="form-control form-control-sm mb-2" name="fin_proceso3_{{ empleado.codigo_emp }}" disabled>
+                        </td>
+                        <td>
+                            <input type="time" class="form-control form-control-sm mb-2" name="inicio_proceso4_{{ empleado.codigo_emp }}" disabled>
+                            <input type="time" class="form-control form-control-sm mb-2" name="fin_proceso4_{{ empleado.codigo_emp }}" disabled>
+                        </td>
+                        <td>
+                            <input type="time" class="form-control form-control-sm mb-2" name="inicio_proceso5_{{ empleado.codigo_emp }}" disabled>
+                            <input type="time" class="form-control form-control-sm mb-2" name="fin_proceso5_{{ empleado.codigo_emp }}" disabled>
+                        </td>
+                        <td>
+                            <input type="time" class="form-control form-control-sm mb-2" name="inicio_proceso6_{{ empleado.codigo_emp }}" disabled>
+                            <input type="time" class="form-control form-control-sm mb-2" name="fin_proceso6_{{ empleado.codigo_emp }}" disabled>
+                        </td>
+                        <td>
+                            <input type="number" class="form-control form-control-sm" name="horas_extras_{{ empleado.codigo_emp }}" disabled>
+                        </td>
+                        <td>
+                            <input type="number" class="form-control form-control-sm" name="total_{{ empleado.codigo_emp }}" readonly>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="text-center">
+            <button type="submit" class="btn btn-primary mt-3">Guardar</button>
+        </div>
+    </form>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', (event) => {
+        const now = new Date();
+        const formattedDate = now.toLocaleDateString();
+        document.getElementById('fecha_hora').textContent = formattedDate;
+    });
+
+function toggleInputs(codigoEmp) {
+    const asistencia = document.querySelector(`[name="asistencia_${codigoEmp}"]`).checked;
+    const inputs = document.querySelectorAll(`[name^="inicio_proceso"][name$="_${codigoEmp}"], [name^="fin_proceso"][name$="_${codigoEmp}"], [name="horas_extras_${codigoEmp}"]`);
+    inputs.forEach(input => {
+        input.disabled = !asistencia;
+    });
+}
+
+function filtrarEmpleados() {
+    const deptoSeleccionado = document.getElementById('depto_select').value;
+    const filasEmpleados = document.querySelectorAll('#empleados_tbody tr');
+    filasEmpleados.forEach(fila => {
+        const deptoEmpleado = fila.getAttribute('data-depto');
+        if (deptoSeleccionado === "" || deptoSeleccionado === deptoEmpleado) {
+            fila.style.display = "";
+        } else {
+            fila.style.display = "none";
+        }
+    });
+}
+</script>
+{% endblock %}

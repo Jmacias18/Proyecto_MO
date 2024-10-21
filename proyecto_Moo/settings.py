@@ -42,6 +42,8 @@ INSTALLED_APPS = [
     'usuarios',
     'ckeditor',
     'procesos',
+    'horas_procesos',
+
 ]
 
 MIDDLEWARE = [
