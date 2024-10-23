@@ -8,5 +8,7 @@ class HorasProcesosForm(forms.Form):
     proceso2 = forms.ModelChoiceField(queryset=Procesos.objects.all(), label="Proceso 2")
     proceso3 = forms.ModelChoiceField(queryset=Procesos.objects.all(), label="Proceso 3")
     proceso4 = forms.ModelChoiceField(queryset=Procesos.objects.all(), label="Proceso 4")
+    proceso4 = forms.ModelChoiceField(queryset=Procesos.objects.all(), label="Proceso 5")
+    proceso4 = forms.ModelChoiceField(queryset=Procesos.objects.all(), label="Proceso 6")
     horas_extras = forms.IntegerField(label="Horas Extras")
     total = forms.IntegerField(label="Total")

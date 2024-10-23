@@ -1,15 +1,19 @@
-# horas_procesos/models.py
 from django.db import models
+from procesos.models import Empleados
 
-class Empleados(models.Model):
-    codigo_emp = models.CharField(db_column='Codigo_Emp', primary_key=True, max_length=50, db_collation='SQL_Latin1_General_CP1_CI_AS')
-    nombre_emp = models.CharField(db_column='Nombre_Emp', max_length=100, db_collation='SQL_Latin1_General_CP1_CI_AS')
-    depto_emp = models.CharField(db_column='Depto_Emp', max_length=60, db_collation='SQL_Latin1_General_CP1_CI_AS')
-    puesto_emp = models.CharField(db_column='Puesto_Emp', max_length=100, db_collation='SQL_Latin1_General_CP1_CI_AS')
-    tipo_puesto = models.CharField(db_column='Tipo_Puesto', max_length=50, db_collation='SQL_Latin1_General_CP1_CI_AS')
-    turno_emp = models.CharField(db_column='Turno_emp', max_length=30, db_collation='SQL_Latin1_General_CP1_CI_AS', blank=True, null=True)
-    supervisor = models.CharField(db_column='Supervisor', max_length=6, db_collation='SQL_Latin1_General_CP1_CI_AS', blank=True, null=True)
+class Horasprocesos(models.Model):
+    id_hrspro = models.AutoField(db_column='ID_HrsProcesos', primary_key=True)
+    fecha_hrspro = models.DateField(db_column='Fecha_HrsProcesos')
+    codigo_emp = models.ForeignKey(Empleados, models.DO_NOTHING, db_column='Codigo_Emp', related_name='horasprocesos_horas')
+    asistencia = models.BooleanField(db_column='Asistencia')
+    id_pro = models.IntegerField(db_column='ID_Proceso')
+    horaentrada = models.TimeField(db_column='HoraEntrada')
+    horasalida = models.TimeField(db_column='HoraSalida')
+    hrs = models.FloatField(db_column='Hrs')
+    totalhrs = models.FloatField(db_column='TotalHrs')
+    hrsextras = models.FloatField(db_column='HrsExtras')
+    autorizado = models.BooleanField(db_column='Autorizado', null=True, blank=True)
+    sync = models.BooleanField(db_column='SYNC', null=True, blank=True)
 
     class Meta:
-        managed = False
-        db_table = 'Empleados'
+        db_table = 'HorasProcesos'

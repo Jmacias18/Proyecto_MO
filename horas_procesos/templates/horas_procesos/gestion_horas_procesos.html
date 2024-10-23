@@ -8,10 +8,12 @@
         {% csrf_token %}
         <p class="text-center">Reporte Diario de Coordinador</p>
         <div class="mb-4">
-            <label for="fecha_hora" class="form-label">Fecha y Hora:</label>
+            <!-- Mostrar la fecha actual -->
+            <label for="fecha_hora" class="form-label">Fecha:</label>
             <p id="fecha_hora" class="form-control-plaintext"></p>
         </div>
         <div class="mb-4">
+            <!-- Selector de departamento -->
             <label for="depto_select" class="form-label">Selecciona un Departamento:</label>
             <select id="depto_select" class="form-select" onchange="filtrarEmpleados()">
                 <option value="" selected>Todos los Departamentos</option>
@@ -20,6 +22,10 @@
                 {% endfor %}
             </select>
         </div>
+        <div class="mb-4">
+            <!-- Mostrar el total de empleados -->
+            <p id="total_empleados" class="form-label">Total de Empleados: 0</p>
+        </div>
         <div class="table-responsive">
             <table class="table table-bordered table-hover table-sm">
                 <thead class="thead-dark">
@@ -27,8 +33,8 @@
                         <th>#</th>
                         <th>No. Empleado</th>
                         <th>Empleado</th>
-                        <th>Depto</th>
-                        <th>Asis</th>
+                        <th>Departamento</th>
+                        <th>Inasistencia</th>
                         <th>
                             <select class="form-select form-select-sm" name="proceso1_header">
                                 <option value="" disabled selected>Proceso 1</option>
@@ -84,39 +90,44 @@
                 <tbody id="empleados_tbody">
                     {% for empleado in empleados %}
                     <tr data-depto="{{ empleado.depto_emp }}">
-                        <td>{{ forloop.counter }}</td>
+                        <td class="employee-number"></td>
                         <td>{{ empleado.codigo_emp }}</td>
                         <td>{{ empleado.nombre_emp }}</td>
                         <td>{{ empleado.depto_emp }}</td>
                         <td>
-                            <input type="checkbox" class="form-check-input" name="asistencia_{{ empleado.codigo_emp }}" onchange="toggleInputs('{{ empleado.codigo_emp }}')">
+                            <input type="checkbox" class="form-check-input" name="inasistencia_{{ empleado.codigo_emp }}" onchange="toggleInputs('{{ empleado.codigo_emp }}')">
                         </td>
                         <td>
-                            <input type="time" class="form-control form-control-sm mb-2" name="inicio_proceso1_{{ empleado.codigo_emp }}" disabled>
-                            <input type="time" class="form-control form-control-sm mb-2" name="fin_proceso1_{{ empleado.codigo_emp }}" disabled>
+                            <input type="time" class="form-control form-control-sm mb-2 timepicker" name="inicio_proceso1_{{ empleado.codigo_emp }}" onchange="calcularTotalHoras('{{ empleado.codigo_emp }}', 1)">
+                            <input type="time" class="form-control form-control-sm mb-2 timepicker" name="fin_proceso1_{{ empleado.codigo_emp }}" onchange="calcularTotalHoras('{{ empleado.codigo_emp }}', 1)">
+                            <input type="text" class="form-control form-control-sm mb-2" name="total_proceso1_{{ empleado.codigo_emp }}" readonly>
                         </td>
                         <td>
-                            <input type="time" class="form-control form-control-sm mb-2" name="inicio_proceso2_{{ empleado.codigo_emp }}" disabled>
-                            <input type="time" class="form-control form-control-sm mb-2" name="fin_proceso2_{{ empleado.codigo_emp }}" disabled>
+                            <input type="time" class="form-control form-control-sm mb-2 timepicker" name="inicio_proceso2_{{ empleado.codigo_emp }}" onchange="calcularTotalHoras('{{ empleado.codigo_emp }}', 2)">
+                            <input type="time" class="form-control form-control-sm mb-2 timepicker" name="fin_proceso2_{{ empleado.codigo_emp }}" onchange="calcularTotalHoras('{{ empleado.codigo_emp }}', 2)">
+                            <input type="text" class="form-control form-control-sm mb-2" name="total_proceso2_{{ empleado.codigo_emp }}" readonly>
                         </td>
                         <td>
-                            <input type="time" class="form-control form-control-sm mb-2" name="inicio_proceso3_{{ empleado.codigo_emp }}" disabled>
-                            <input type="time" class="form-control form-control-sm mb-2" name="fin_proceso3_{{ empleado.codigo_emp }}" disabled>
+                            <input type="time" class="form-control form-control-sm mb-2 timepicker" name="inicio_proceso3_{{ empleado.codigo_emp }}" onchange="calcularTotalHoras('{{ empleado.codigo_emp }}', 3)">
+                            <input type="time" class="form-control form-control-sm mb-2 timepicker" name="fin_proceso3_{{ empleado.codigo_emp }}" onchange="calcularTotalHoras('{{ empleado.codigo_emp }}', 3)">
+                            <input type="text" class="form-control form-control-sm mb-2" name="total_proceso3_{{ empleado.codigo_emp }}" readonly>
                         </td>
                         <td>
-                            <input type="time" class="form-control form-control-sm mb-2" name="inicio_proceso4_{{ empleado.codigo_emp }}" disabled>
-                            <input type="time" class="form-control form-control-sm mb-2" name="fin_proceso4_{{ empleado.codigo_emp }}" disabled>
+                            <input type="time" class="form-control form-control-sm mb-2 timepicker" name="inicio_proceso4_{{ empleado.codigo_emp }}" onchange="calcularTotalHoras('{{ empleado.codigo_emp }}', 4)">
+                            <input type="time" class="form-control form-control-sm mb-2 timepicker" name="fin_proceso4_{{ empleado.codigo_emp }}" onchange="calcularTotalHoras('{{ empleado.codigo_emp }}', 4)">
+                            <input type="text" class="form-control form-control-sm mb-2" name="total_proceso4_{{ empleado.codigo_emp }}" readonly>
                         </td>
                         <td>
-                            <input type="time" class="form-control form-control-sm mb-2" name="inicio_proceso5_{{ empleado.codigo_emp }}" disabled>
-                            <input type="time" class="form-control form-control-sm mb-2" name="fin_proceso5_{{ empleado.codigo_emp }}" disabled>
+                            <input type="time" class="form-control form-control-sm mb-2 timepicker" name="inicio_proceso5_{{ empleado.codigo_emp }}" onchange="calcularTotalHoras('{{ empleado.codigo_emp }}', 5)">
+                            <input type="time" class="form-control form-control-sm mb-2 timepicker" name="fin_proceso5_{{ empleado.codigo_emp }}" onchange="calcularTotalHoras('{{ empleado.codigo_emp }}', 5)">
+                            <input type="text" class="form-control form-control-sm mb-2" name="total_proceso5_{{ empleado.codigo_emp }}" readonly>
                         </td>
                         <td>
-                            <input type="time" class="form-control form-control-sm mb-2" name="inicio_proceso6_{{ empleado.codigo_emp }}" disabled>
-                            <input type="time" class="form-control form-control-sm mb-2" name="fin_proceso6_{{ empleado.codigo_emp }}" disabled>
+                            <input type="time" class="form-control form-control-sm mb-2 timepicker" name="inicio_proceso6_{{ empleado.codigo_emp }}" onchange="calcularTotalHoras('{{ empleado.codigo_emp }}', 6)">
+                            <input type="time" class="form-control form-control-sm mb-2 timepicker" name="fin_proceso6_{{ empleado.codigo_emp }}" onchange="calcularTotalHoras('{{ empleado.codigo_emp }}', 6)">
                         </td>
                         <td>
-                            <input type="number" class="form-control form-control-sm" name="horas_extras_{{ empleado.codigo_emp }}" disabled>
+                            <input type="number" class="form-control form-control-sm" name="horas_extras_{{ empleado.codigo_emp }}" onchange="calcularTotalHoras('{{ empleado.codigo_emp }}')">
                         </td>
                         <td>
                             <input type="number" class="form-control form-control-sm" name="total_{{ empleado.codigo_emp }}" readonly>
@@ -132,32 +143,106 @@
     </form>
 </div>
 
+<!-- Incluir Flatpickr CSS y JS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
 <script>
     document.addEventListener('DOMContentLoaded', (event) => {
         const now = new Date();
         const formattedDate = now.toLocaleDateString();
         document.getElementById('fecha_hora').textContent = formattedDate;
+
+        // Inicializar Flatpickr en los campos de tiempo
+        flatpickr(".timepicker", {
+            enableTime: true,
+            noCalendar: true,
+            dateFormat: "H:i",
+            time_24hr: true
+        });
+
+        // Enumerar empleados al cargar la página
+        filtrarEmpleados();
     });
 
-function toggleInputs(codigoEmp) {
-    const asistencia = document.querySelector(`[name="asistencia_${codigoEmp}"]`).checked;
-    const inputs = document.querySelectorAll(`[name^="inicio_proceso"][name$="_${codigoEmp}"], [name^="fin_proceso"][name$="_${codigoEmp}"], [name="horas_extras_${codigoEmp}"]`);
-    inputs.forEach(input => {
-        input.disabled = !asistencia;
-    });
-}
+    // Función para filtrar empleados por departamento y enumerarlos
+    function filtrarEmpleados() {
+        // Obtener el departamento seleccionado
+        const deptoSeleccionado = document.getElementById('depto_select').value;
+        // Obtener todas las filas de empleados
+        const filasEmpleados = document.querySelectorAll('#empleados_tbody tr');
+        let contador = 1;
+        let totalEmpleados = 0;
 
-function filtrarEmpleados() {
-    const deptoSeleccionado = document.getElementById('depto_select').value;
-    const filasEmpleados = document.querySelectorAll('#empleados_tbody tr');
-    filasEmpleados.forEach(fila => {
-        const deptoEmpleado = fila.getAttribute('data-depto');
-        if (deptoSeleccionado === "" || deptoSeleccionado === deptoEmpleado) {
-            fila.style.display = "";
+        // Iterar sobre cada fila de empleado
+        filasEmpleados.forEach(fila => {
+            // Obtener el departamento del empleado
+            const deptoEmpleado = fila.getAttribute('data-depto');
+            // Mostrar u ocultar la fila según el departamento seleccionado
+            if (deptoSeleccionado === "" || deptoSeleccionado === deptoEmpleado) {
+                fila.style.display = "";
+                // Enumerar la fila visible
+                fila.querySelector('.employee-number').textContent = contador++;
+                totalEmpleados++;
+            } else {
+                fila.style.display = "none";
+            }
+        });
+
+        // Actualizar el total de empleados visibles
+        document.getElementById('total_empleados').textContent = `Total de Empleados: ${totalEmpleados}`;
+    }
+
+    // Función para habilitar/deshabilitar campos de tiempo y horas extras
+    function toggleInputs(codigoEmp) {
+        const inasistencia = document.querySelector(`[name="inasistencia_${codigoEmp}"]`).checked;
+        const inputs = document.querySelectorAll(`[name^="inicio_proceso"][name$="_${codigoEmp}"], [name^="fin_proceso"][name$="_${codigoEmp}"], [name="horas_extras_${codigoEmp}"]`);
+        inputs.forEach(input => {
+            input.disabled = inasistencia;
+            if (inasistencia) {
+                input.value = ''; // Limpiar el valor del campo si la inasistencia está activada
+            }
+        });
+    }
+
+    // Función para calcular el total de horas entre la hora de entrada y la hora de salida
+    function calcularTotalHoras(codigoEmp, procesoNum) {
+        const inicio = document.querySelector(`[name="inicio_proceso${procesoNum}_${codigoEmp}"]`).value;
+        const fin = document.querySelector(`[name="fin_proceso${procesoNum}_${codigoEmp}"]`).value;
+        
+        const totalField = document.querySelector(`[name="total_proceso${procesoNum}_${codigoEmp}"]`);
+
+        if (inicio && fin) {
+            const [inicioHoras, inicioMinutos] = inicio.split(':').map(Number);
+            const [finHoras, finMinutos] = fin.split(':').map(Number);
+
+            const inicioDate = new Date(0, 0, 0, inicioHoras, inicioMinutos);
+            const finDate = new Date(0, 0, 0, finHoras, finMinutos);
+
+            let diff = (finDate - inicioDate) / (1000 * 60 * 60); // Diferencia en horas
+            if (diff < 0) {
+                diff += 24; // Ajuste si la hora de fin es después de la medianoche
+            }
+
+            totalField.value = diff.toFixed(2);
         } else {
-            fila.style.display = "none";
+            totalField.value = '';
         }
-    });
-}
+
+        // Calcular el total de horas trabajadas en todos los procesos
+        let totalHoras = 0;
+        for (let i = 1; i <= 6; i++) {
+            const totalProceso = document.querySelector(`[name="total_proceso${i}_${codigoEmp}"]`).value;
+            if (totalProceso) {
+                totalHoras += parseFloat(totalProceso) || 0;
+            }
+        }
+
+        // Incluir horas extras en el total de horas trabajadas
+        const horasExtras = parseFloat(document.querySelector(`[name="horas_extras_${codigoEmp}"]`).value) || 0;
+        totalHoras += horasExtras;
+
+        document.querySelector(`[name="total_${codigoEmp}"]`).value = totalHoras.toFixed(2);
+    }
 </script>
 {% endblock %}
