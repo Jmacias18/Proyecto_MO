@@ -6,4 +6,3 @@ class ProcesosForm(forms.ModelForm):
     class Meta:
         model = Procesos
         fields = ['nombre_pro', 'estado_pro']
-        

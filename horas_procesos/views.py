@@ -3,6 +3,10 @@ from .forms import HorasProcesosForm
 from procesos.models import Empleados, Procesos
 from .models import Horasprocesos
 from django.utils import timezone
+import subprocess
+import os
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 
 def gestion_horas_procesos(request):
     if request.method == 'POST':
@@ -64,3 +68,17 @@ def gestion_horas_procesos(request):
         'procesos': procesos,
         'departamentos': departamentos,
     })
+
+
+@csrf_exempt
+def sync_to_server_view(request):
+    if request.method == 'POST':
+        try:
+            # Obtener la ruta absoluta del script de sincronización
+            script_path = os.path.join(os.path.dirname(__file__), 'sync_db_to_server.py')
+            # Ejecutar el script de sincronización
+            subprocess.run(['python', script_path], check=True)
+            return JsonResponse({'status': 'success', 'message': 'Sincronización completada con éxito.'})
+        except subprocess.CalledProcessError as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+    return JsonResponse({'status': 'error', 'message': 'Método no permitido.'})

@@ -2,6 +2,9 @@ from django.shortcuts import render
 from django.views.generic.base import TemplateView
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
+import subprocess
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 
 @method_decorator(login_required, name='dispatch')
 class HomePageView(TemplateView):
@@ -17,3 +20,15 @@ class HomePageView(TemplateView):
 class SamplePageView(TemplateView):
     template_name = "core/sample.html"
 
+
+
+@csrf_exempt
+def sync_databases_view(request):
+    if request.method == 'POST':
+        try:
+            # Ejecutar el script de sincronización
+            subprocess.run(['python', 'core/sync_db.py'], check=True)
+            return JsonResponse({'status': 'success', 'message': 'Sincronización completada con éxito.'})
+        except subprocess.CalledProcessError as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+    return JsonResponse({'status': 'error', 'message': 'Método no permitido.'})

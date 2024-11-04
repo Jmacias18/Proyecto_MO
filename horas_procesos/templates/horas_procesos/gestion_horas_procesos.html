@@ -1,6 +1,39 @@
 {% extends 'core/base.html' %}
 {% load static %}
 {% block title %}Gestión de Procesos y Horas Extras{% endblock %}
+{% block navbar_extra %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        if (window.location.pathname === '/horas_procesos/gestion_horas_procesos/') {
+            const navbar = document.querySelector('.navbar-nav.ms-auto');
+            const syncButton = document.createElement('li');
+            syncButton.className = 'nav-item';
+            syncButton.innerHTML = `
+                <button id="sync-to-server-button" class="nav-link">Sincronizar Procesos</button>
+            `;
+            navbar.appendChild(syncButton);
+
+            document.getElementById('sync-to-server-button').addEventListener('click', function() {
+                fetch("{% url 'horas_procesos:sync_to_server' %}", {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    alert(data.message);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Ocurrió un error durante la sincronización.');
+                });
+            });
+        }
+    });
+</script>
+{% endblock %}
 {% block content %}
 <div class="container mt-4">
     <h2 class="mb-4 text-center">Gestión de Procesos y Horas Extras</h2>
@@ -16,7 +49,7 @@
             <!-- Selector de departamento -->
             <label for="depto_select" class="form-label">Selecciona un Departamento:</label>
             <select id="depto_select" class="form-select" onchange="filtrarEmpleados()">
-                <option value="" selected>Todos los Departamentos</option>
+                <option value="" selected>Departamento</option>
                 {% for depto in departamentos %}
                 <option value="{{ depto }}">{{ depto }}</option>
                 {% endfor %}
@@ -24,9 +57,9 @@
         </div>
         <div class="mb-4">
             <!-- Mostrar el total de empleados -->
-            <p id="total_empleados" class="form-label">Total de Empleados: 0</p>
+            <p id="total_empleados" class="form-label" style="display: none;">Total de Empleados: 0</p>   
         </div>
-        <div class="table-responsive">
+        <div id="tabla_empleados" class="table-responsive" style="display: none;">
             <table class="table table-bordered table-hover table-sm">
                 <thead class="thead-dark">
                     <tr>
@@ -96,43 +129,19 @@
                         <td>{{ empleado.depto_emp }}</td>
                         <td>
                             <input type="checkbox" class="form-check-input" name="inasistencia_{{ empleado.codigo_emp }}" onchange="toggleInputs('{{ empleado.codigo_emp }}')">
+                            <label for="inasistencia_{{ empleado.codigo_emp }}"></label>
                         </td>
+                        {% for i in "123456" %}
                         <td>
-                            <input type="checkbox" class="form-check-input copy-checkbox" data-proceso="1" data-emp="{{ empleado.codigo_emp }}">
-                            <input type="time" class="form-control form-control-sm mb-2 timepicker" name="inicio_proceso1_{{ empleado.codigo_emp }}" placeholder="Inicio" disabled onchange="ajustarHoraFin('{{ empleado.codigo_emp }}', 1)">
-                            <input type="time" class="form-control form-control-sm mb-2 timepicker" name="fin_proceso1_{{ empleado.codigo_emp }}" placeholder="Fin" disabled onchange="calcularTotalHoras('{{ empleado.codigo_emp }}', 1)">
-                            <input type="text" class="form-control form-control-sm mb-2" name="total_proceso1_{{ empleado.codigo_emp }}" readonly>
+                            <input type="checkbox" class="form-check-input copy-checkbox" data-proceso="{{ i }}" data-emp="{{ empleado.codigo_emp }}" onchange="handleCheckboxChange(event)">
+                            <label for="copy-checkbox">Copiar Horas</label>
+                            <input type="time" class="form-control form-control-sm mb-2" name="inicio_proceso{{ i }}_{{ empleado.codigo_emp }}" placeholder="Inicio" disabled step="60" onchange="ajustarHoraFin('{{ empleado.codigo_emp }}', {{ i }})">
+                            <input type="time" class="form-control form-control-sm mb-2" name="fin_proceso{{ i }}_{{ empleado.codigo_emp }}" placeholder="Fin" disabled step="60" onchange="calcularTotalHoras('{{ empleado.codigo_emp }}', {{ i }})">
+                            <input type="text" class="form-control form-control-sm mb-2" name="total_proceso{{ i }}_{{ empleado.codigo_emp }}" readonly>
+                            <input type="checkbox" class="form-check-input delete-checkbox" data-proceso="{{ i }}" data-emp="{{ empleado.codigo_emp }}" onchange="handleDeleteCheckboxChange(event)">
+                            <label for="delete-checkbox">Borrar Horas</label>
                         </td>
-                        <td>
-                            <input type="checkbox" class="form-check-input copy-checkbox" data-proceso="2" data-emp="{{ empleado.codigo_emp }}">
-                            <input type="time" class="form-control form-control-sm mb-2 timepicker" name="inicio_proceso2_{{ empleado.codigo_emp }}" placeholder="Inicio" disabled onchange="ajustarHoraFin('{{ empleado.codigo_emp }}', 2)">
-                            <input type="time" class="form-control form-control-sm mb-2 timepicker" name="fin_proceso2_{{ empleado.codigo_emp }}" placeholder="Fin" disabled onchange="calcularTotalHoras('{{ empleado.codigo_emp }}', 2)">
-                            <input type="text" class="form-control form-control-sm mb-2" name="total_proceso2_{{ empleado.codigo_emp }}" readonly>
-                        </td>
-                        <td>
-                            <input type="checkbox" class="form-check-input copy-checkbox" data-proceso="3" data-emp="{{ empleado.codigo_emp }}">
-                            <input type="time" class="form-control form-control-sm mb-2 timepicker" name="inicio_proceso3_{{ empleado.codigo_emp }}" placeholder="Inicio" disabled onchange="ajustarHoraFin('{{ empleado.codigo_emp }}', 3)">
-                            <input type="time" class="form-control form-control-sm mb-2 timepicker" name="fin_proceso3_{{ empleado.codigo_emp }}" placeholder="Fin" disabled onchange="calcularTotalHoras('{{ empleado.codigo_emp }}', 3)">
-                            <input type="text" class="form-control form-control-sm mb-2" name="total_proceso3_{{ empleado.codigo_emp }}" readonly>
-                        </td>
-                        <td>
-                            <input type="checkbox" class="form-check-input copy-checkbox" data-proceso="4" data-emp="{{ empleado.codigo_emp }}">
-                            <input type="time" class="form-control form-control-sm mb-2 timepicker" name="inicio_proceso4_{{ empleado.codigo_emp }}" placeholder="Inicio" disabled onchange="ajustarHoraFin('{{ empleado.codigo_emp }}', 4)">
-                            <input type="time" class="form-control form-control-sm mb-2 timepicker" name="fin_proceso4_{{ empleado.codigo_emp }}" placeholder="Fin" disabled onchange="calcularTotalHoras('{{ empleado.codigo_emp }}', 4)">
-                            <input type="text" class="form-control form-control-sm mb-2" name="total_proceso4_{{ empleado.codigo_emp }}" readonly>
-                        </td>
-                        <td>
-                            <input type="checkbox" class="form-check-input copy-checkbox" data-proceso="5" data-emp="{{ empleado.codigo_emp }}">
-                            <input type="time" class="form-control form-control-sm mb-2 timepicker" name="inicio_proceso5_{{ empleado.codigo_emp }}" placeholder="Inicio" disabled onchange="ajustarHoraFin('{{ empleado.codigo_emp }}', 5)">
-                            <input type="time" class="form-control form-control-sm mb-2 timepicker" name="fin_proceso5_{{ empleado.codigo_emp }}" placeholder="Fin" disabled onchange="calcularTotalHoras('{{ empleado.codigo_emp }}', 5)">
-                            <input type="text" class="form-control form-control-sm mb-2" name="total_proceso5_{{ empleado.codigo_emp }}" readonly>
-                        </td>
-                        <td>
-                            <input type="checkbox" class="form-check-input copy-checkbox" data-proceso="6" data-emp="{{ empleado.codigo_emp }}">
-                            <input type="time" class="form-control form-control-sm mb-2 timepicker" name="inicio_proceso6_{{ empleado.codigo_emp }}" placeholder="Inicio" disabled onchange="ajustarHoraFin('{{ empleado.codigo_emp }}', 6)">
-                            <input type="time" class="form-control form-control-sm mb-2 timepicker" name="fin_proceso6_{{ empleado.codigo_emp }}" placeholder="Fin" disabled onchange="calcularTotalHoras('{{ empleado.codigo_emp }}', 6)">
-                            <input type="text" class="form-control form-control-sm mb-2" name="total_proceso6_{{ empleado.codigo_emp }}" readonly>
-                        </td>
+                        {% endfor %}
                         <td>
                             <input type="number" class="form-control form-control-sm" name="horas_extras_{{ empleado.codigo_emp }}" onchange="calcularTotalHoras('{{ empleado.codigo_emp }}')">
                         </td>
@@ -145,12 +154,9 @@
                 <tfoot>
                     <tr>
                         <td colspan="5" class="text-end"><strong>Total Horas:</strong></td>
-                        <td id="total_proceso1" class="text-center">0.00</td>
-                        <td id="total_proceso2" class="text-center">0.00</td>
-                        <td id="total_proceso3" class="text-center">0.00</td>
-                        <td id="total_proceso4" class="text-center">0.00</td>
-                        <td id="total_proceso5" class="text-center">0.00</td>
-                        <td id="total_proceso6" class="text-center">0.00</td>
+                        {% for i in "123456" %}
+                        <td id="total_proceso{{ i }}" class="text-center">0.00</td>
+                        {% endfor %}
                         <td colspan="2"></td>
                     </tr>
                 </tfoot>
@@ -162,8 +168,5 @@
     </form>
 </div>
 
-<!-- Incluir Flatpickr CSS y JS -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="{% static 'horas_procesos/js/gestion_horas_procesos.js' %}"></script>
 {% endblock %}

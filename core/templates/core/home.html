@@ -1,12 +1,71 @@
 {% extends 'core/base.html' %}
 {% load static %}
 {% block title %}Inicio{% endblock %}
+{% block navbar_extra %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const navbarRight = document.getElementById('navbar-right');
+        if (window.location.pathname === '/') {
+            const syncButton = document.createElement('li');
+            syncButton.className = 'nav-item';
+            syncButton.innerHTML = `
+                <a id="sync-button" class="nav-link" href="#">Sincronizar Bases de Datos</a>
+            `;
+            navbarRight.insertBefore(syncButton, navbarRight.firstChild);
+
+            document.getElementById('sync-button').addEventListener('click', function(event) {
+                event.preventDefault();  // Evitar el comportamiento predeterminado del enlace
+                fetch("{% url 'core:sync_databases' %}", {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    alert(data.message);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Ocurrió un error durante la sincronización.');
+                });
+            });
+        } else if (window.location.pathname === '/horas_procesos/gestion_horas_procesos/') {
+            const syncButton = document.createElement('li');
+            syncButton.className = 'nav-item';
+            syncButton.innerHTML = `
+                <a id="sync-to-server-button" class="nav-link" href="#">Sincronizar Procesos</a>
+            `;
+            navbarRight.insertBefore(syncButton, navbarRight.firstChild);
+
+            document.getElementById('sync-to-server-button').addEventListener('click', function(event) {
+                event.preventDefault();  // Evitar el comportamiento predeterminado del enlace
+                fetch("{% url 'horas_procesos:sync_to_server' %}", {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    alert(data.message);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Ocurrió un error durante la sincronización.');
+                });
+            });
+        }
+    });
+</script>
+{% endblock %}
 {% block content %}
 <header class="text-white" style="background-image: url('{% static 'core/assets/fondoHome.png' %}'); background-position: center; background-size: cover; height: 60vh; display: flex; align-items: center; justify-content: center;">
   <div class="container px-4 text-center">
       <h1 class="fw-bolder">SANA Realtime WebApp</h1>
       <p class="lead">Aplicación web oficial para uso del personal de calidad.</p>
-      
   </div>
 </header>
 

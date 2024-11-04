@@ -23,7 +23,7 @@
     <!-- Navegación -->
     <nav class="navbar navbar-expand-lg fixed-top" id="mainNav" style="border-bottom: 2px solid #ccc;"> 
         <div class="container px-4">
-            <a class="navbar-brand" href="{% url 'home' %}">
+            <a class="navbar-brand" href="{% url 'core:home' %}">
                 <img src="{% static 'core/assets/logosana.jpg' %}" alt="Sana Premium Foods Logo" height="40">
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarResponsive" aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation">
@@ -37,29 +37,33 @@
                             Producción
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
-                            <li><a class="dropdown-item" href="{}">Registros de Paros de Producción</a></li>
-                            <li><a class="dropdown-item" href="{}">Registros de Procesos y Maquinaria</a></li>
+                            <li><a class="dropdown-item" href="#">Registros de Paros de Producción</a></li>
+                            <li><a class="dropdown-item" href="#">Registros de Procesos y Maquinaria</a></li>
                             <li><a class="dropdown-item" href="{% url 'horas_procesos:gestion_horas_procesos' %}">Horas Procesos</a></li>
                         </ul>
                     </li>
-                    <li class="nav-item"><a class="nav-link" href="">Temperatura</a></li>
-                    <li class="nav-item"><a class="nav-link" href="">Calidad</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#">Temperatura</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#">Calidad</a></li>
                     {% if request.user.is_staff %}
                     <li class="nav-item"><a class="nav-link" href="{% url 'usuarios:user_list' %}">Usuarios</a></li>
                     <li class="nav-item"><a class="nav-link" href="{% url 'procesos:procesos_list' %}">Procesos</a></li>
                     {% endif %}
                     {% endif %}
                 </ul>
-                <ul class="navbar-nav ms-auto"> 
+                <ul class="navbar-nav ms-auto" id="navbar-right"> 
                     {% if not request.user.is_authenticated %}
                     <li class="nav-item"><a class="nav-link" href="{% url 'login' %}">Acceder</a></li>
                     {% else %}
-                    <form id="logout-form" method="post" action="{% url 'logout' %}">
-                      {% csrf_token %}
-                      <button type="submit" class="nav-link btn btn-link" style="padding: 0;">{% trans "Log out" %}</button>
-                    </form>                   
+                    
+                    <li class="nav-item">
+                        <form id="logout-form" method="post" action="{% url 'logout' %}">
+                          {% csrf_token %}
+                          <button type="submit" class="nav-link btn btn-link" style="padding: 0;">{% trans "Log out" %}</button>
+                        </form>
+                    </li>
                     {% endif %}
                 </ul>
+                {% block navbar_extra %}{% endblock %}
             </div>
         </div>
     </nav>
