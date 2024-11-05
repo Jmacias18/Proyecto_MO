@@ -29,6 +29,29 @@ document.addEventListener('DOMContentLoaded', () => {
         filtrarEmpleados();
     });
 });
+// Función para manejar el cambio de los checkboxes de eliminación
+function handleDeleteCheckboxChange(event) {
+    const checkbox = event.target;
+    const row = checkbox.closest('tr');
+    const procesoNum = checkbox.dataset.proceso; // Obtener el número del proceso del dataset del checkbox
+    const codigoEmp = checkbox.dataset.emp; // Obtener el código del empleado del dataset del checkbox
+
+    // Seleccionar solo los campos de entrada correspondientes al proceso y empleado específicos
+    const inputs = row.querySelectorAll(`input[name="inicio_proceso${procesoNum}_${codigoEmp}"], input[name="fin_proceso${procesoNum}_${codigoEmp}"], input[name="total_proceso${procesoNum}_${codigoEmp}"]`);
+
+    if (checkbox.checked) {
+        // Deshabilitar los campos de entrada correspondientes
+        inputs.forEach(input => {
+            input.disabled = true;
+            input.value = ''; // Limpiar el valor del campo
+        });
+    } else {
+        // Habilitar los campos de entrada correspondientes
+        inputs.forEach(input => {
+            input.disabled = false;
+        });
+    }
+}
 
 function handleCheckboxChange(event) {
     const checkbox = event.target;

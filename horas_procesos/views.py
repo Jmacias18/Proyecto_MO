@@ -82,3 +82,37 @@ def sync_to_server_view(request):
         except subprocess.CalledProcessError as e:
             return JsonResponse({'status': 'error', 'message': str(e)})
     return JsonResponse({'status': 'error', 'message': 'Método no permitido.'})
+
+
+def editar_registros(request):
+    # Lógica de la vista para editar registros pasados
+    departamentos = Empleados.objects.values_list('depto_emp', flat=True).distinct()
+    return render(request, 'horas_procesos/editar_registros.html', {'departamentos': departamentos})
+
+def obtener_registros(request):
+    fecha = request.GET.get('fecha')
+    departamento = request.GET.get('departamento')
+    
+    empleados = Empleados.objects.filter(depto_emp=departamento)
+    registros_data = []
+    for empleado in empleados:
+        registros = Horasprocesos.objects.filter(fecha_hrspro=fecha, codigo_emp=empleado)
+        registro_data = {
+            'codigo_emp': empleado.codigo_emp,
+            'nombre_emp': empleado.nombre_emp,
+            'depto_emp': empleado.depto_emp,
+            'asistencia': False,
+            'hrsextras': 0,
+            'totalhrs': 0
+        }
+        for i in range(1, 7):
+            proceso = registros.filter(id_pro=i).first()
+            if proceso:
+                registro_data[f'inicio_proceso{i}'] = proceso.horaentrada
+                registro_data[f'fin_proceso{i}'] = proceso.horasalida
+                registro_data[f'total_proceso{i}'] = proceso.hrs
+                registro_data['asistencia'] = proceso.asistencia
+                registro_data['hrsextras'] = proceso.hrsextras
+                registro_data['totalhrs'] = proceso.totalhrs
+        registros_data.append(registro_data)
+    return JsonResponse({'registros': registros_data})

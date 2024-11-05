@@ -1,0 +1,54 @@
+{% extends 'core/base.html' %}
+{% load static %}
+{% block title %}Editar Registros Pasados{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4 text-center">Editar Registros Pasados</h2>
+    <form method="post" onsubmit="return validarFormulario()">
+        {% csrf_token %}
+        <div class="mb-4">
+            <!-- Selector de fecha -->
+            <label for="fecha_select" class="form-label">Selecciona una Fecha:</label>
+            <input type="date" id="fecha_select" class="form-control" onchange="filtrarRegistros()">
+        </div>
+        <div class="mb-4">
+            <!-- Selector de departamento -->
+            <label for="depto_select" class="form-label">Selecciona un Departamento:</label>
+            <select id="depto_select" class="form-select" onchange="filtrarRegistros()">
+                <option value="" selected>Departamento</option>
+                {% for depto in departamentos %}
+                <option value="{{ depto }}">{{ depto }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div id="tabla_registros" class="table-responsive" style="display: none;">
+            <table class="table table-bordered table-hover table-sm">
+                <thead class="thead-dark">
+                    <tr>
+                        <th>No. Empleado</th>
+                        <th>Empleado</th>
+                        <th>Departamento</th>
+                        <th>Inasistencia</th>
+                        <th>Proceso 1</th>
+                        <th>Proceso 2</th>
+                        <th>Proceso 3</th>
+                        <th>Proceso 4</th>
+                        <th>Proceso 5</th>
+                        <th>Proceso 6</th>
+                        <th>Horas Extras</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody id="registros_tbody">
+                    <!-- Los registros se cargarán aquí -->
+                </tbody>
+            </table>
+        </div>
+        <div class="text-center">
+            <button type="submit" class="btn btn-primary mt-3">Guardar Cambios</button>
+        </div>
+    </form>
+</div>
+
+<script src="{% static 'horas_procesos/js/editar_registros.js' %}"></script>
+{% endblock %}
