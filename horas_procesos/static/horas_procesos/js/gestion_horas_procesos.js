@@ -1,43 +1,6 @@
-document.addEventListener('DOMContentLoaded', () => {
-    const now = new Date();
-    document.getElementById('fecha_hora').textContent = now.toLocaleDateString();
 
-    // Ocultar la tabla de empleados al cargar la página
-    document.getElementById('tabla_empleados').style.display = 'none';
 
-    // Delegación de eventos para los checkboxes
-    document.getElementById('empleados_tbody').addEventListener('change', (event) => {
-        if (event.target.classList.contains('copy-checkbox')) {
-            handleCheckboxChange(event);
-        } else if (event.target.classList.contains('delete-checkbox')) {
-            handleDeleteCheckboxChange(event);
-        }
-    });
-
-    // Añadir eventos de cambio a los campos de horas extras
-    document.querySelectorAll('[name^="horas_extras_"]').forEach(input => {
-        input.addEventListener('input', () => {
-            const codigoEmp = input.name.split('_')[2];
-            if (input.value < 0) input.value = 0; // No permitir valores negativos
-            calcularTotalHoras(codigoEmp, 0); // Recalcular el total
-        });
-    });
-
-    // Añadir evento de cambio al selector de departamento
-    document.getElementById('depto_select').addEventListener('change', () => {
-        restablecerFormulario();
-        filtrarEmpleados();
-    });
-
-    // Añadir evento de envío al formulario para realizar la validación
-    document.querySelector('form').addEventListener('submit', (event) => {
-        if (!validarHorasRegistradas()) {
-            event.preventDefault(); // Evitar el envío del formulario si la validación falla
-        }
-    });
-});
-
-// Función para validar si algún empleado tiene un proceso sin horas registradas
+// Función para validar si algún empleado tiene un proceso sin horas registradas y evitar horas solapadas y duplicación de procesos
 function validarHorasRegistradas() {
     const filasEmpleados = document.querySelectorAll('#empleados_tbody tr');
     let valid = true;
@@ -53,32 +16,55 @@ function validarHorasRegistradas() {
             if (!inasistencia && !deleteCheckbox) {
                 let tieneHorasRegistradas = false;
                 let horasRegistradas = new Set();
+                let horarios = [];
+                let procesosRegistrados = new Set();
 
                 for (let i = 1; i <= 6; i++) {
                     const inicio = document.querySelector(`[name="inicio_proceso${i}_${codigoEmp}"]`);
                     const fin = document.querySelector(`[name="fin_proceso${i}_${codigoEmp}"]`);
+                    const procesoSelect = document.querySelector(`[name="proceso${i}_header"]`);
 
                     // Verificar si el campo de inicio y fin no están deshabilitados y contienen valores
-                    if (inicio && fin && !inicio.disabled && !fin.disabled) {
+                    if (inicio && fin && procesoSelect && !inicio.disabled && !fin.disabled) {
                         if (!inicio.value || !fin.value) {
-                            mensajeAlerta += `El empleado con código ${codigoEmp} tiene campos de inicio o fin vacíos en el proceso ${i}.<br>`;
+                            mensajeAlerta += `El empleado con código ${codigoEmp} tiene campos de inicio o fin vacíos en el proceso ${i}.\n`;
                             valid = false;
                         } else {
                             tieneHorasRegistradas = true;
                             const horas = `${inicio.value}-${fin.value}`;
                             if (horasRegistradas.has(horas)) {
-                                mensajeAlerta += `El empleado con código ${codigoEmp} tiene horas de inicio y fin idénticas en más de un proceso.<br>`;
+                                mensajeAlerta += `El empleado con código ${codigoEmp} tiene horas de inicio y fin idénticas en más de un proceso.\n`;
                                 valid = false;
                             } else {
                                 horasRegistradas.add(horas);
+                                horarios.push({ inicio: inicio.value, fin: fin.value });
+                            }
+
+                            // Verificar si el proceso está duplicado
+                            const procesoValue = procesoSelect.value;
+                            if (procesosRegistrados.has(procesoValue)) {
+                                mensajeAlerta += `El empleado con código ${codigoEmp} tiene el proceso ${procesoValue} duplicado en diferentes campos de proceso.\n`;
+                                valid = false;
+                            } else {
+                                procesosRegistrados.add(procesoValue);
                             }
                         }
                     }
                 }
 
+                // Verificar si hay horas solapadas
+                horarios.sort((a, b) => a.inicio.localeCompare(b.inicio));
+                for (let i = 0; i < horarios.length - 1; i++) {
+                    if (horarios[i].fin > horarios[i + 1].inicio) {
+                        mensajeAlerta += `El empleado con código ${codigoEmp} tiene horas solapadas entre los procesos.\n`;
+                        valid = false;
+                        break;
+                    }
+                }
+
                 // Si no tiene horas registradas en ningún campo desbloqueado
                 if (!tieneHorasRegistradas) {
-                    mensajeAlerta += `El empleado con código ${codigoEmp} no tiene horas registradas en ningún proceso.<br>`;
+                    mensajeAlerta += `El empleado con código ${codigoEmp} no tiene horas registradas en ningún proceso.\n`;
                     valid = false;
                 }
             }
@@ -99,60 +85,36 @@ function mostrarAlerta(mensaje) {
     alerta.innerHTML = mensaje;
     alerta.style.display = 'block';
 }
-// Función para validar si algún empleado tiene un proceso sin horas registradas
-function validarHorasRegistradas() {
-    const filasEmpleados = document.querySelectorAll('#empleados_tbody tr');
-    let valid = true;
-    let mensajeAlerta = '';
 
-    filasEmpleados.forEach(fila => {
-        if (fila.style.display !== 'none') { // Solo validar empleados visibles
-            const codigoEmp = fila.dataset.codigo_emp;
-            const inasistencia = document.querySelector(`[name="inasistencia_${codigoEmp}"]`).checked;
-            const deleteCheckbox = fila.querySelector('.delete-checkbox').checked;
 
-            // Verificar si el empleado no tiene inasistencia ni está marcado para eliminar
-            if (!inasistencia && !deleteCheckbox) {
-                let tieneHorasRegistradas = false;
-                let horasRegistradas = new Set();
+// Función para manejar el cambio de los checkboxes de eliminación
+function handleDeleteCheckboxChange(event) {
+    const checkbox = event.target;
+    const row = checkbox.closest('tr');
+    const procesoNum = checkbox.dataset.proceso; // Obtener el número del proceso del dataset del checkbox
+    const codigoEmp = checkbox.dataset.emp; // Obtener el código del empleado del dataset del checkbox
 
-                for (let i = 1; i <= 6; i++) {
-                    const inicio = document.querySelector(`[name="inicio_proceso${i}_${codigoEmp}"]`);
-                    const fin = document.querySelector(`[name="fin_proceso${i}_${codigoEmp}"]`);
-
-                    // Verificar si el campo de inicio y fin no están deshabilitados y contienen valores
-                    if (inicio && fin && !inicio.disabled && !fin.disabled) {
-                        if (!inicio.value || !fin.value) {
-                            mensajeAlerta += `El empleado con código ${codigoEmp} tiene campos de inicio o fin vacíos en el proceso ${i}.\n`;
-                            valid = false;
-                        } else {
-                            tieneHorasRegistradas = true;
-                            const horas = `${inicio.value}-${fin.value}`;
-                            if (horasRegistradas.has(horas)) {
-                                mensajeAlerta += `El empleado con código ${codigoEmp} tiene horas de inicio y fin idénticas en más de un proceso.\n`;
-                                valid = false;
-                            } else {
-                                horasRegistradas.add(horas);
-                            }
-                        }
-                    }
-                }
-
-                // Si no tiene horas registradas en ningún campo desbloqueado
-                if (!tieneHorasRegistradas) {
-                    mensajeAlerta += `El empleado con código ${codigoEmp} no tiene horas registradas en ningún proceso.\n`;
-                    valid = false;
-                }
-            }
-        }
-    });
-
-    // Si no es válido, mostramos el mensaje de alerta
-    if (!valid) {
-        alert(mensajeAlerta);
+    // Validar que los datos del dataset existen
+    if (!procesoNum || !codigoEmp) {
+        console.error('Datos del dataset faltantes en el checkbox.');
+        return;
     }
 
-    return valid;
+    // Seleccionar solo los campos de entrada correspondientes al proceso y empleado específicos
+    const inputs = row.querySelectorAll(`input[name="inicio_proceso${procesoNum}_${codigoEmp}"], input[name="fin_proceso${procesoNum}_${codigoEmp}"], input[name="total_proceso${procesoNum}_${codigoEmp}"]`);
+
+    if (checkbox.checked) {
+        // Deshabilitar los campos de entrada correspondientes
+        inputs.forEach(input => {
+            input.disabled = true;
+            input.value = ''; // Limpiar el valor del campo
+        });
+    } else {
+        // Habilitar los campos de entrada correspondientes
+        inputs.forEach(input => {
+            input.disabled = false;
+        });
+    }
 }
 
 function handleCheckboxChange(event) {
@@ -236,21 +198,6 @@ function filtrarEmpleados() {
     sumarHorasPorProceso();
 }
 
-function toggleInputs(codigoEmp) {
-    const inasistencia = document.querySelector(`[name="inasistencia_${codigoEmp}"]`).checked;
-    const inputs = document.querySelectorAll(`[name^="inicio_proceso"][name$="_${codigoEmp}"], [name^="fin_proceso"][name$="_${codigoEmp}"], [name="horas_extras_${codigoEmp}"]`);
-    inputs.forEach(input => {
-        input.disabled = inasistencia;
-        if (inasistencia) input.value = '';
-    });
-
-    if (inasistencia) {
-        document.querySelector(`[name="total_${codigoEmp}"]`).value = '0.00';
-    }
-
-    sumarHorasPorProceso();
-}
-
 function toggleProcesoInputs(procesoNum) {
     const procesoSelect = document.querySelector(`[name="proceso${procesoNum}_header"]`);
     const inputs = document.querySelectorAll(`[name^="inicio_proceso${procesoNum}_"], [name^="fin_proceso${procesoNum}_"]`);
@@ -260,6 +207,13 @@ function toggleProcesoInputs(procesoNum) {
     });
 
     // Recalcula las horas cada vez que se selecciona un proceso
+    document.querySelectorAll('#empleados_tbody tr').forEach(fila => {
+        const codigoEmp = fila.dataset.codigo_emp;
+        if (procesoSelect.value) {
+            calcularTotalHoras(codigoEmp, procesoNum);
+        }
+    });
+
     sumarHorasPorProceso();
 }
 
@@ -305,6 +259,9 @@ function ajustarHoraFin(codigoEmp, procesoNum) {
         siguienteInicioField.value = ajustarHora(horas, minutos);
         [horas, minutos] = siguienteInicioField.value.split(':').map(Number);
         siguienteFinField.value = ajustarHora(horas, minutos);
+
+        // Calcular las horas para el siguiente proceso
+        calcularTotalHoras(codigoEmp, i);
     }
 }
 
@@ -343,8 +300,11 @@ function calcularTotalHoras(codigoEmp, procesoNum) {
 
     let totalHoras = 0;
     for (let i = 1; i <= 6; i++) {
-        const totalProceso = document.querySelector(`[name="total_proceso${i}_${codigoEmp}"]`).value;
-        if (totalProceso) totalHoras += parseFloat(totalProceso) || 0;
+        const procesoSelect = document.querySelector(`[name="proceso${i}_header"]`);
+        if (procesoSelect && procesoSelect.value) {
+            const totalProceso = document.querySelector(`[name="total_proceso${i}_${codigoEmp}"]`).value;
+            if (totalProceso) totalHoras += parseFloat(totalProceso) || 0;
+        }
     }
 
     const horasExtrasField = document.querySelector(`[name="horas_extras_${codigoEmp}"]`);
@@ -364,10 +324,13 @@ function sumarHorasPorProceso() {
         let totalEmpleado = 0;
 
         for (let i = 1; i <= 6; i++) {
-            const totalProceso = fila.querySelector(`[name="total_proceso${i}_${fila.dataset.codigo_emp}"]`);
-            if (totalProceso && totalProceso.value) {
-                totalHorasPorProceso[i - 1] += parseFloat(totalProceso.value) || 0;
-                totalEmpleado += parseFloat(totalProceso.value) || 0;
+            const procesoSelect = document.querySelector(`[name="proceso${i}_header"]`);
+            if (procesoSelect && procesoSelect.value) {
+                const totalProceso = fila.querySelector(`[name="total_proceso${i}_${fila.dataset.codigo_emp}"]`);
+                if (totalProceso && totalProceso.value) {
+                    totalHorasPorProceso[i - 1] += parseFloat(totalProceso.value) || 0;
+                    totalEmpleado += parseFloat(totalProceso.value) || 0;
+                }
             }
         }
 
@@ -384,22 +347,66 @@ function sumarHorasPorProceso() {
         }
     }
 }
-
-function restablecerFormulario() {
-    const inputs = document.querySelectorAll('input[type="time"], input[type="number"], input[type="text"]');
+function toggleInputs(codigoEmp) {
+    const inasistencia = document.querySelector(`[name="inasistencia_${codigoEmp}"]`).checked;
+    const inputs = document.querySelectorAll(`[name^="inicio_proceso"][name$="_${codigoEmp}"], [name^="fin_proceso"][name$="_${codigoEmp}"], [name="horas_extras_${codigoEmp}"]`);
     inputs.forEach(input => {
-        if (input.type === 'time' || input.type === 'number') {
-            input.value = '';
-        }
-        if (!input.name.startsWith('horas_extras_')) {
-            input.disabled = true; // Bloquear los inputs por defecto excepto horas extras
-        }
+        input.disabled = inasistencia;
+        if (inasistencia) input.value = '';
     });
 
-    const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-    checkboxes.forEach(checkbox => {
-        checkbox.checked = false;
-    });
+    if (inasistencia) {
+        document.querySelector(`[name="total_${codigoEmp}"]`).value = '0.00';
+    }
+
+    // Restablecer los totales de horas por proceso
+    for (let i = 1; i <= 6; i++) {
+        const totalProcesoField = document.querySelector(`[name="total_proceso${i}_${codigoEmp}"]`);
+        if (totalProcesoField) {
+            totalProcesoField.value = '0.00';
+        }
+    }
 
     sumarHorasPorProceso();
+}
+function restablecerFormulario() {
+    const filasEmpleados = document.querySelectorAll('#empleados_tbody tr');
+
+    filasEmpleados.forEach(fila => {
+        // Limpiar los campos de horas, procesos y horas extras
+        const inputs = fila.querySelectorAll('input[type="time"], input[type="number"], input[type="text"]');
+        inputs.forEach(input => {
+            input.value = ''; // Limpiar el valor de los campos de tiempo y número
+            input.disabled = true; // Bloquear los inputs por defecto
+        });
+
+        // Restablecer los checkboxes
+        const checkboxes = fila.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = false; // Desmarcar todos los checkboxes
+        });
+
+        // Limpiar los campos de selección de procesos
+        const selects = fila.querySelectorAll('select[name^="proceso"]');
+        selects.forEach(select => {
+            select.selectedIndex = 0; // Restablecer el valor del selector al primer elemento
+            const procesoNum = select.name.match(/\d+/)[0]; // Obtener el número del proceso
+            const inputsProceso = fila.querySelectorAll(`[name="inicio_proceso${procesoNum}_${fila.dataset.codigo_emp}"], [name="fin_proceso${procesoNum}_${fila.dataset.codigo_emp}"]`);
+            inputsProceso.forEach(input => {
+                input.disabled = true; // Deshabilitar los campos de entrada asociados
+                input.value = ''; // Limpiar el valor de los campos de hora de inicio y fin
+            });
+        });
+    });
+
+    // Restablecer los totales de horas por proceso
+    for (let i = 1; i <= 6; i++) {
+        const totalProcesoField = document.querySelector(`#total_proceso${i}`);
+        if (totalProcesoField) {
+            totalProcesoField.textContent = '0.00'; // Restablecer los totales de horas a 0
+        }
+    }
+
+    // Mostrar la tabla de empleados si hay empleados en el nuevo departamento
+    filtrarEmpleados();
 }
