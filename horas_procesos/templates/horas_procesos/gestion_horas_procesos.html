@@ -32,11 +32,17 @@
             });
         }
     });
+
+    function validarFormulario() {
+        return validarHorasRegistradas(); // Llamar a la función de validación antes de enviar el formulario
+    }
 </script>
 {% endblock %}
 {% block content %}
 <div class="container mt-4">
     <h2 class="mb-4 text-center">Gestión de Procesos y Horas Extras</h2>
+    <!-- Elemento de alerta -->
+    <div id="alerta" class="alert alert-danger" style="display: none;"></div>
     <form method="post" onsubmit="return validarFormulario()">
         {% csrf_token %}
         <p class="text-center">Reporte Diario de Coordinador</p>
