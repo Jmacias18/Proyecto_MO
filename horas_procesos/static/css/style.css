@@ -1,0 +1,18 @@
+.table-wrapper {
+    position: relative;
+    max-height: 400px; /* Ajusta la altura según sea necesario */
+    overflow-y: auto;
+}
+
+.table-wrapper table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.table-wrapper th {
+    position: sticky;
+    top: 0;
+    background: #fff; /* Fondo blanco para las cabeceras */
+    z-index: 1; /* Asegura que las cabeceras estén por encima del contenido */
+    box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.4); /* Añade una sombra para mayor visibilidad */
+}

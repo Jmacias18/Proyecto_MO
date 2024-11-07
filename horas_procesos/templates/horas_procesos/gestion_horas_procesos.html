@@ -36,13 +36,54 @@
     function validarFormulario() {
         return validarHorasRegistradas(); // Llamar a la función de validación antes de enviar el formulario
     }
+
+    function mostrarAlerta(mensaje) {
+        const alerta = document.getElementById('alerta');
+        alerta.querySelector('.alerta-mensaje').textContent = mensaje;
+        alerta.style.display = 'block';
+    }
+
+    function cerrarAlerta() {
+        const alerta = document.getElementById('alerta');
+        alerta.style.display = 'none';
+    }
 </script>
 {% endblock %}
 {% block content %}
+<style>
+ /* Estilo para la alerta centrada */
+    .alerta-centrada {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 1050; /* Asegura que la alerta esté por encima de otros elementos */
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+        padding: 20px;
+        border-radius: 5px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        display: none; /* Ocultar por defecto */
+    }
+
+    .alerta-centrada .close-btn {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: none;
+        border: none;
+        font-size: 20px;
+        cursor: pointer;
+    }
+</style>
 <div class="container mt-4">
     <h2 class="mb-4 text-center">Gestión de Procesos y Horas Extras</h2>
     <!-- Elemento de alerta -->
-    <div id="alerta" class="alert alert-danger" style="display: none;"></div>
+    <div id="alerta" class="alerta-centrada">
+        <button class="close-btn" onclick="cerrarAlerta()">&times;</button>
+        <span class="alerta-mensaje"></span>
+    </div>
     <form method="post" onsubmit="return validarFormulario()">
         {% csrf_token %}
         <p class="text-center">Reporte Diario de Coordinador</p>
@@ -68,7 +109,7 @@
             <!-- Mostrar el total de empleados -->
             <p id="total_empleados" class="form-label" style="display: none;">Total de Empleados: 0</p>   
         </div>
-        <div id="tabla_empleados" class="table-responsive" style="display: none;">
+        <div id="tabla_empleados" class="table-wrapper" style="display: none;">
             <table class="table table-bordered table-hover table-sm">
                 <thead class="thead-dark">
                     <tr>
