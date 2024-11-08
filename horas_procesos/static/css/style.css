@@ -1,18 +1,24 @@
-.table-wrapper {
-    position: relative;
-    max-height: 400px; /* Ajusta la altura según sea necesario */
-    overflow-y: auto;
+.custom-alert {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1050;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    max-width: 300px;
+    text-align: center;
+    background-color: white;
+    border: 1px solid #ccc;
 }
 
-.table-wrapper table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.table-wrapper th {
-    position: sticky;
-    top: 0;
-    background: #fff; /* Fondo blanco para las cabeceras */
-    z-index: 1; /* Asegura que las cabeceras estén por encima del contenido */
-    box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.4); /* Añade una sombra para mayor visibilidad */
+.custom-alert .close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
 }
