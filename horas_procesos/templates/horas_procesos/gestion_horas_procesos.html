@@ -34,7 +34,7 @@
     });
 
     function validarFormulario() {
-        return validarHorasRegistradas(); // Llamar a la función de validación antes de enviar el formulario
+        return validarHorasRegistradas() && validarHorasInicioFinIguales(); 
     }
 
   
@@ -69,7 +69,7 @@
 </style>
 <div class="container mt-4">
     <h2 class="mb-4 text-center">Gestión de Procesos y Horas Extras</h2>
-    <!-- Elemento de alerta -->
+   
     <div id="alerta" class="alerta-centrada" style="display: none;">
         <button class="close-btn" onclick="cerrarAlerta()">×</button>
         <span class="alerta-mensaje"></span>
@@ -78,7 +78,7 @@
         {% csrf_token %}
         <p class="text-center">Reporte Diario de Coordinador</p>
         <div class="mb-4">
-            <!-- Mostrar la fecha actual -->
+            
             <label for="fecha" class="form-label">Fecha:</label>
             <p id="fecha" class="form-control-plaintext"></p>
         </div>
@@ -86,7 +86,7 @@
             <a href="{% url 'horas_procesos:editar_registros' %}" class="btn btn-secondary">Editar Registros Pasados</a>
         </div>
         <div class="mb-4">
-            <!-- Selector de departamento -->
+            
             <label for="depto_select" class="form-label">Selecciona un Departamento:</label>
             <select id="depto_select" class="form-select" onchange="filtrarEmpleados()">
                 <option value="" selected>Departamento</option>
@@ -96,7 +96,7 @@
             </select>
         </div>
         <div class="mb-4">
-            <!-- Mostrar el total de empleados -->
+            
             <p id="total_empleados" class="form-label" style="display: none;">Total de Empleados: 0</p>   
         </div>
         <div id="tabla_empleados" class="table-wrapper" style="display: none;">
@@ -104,7 +104,7 @@
                 <thead class="thead-dark">
                     <tr>
                         <th></th>
-                        <th>No. Empleado</th>
+                        <th>No.Emp</th>
                         <th>Empleado</th>
                         <th>Departamento</th>
                         <th>Inasistencia</th>

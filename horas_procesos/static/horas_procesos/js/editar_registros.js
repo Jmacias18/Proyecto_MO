@@ -1,8 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Ocultar la tabla de registros al cargar la página
+    
     document.getElementById('tabla_registros').style.display = 'none';
 
-    // Añadir evento de cambio al selector de fecha y departamento
+    
     document.getElementById('fecha_select').addEventListener('change', filtrarRegistros);
     document.getElementById('depto_select').addEventListener('change', filtrarRegistros);
 });
@@ -16,12 +16,12 @@ function filtrarRegistros() {
         return;
     }
 
-    // Llamada AJAX para obtener los registros filtrados por fecha y departamento
+    
     fetch(`/horas_procesos/obtener_registros?fecha=${fechaSeleccionada}&departamento=${deptoSeleccionado}`)
         .then(response => response.json())
         .then(data => {
             const tbody = document.getElementById('registros_tbody');
-            tbody.innerHTML = ''; // Limpiar el contenido anterior
+            tbody.innerHTML = ''; 
 
             data.registros.forEach(registro => {
                 const row = document.createElement('tr');

@@ -7,12 +7,12 @@
     <form method="post" onsubmit="return validarFormulario()">
         {% csrf_token %}
         <div class="mb-4">
-            <!-- Selector de fecha -->
+            
             <label for="fecha_select" class="form-label">Selecciona una Fecha:</label>
             <input type="date" id="fecha_select" class="form-control" onchange="filtrarRegistros()">
         </div>
         <div class="mb-4">
-            <!-- Selector de departamento -->
+            
             <label for="depto_select" class="form-label">Selecciona un Departamento:</label>
             <select id="depto_select" class="form-select" onchange="filtrarRegistros()">
                 <option value="" selected>Departamento</option>
@@ -40,7 +40,7 @@
                     </tr>
                 </thead>
                 <tbody id="registros_tbody">
-                    <!-- Los registros se cargarán aquí -->
+                    
                 </tbody>
             </table>
         </div>

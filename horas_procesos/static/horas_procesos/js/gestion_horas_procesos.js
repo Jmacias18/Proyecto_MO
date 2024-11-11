@@ -34,7 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Añadir evento de envío al formulario para realizar la validación
     const form = document.querySelector('form');
     form.addEventListener('submit', (event) => {
-        if (!validarHorasRegistradas()) {
+        if (!validarHorasRegistradas() || !validarHorasInicioFinIguales()) {
             event.preventDefault(); // Evitar el envío del formulario si la validación falla
         }
     });
@@ -68,6 +68,33 @@ function showAlert(message, type) {
 function cerrarAlerta() {
     const alerta = document.getElementById('alerta');
     alerta.style.display = 'none';
+}
+function validarHorasInicioFinIguales() {
+    const filasEmpleados = document.querySelectorAll('#empleados_tbody tr');
+    let valid = true;
+    let mensajeAlerta = '';
+
+    filasEmpleados.forEach(fila => {
+        if (fila.style.display !== 'none') { // Solo validar empleados visibles
+            const codigoEmp = fila.dataset.codigo_emp;
+
+            for (let i = 1; i <= 6; i++) {
+                const inicio = document.querySelector(`[name="inicio_proceso${i}_${codigoEmp}"]`).value;
+                const fin = document.querySelector(`[name="fin_proceso${i}_${codigoEmp}"]`).value;
+
+                if (inicio && fin && inicio === fin) {
+                    mensajeAlerta += `El empleado con código ${codigoEmp} tiene horas de inicio y fin iguales en el proceso ${i}.\n`;
+                    valid = false;
+                }
+            }
+        }
+    });
+
+    if (!valid) {
+        showAlert(mensajeAlerta, 'danger');
+    }
+
+    return valid;
 }
 function restablecerFormulario() {
     const filasEmpleados = document.querySelectorAll('#empleados_tbody tr');
@@ -295,11 +322,10 @@ function handleCheckboxChange(event) {
     const proceso = checkbox.dataset.proceso;
     const emp = checkbox.dataset.emp;
     const row = checkbox.closest('tr');
-    const prevRow = getPreviousRow(row, proceso);
+    const prevRow = getPreviousRowWithProceso(row, proceso);
 
     const inicioInput = row.querySelector(`input[name="inicio_proceso${proceso}_${emp}"]`);
     const finInput = row.querySelector(`input[name="fin_proceso${proceso}_${emp}"]`);
-    
 
     // Validar que los elementos de entrada existen
     if (!inicioInput || !finInput) {
@@ -324,11 +350,24 @@ function handleCheckboxChange(event) {
         inicioInput.value = inicioInput.dataset.originalValue || '';
         finInput.value = finInput.dataset.originalValue || '';
 
-
         calcularTotalHoras(emp, proceso);
     }
 
     sumarHorasPorProceso();
+}
+
+function getPreviousRowWithProceso(currentRow, proceso) {
+    const deptoActual = currentRow.getAttribute('data-depto');
+    let prevRow = currentRow.previousElementSibling;
+    while (prevRow) {
+        const prevInicioInput = prevRow.querySelector(`input[name="inicio_proceso${proceso}_${prevRow.dataset.codigo_emp}"]`);
+        const prevFinInput = prevRow.querySelector(`input[name="fin_proceso${proceso}_${prevRow.dataset.codigo_emp}"]`);
+        if (prevRow.getAttribute('data-depto') === deptoActual && prevInicioInput && prevFinInput && prevInicioInput.value && prevFinInput.value) {
+            return prevRow;
+        }
+        prevRow = prevRow.previousElementSibling;
+    }
+    return null;
 }
 
 function getPreviousRow(currentRow, proceso) {
@@ -404,11 +443,25 @@ function toggleProcesoInputs(procesoNum) {
 function ajustarHoraFin(codigoEmp, procesoNum) {
     const inicioField = document.querySelector(`[name="inicio_proceso${procesoNum}_${codigoEmp}"]`);
     const finField = document.querySelector(`[name="fin_proceso${procesoNum}_${codigoEmp}"]`);
-    
-    // Validar que los elementos de entrada existen
+    const procesoSelect = document.querySelector(`[name="proceso${procesoNum}_header"]`);
+
+    // Verificar si el proceso está seleccionado
+    if (!procesoSelect || !procesoSelect.value) {
+        console.error(`El proceso ${procesoNum} no está seleccionado para el empleado ${codigoEmp}`);
+        return;
+    }
+
     if (!inicioField || !finField) {
         console.error(`No se encontraron los elementos de entrada para el proceso ${procesoNum} y el empleado ${codigoEmp}`);
         return;
+    }
+
+    // Obtener la hora de fin del proceso anterior
+    if (procesoNum > 1) {
+        const finAnteriorField = document.querySelector(`[name="fin_proceso${procesoNum - 1}_${codigoEmp}"]`);
+        if (finAnteriorField && finAnteriorField.value) {
+            inicioField.value = finAnteriorField.value;
+        }
     }
 
     if (!inicioField.value) return;
@@ -421,7 +474,6 @@ function ajustarHoraFin(codigoEmp, procesoNum) {
 
     const [inicioHoras, inicioMinutos] = inicioField.value.split(':').map(Number);
 
-    // Validar que las horas y minutos son números válidos
     if (isNaN(inicioHoras) || isNaN(inicioMinutos)) {
         console.error(`Horas o minutos inválidos para el proceso ${procesoNum} y el empleado ${codigoEmp}`);
         finField.value = '';
@@ -437,14 +489,15 @@ function ajustarHoraFin(codigoEmp, procesoNum) {
     for (let i = procesoNum + 1; i <= 6; i++) {
         const siguienteInicioField = document.querySelector(`[name="inicio_proceso${i}_${codigoEmp}"]`);
         const siguienteFinField = document.querySelector(`[name="fin_proceso${i}_${codigoEmp}"]`);
-        
-        if (!siguienteInicioField || !siguienteFinField) continue;
+        const siguienteProcesoSelect = document.querySelector(`[name="proceso${i}_header"]`);
+
+        // Verificar si el siguiente proceso está seleccionado
+        if (!siguienteInicioField || !siguienteFinField || !siguienteProcesoSelect || !siguienteProcesoSelect.value) continue;
 
         siguienteInicioField.value = ajustarHora(horas, minutos);
         [horas, minutos] = siguienteInicioField.value.split(':').map(Number);
         siguienteFinField.value = ajustarHora(horas, minutos);
 
-        // Calcular las horas para el siguiente proceso
         calcularTotalHoras(codigoEmp, i);
     }
 }
