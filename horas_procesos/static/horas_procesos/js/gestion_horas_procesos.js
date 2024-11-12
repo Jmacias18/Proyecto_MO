@@ -59,10 +59,6 @@ function showAlert(message, type) {
     alerta.querySelector('.alerta-mensaje').innerHTML = message.replace(/\n/g, '<br>'); // Reemplazar saltos de línea con <br>
     alerta.className = `alerta-centrada alert alert-${type}`;
     alerta.style.display = 'block';
-
-    setTimeout(() => {
-        alerta.style.display = 'none';
-    }, 5000);
 }
 
 function cerrarAlerta() {
@@ -195,27 +191,29 @@ function validarHorasInicioFinIguales() {
 
 function validarHorasRegistradas() {
     const filasEmpleados = document.querySelectorAll('#empleados_tbody tr');
+    const deptoSeleccionado = document.getElementById('depto_select').value;
     let valid = true;
     let mensajeAlerta = '';
 
     filasEmpleados.forEach(fila => {
-        if (fila.style.display !== 'none') { // Solo validar empleados visibles
-            const codigoEmp = fila.dataset.codigo_emp;
-            const inasistencia = document.querySelector(`[name="inasistencia_${codigoEmp}"]`).checked;
-            const deleteCheckbox = fila.querySelector('.delete-checkbox').checked;
+        const deptoEmpleado = fila.getAttribute('data-depto');
+        const codigoEmp = fila.dataset.codigo_emp;
+        const inasistencia = document.querySelector(`[name="inasistencia_${codigoEmp}"]`).checked;
 
-            // Verificar si el empleado no tiene inasistencia ni está marcado para eliminar
-            if (!inasistencia && !deleteCheckbox) {
-                let tieneHorasRegistradas = false;
-                let horasRegistradas = new Set();
-                let horarios = [];
-                for (let i = 1; i <= 6; i++) {
+        if (deptoEmpleado === deptoSeleccionado && !inasistencia) {
+            let tieneHorasRegistradas = false;
+            let horasRegistradas = new Set();
+            let horarios = [];
+
+            for (let i = 1; i <= 6; i++) {
+                const procesoSelect = document.querySelector(`[name="proceso${i}_header"]`);
+
+                if (procesoSelect && procesoSelect.value) {
                     const inicio = document.querySelector(`[name="inicio_proceso${i}_${codigoEmp}"]`);
                     const fin = document.querySelector(`[name="fin_proceso${i}_${codigoEmp}"]`);
-                    const procesoSelect = document.querySelector(`[name="proceso${i}_header"]`);
 
                     // Verificar si el campo de inicio y fin no están deshabilitados y contienen valores
-                    if (inicio && fin && procesoSelect && !inicio.disabled && !fin.disabled) {
+                    if (inicio && fin && !inicio.disabled && !fin.disabled) {
                         if (!inicio.value || !fin.value) {
                             mensajeAlerta += `El empleado con código ${codigoEmp} tiene campos de inicio o fin vacíos en el proceso ${i}.\n`;
                             valid = false;
@@ -232,29 +230,29 @@ function validarHorasRegistradas() {
                         }
                     }
                 }
+            }
 
-                // Verificar si hay horas solapadas
-                horarios.sort((a, b) => a.inicio.localeCompare(b.inicio));
-                for (let i = 0; i < horarios.length - 1; i++) {
-                    if (horarios[i].fin > horarios[i + 1].inicio) {
-                        mensajeAlerta += `El empleado con código ${codigoEmp} tiene horas solapadas entre los procesos.\n`;
-                        valid = false;
-                        break;
-                    }
-                }
-
-                // Si no tiene horas registradas en ningún campo desbloqueado
-                if (!tieneHorasRegistradas) {
-                    mensajeAlerta += `El empleado con código ${codigoEmp} no tiene horas registradas en ningún proceso.\n`;
+            // Verificar si hay horas solapadas
+            horarios.sort((a, b) => a.inicio.localeCompare(b.inicio));
+            for (let i = 0; i < horarios.length - 1; i++) {
+                if (horarios[i].fin > horarios[i + 1].inicio) {
+                    mensajeAlerta += `El empleado con código ${codigoEmp} tiene horas solapadas entre los procesos.\n`;
                     valid = false;
+                    break;
                 }
+            }
+
+            // Si no tiene horas registradas en ningún campo desbloqueado
+            if (!tieneHorasRegistradas) {
+                mensajeAlerta += `El empleado con código ${codigoEmp} no tiene horas registradas en ningún proceso.\n`;
+                valid = false;
             }
         }
     });
 
     // Si no es válido, mostramos el mensaje de alerta
     if (!valid) {
-        showAlert(mensajeAlerta);
+        showAlert(mensajeAlerta, 'danger');
     }
 
     return valid;
