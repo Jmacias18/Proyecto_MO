@@ -135,7 +135,7 @@ function filtrarEmpleados() {
     let contador = 1;
     let totalEmpleados = 0;
 
-    // Restablecer el formulario antes de filtrar empleados
+    // Restablecer el formulario antes de filtrar
     restablecerFormulario();
 
     if (deptoSeleccionado === "") {
@@ -156,7 +156,7 @@ function filtrarEmpleados() {
     });
 
     document.getElementById('total_empleados').textContent = `Total de Empleados: ${totalEmpleados}`;
-    document.getElementById('total_empleados').style.display = 'block'; // Mostrar total_empleados
+    document.getElementById('total_empleados').style.display = 'block'; 
     document.getElementById('tabla_empleados').style.display = totalEmpleados > 0 ? 'block' : 'none';
     sumarHorasPorProceso();
 }
