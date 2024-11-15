@@ -1,13 +1,14 @@
-from django.shortcuts import render, redirect
+from datetime import datetime
+from django.shortcuts import render, redirect, get_object_or_404
 from .forms import HorasProcesosForm
 from procesos.models import Empleados, Procesos
 from .models import Horasprocesos
 from django.utils import timezone
-import subprocess
-import os
-from django.http import JsonResponse
+from django.db.models import Sum
 from django.views.decorators.csrf import csrf_exempt
-
+import os
+import subprocess
+from django.http import JsonResponse
 def gestion_horas_procesos(request):
     if request.method == 'POST':
         for empleado in Empleados.objects.all():
@@ -33,15 +34,19 @@ def gestion_horas_procesos(request):
                     sync=False
                 )
             else:
-                
                 for i in range(1, 7):
                     id_proceso = request.POST.get(f'proceso{i}_header')
                     hora_entrada = request.POST.get(f'inicio_proceso{i}_{codigo_emp}') or None
                     hora_salida = request.POST.get(f'fin_proceso{i}_{codigo_emp}') or None
-                    total_hrs_proceso = request.POST.get(f'total_proceso{i}_{codigo_emp}', None)
-                    total_hrs_proceso = float(total_hrs_proceso) if total_hrs_proceso and total_hrs_proceso.strip() else 0
 
                     if id_proceso and hora_entrada and hora_salida:
+                        # Calcular las horas trabajadas
+                        formato = '%H:%M'
+                        hora_entrada_dt = datetime.strptime(hora_entrada, formato)
+                        hora_salida_dt = datetime.strptime(hora_salida, formato)
+                        diferencia = hora_salida_dt - hora_entrada_dt
+                        horas_trabajadas = diferencia.total_seconds() / 3600
+
                         Horasprocesos.objects.create(
                             fecha_hrspro=timezone.now().date(),
                             codigo_emp=empleado,
@@ -49,8 +54,8 @@ def gestion_horas_procesos(request):
                             id_pro=id_proceso,
                             horaentrada=hora_entrada,
                             horasalida=hora_salida,
-                            hrs=total_hrs_proceso,
-                            totalhrs=total_hrs_proceso + horas_extras, 
+                            hrs=horas_trabajadas,
+                            totalhrs=horas_trabajadas + horas_extras,
                             hrsextras=horas_extras,
                             autorizado=False,
                             sync=False
@@ -62,11 +67,13 @@ def gestion_horas_procesos(request):
     empleados = Empleados.objects.all()
     procesos = Procesos.objects.filter(estado_pro=True)  # Filtrar solo los procesos activos
     departamentos = Empleados.objects.values_list('depto_emp', flat=True).distinct()
+    rango_procesos = range(1, 7)  # Generar el rango de números del 1 al 6
     return render(request, 'horas_procesos/gestion_horas_procesos.html', {
         'form': form,
         'empleados': empleados,
         'procesos': procesos,
         'departamentos': departamentos,
+        'rango_procesos': rango_procesos,  # Pasar el rango al contexto
     })
 
 
@@ -83,36 +90,70 @@ def sync_to_server_view(request):
             return JsonResponse({'status': 'error', 'message': str(e)})
     return JsonResponse({'status': 'error', 'message': 'Método no permitido.'})
 
+from django.shortcuts import render
+from .models import Horasprocesos, Empleados
+from collections import defaultdict
+from datetime import date
 
-def editar_registros(request):
-    # Lógica de la vista para editar registros pasados
-    departamentos = Empleados.objects.values_list('depto_emp', flat=True).distinct()
-    return render(request, 'horas_procesos/editar_registros.html', {'departamentos': departamentos})
 
-def obtener_registros(request):
-    fecha = request.GET.get('fecha')
-    departamento = request.GET.get('departamento')
+
+def actualizar_horas_procesos(request):
+    departamento_seleccionado = request.GET.get('departamento', None)
+    fecha_seleccionada = request.GET.get('fecha', None)
     
-    empleados = Empleados.objects.filter(depto_emp=departamento)
-    registros_data = []
-    for empleado in empleados:
-        registros = Horasprocesos.objects.filter(fecha_hrspro=fecha, codigo_emp=empleado)
-        registro_data = {
-            'codigo_emp': empleado.codigo_emp,
-            'nombre_emp': empleado.nombre_emp,
-            'depto_emp': empleado.depto_emp,
-            'asistencia': False,
-            'hrsextras': 0,
-            'totalhrs': 0
+    registros = Horasprocesos.objects.all()
+    empleados = Empleados.objects.all()
+    empleados_dict = {empleado.codigo_emp: empleado.depto_emp for empleado in empleados}
+
+    if departamento_seleccionado:
+        empleados = empleados.filter(depto_emp=departamento_seleccionado)
+        registros = registros.filter(codigo_emp__depto_emp=departamento_seleccionado)
+    
+    if fecha_seleccionada:
+        fecha_seleccionada = datetime.strptime(fecha_seleccionada, '%Y-%m-%d').date()
+        registros = registros.filter(fecha_hrspro=fecha_seleccionada)
+
+    # Agrupar registros por empleado
+    registros_por_empleado = defaultdict(list)
+    for registro in registros:
+        registros_por_empleado[registro.codigo_emp.codigo_emp].append(registro)
+
+    # Crear una lista de registros combinados
+    registros_combinados = []
+    for codigo_emp, registros in registros_por_empleado.items():
+        registro_combinado = {
+            'codigo_emp': codigo_emp,
+            'nombre_emp': registros[0].codigo_emp.nombre_emp,
+            'depto_emp': empleados_dict[codigo_emp],
+            'procesos': registros
         }
-        for i in range(1, 7):
-            proceso = registros.filter(id_pro=i).first()
-            if proceso:
-                registro_data[f'inicio_proceso{i}'] = proceso.horaentrada
-                registro_data[f'fin_proceso{i}'] = proceso.horasalida
-                registro_data[f'total_proceso{i}'] = proceso.hrs
-                registro_data['asistencia'] = proceso.asistencia
-                registro_data['hrsextras'] = proceso.hrsextras
-                registro_data['totalhrs'] = proceso.totalhrs
-        registros_data.append(registro_data)
-    return JsonResponse({'registros': registros_data})
+        registros_combinados.append(registro_combinado)
+
+    departamentos = Empleados.objects.values_list('depto_emp', flat=True).distinct()
+
+    if request.method == 'POST':
+        if 'edit' in request.POST:
+            # Editar registro
+            registro_id = request.POST.get('edit')
+            registro = get_object_or_404(Horasprocesos, id_hrspro=registro_id)
+            registro.horaentrada = request.POST.get(f'horaentrada_{registro_id}')
+            registro.horasalida = request.POST.get(f'horasalida_{registro_id}')
+            registro.hrs = float(request.POST.get(f'hrs_{registro_id}').replace(',', '.'))
+            registro.totalhrs = float(request.POST.get(f'totalhrs_{registro_id}').replace(',', '.'))
+            registro.hrsextras = float(request.POST.get(f'hrsextras_{registro_id}').replace(',', '.'))
+            registro.asistencia = 0 if request.POST.get(f'inasistencia_{registro_id}') else 1
+            registro.save()
+            return redirect('horas_procesos:actualizar_horas_procesos')
+        elif 'delete' in request.POST:
+            # Eliminar registro
+            registro_id = request.POST.get('delete')
+            registro = get_object_or_404(Horasprocesos, id_hrspro=registro_id)
+            registro.delete()
+            return redirect('horas_procesos:actualizar_horas_procesos')
+
+    return render(request, 'horas_procesos/actualizar_horas_procesos.html', {
+        'registros_combinados': registros_combinados,
+        'departamentos': departamentos,
+        'departamento_seleccionado': departamento_seleccionado,
+        'fecha_seleccionada': fecha_seleccionada,
+    })

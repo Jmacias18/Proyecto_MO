@@ -2,21 +2,23 @@ document.addEventListener('DOMContentLoaded', () => {
     const now = new Date();
     document.getElementById('fecha').textContent = now.toLocaleDateString();
 
-    // Ocultar la tabla de empleados al cargar la página
     document.getElementById('tabla_empleados').style.display = 'none';
 
-    // Delegación de eventos para los checkboxes
     document.getElementById('empleados_tbody').addEventListener('change', (event) => {
-        if (event.target.classList.contains('copy-checkbox')) {
+        const target = event.target;
+        if (target.classList.contains('copy-checkbox')) {
             handleCheckboxChange(event);
-        } else if (event.target.classList.contains('delete-checkbox')) {
+        } else if (target.classList.contains('delete-checkbox')) {
             handleDeleteCheckboxChange(event);
-        } else if (event.target.classList.contains('inasistencia-checkbox')) {
-            toggleInputs(event.target.dataset.codigoEmp);
+        } else if (target.classList.contains('inasistencia-checkbox')) {
+            toggleInputs(target.dataset.codigoEmp);
+        } else if (target.name.startsWith('horas_extras_')) {
+            const codigoEmp = target.name.split('_')[2];
+            if (target.value < 0) target.value = 0;
+            calcularTotalHoras(codigoEmp, 0);
         }
     });
 
-    // Añadir eventos de cambio a los campos de horas extras
     document.querySelectorAll('[name^="horas_extras_"]').forEach(input => {
         input.addEventListener('input', () => {
             const codigoEmp = input.name.split('_')[2];
@@ -25,13 +27,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Añadir evento de cambio al selector de departamento
     document.getElementById('depto_select').addEventListener('change', () => {
         restablecerFormulario();
         filtrarEmpleados();
     });
 
-    // Añadir evento de envío al formulario para realizar la validación
     const form = document.querySelector('form');
     form.addEventListener('submit', (event) => {
         if (!validarHorasRegistradas() || !validarHorasInicioFinIguales()) {
@@ -39,13 +39,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Evitar el envío del formulario al presionar Enter
     form.addEventListener('keydown', (event) => {
         if (event.key === 'Enter') {
             event.preventDefault(); // Evitar el envío del formulario al presionar Enter
         }
     });
 });
+
 
 document.querySelectorAll('[name^="horas_extras_"]').forEach(input => {
     input.addEventListener('input', () => {
@@ -54,6 +54,8 @@ document.querySelectorAll('[name^="horas_extras_"]').forEach(input => {
         calcularTotalHoras(codigoEmp, 0); // Recalcular el total
     });
 });
+
+
 function showAlert(message, type) {
     const alerta = document.getElementById('alerta');
     alerta.querySelector('.alerta-mensaje').innerHTML = message.replace(/\n/g, '<br>'); // Reemplazar saltos de línea con <br>
@@ -135,12 +137,9 @@ function filtrarEmpleados() {
     let contador = 1;
     let totalEmpleados = 0;
 
-    // Restablecer el formulario antes de filtrar
-    restablecerFormulario();
-
     if (deptoSeleccionado === "") {
         document.getElementById('tabla_empleados').style.display = 'none';
-        document.getElementById('total_empleados').style.display = 'none'; // Ocultar total_empleados
+        document.getElementById('total_empleados').style.display = 'none';
         return;
     }
 
@@ -156,9 +155,8 @@ function filtrarEmpleados() {
     });
 
     document.getElementById('total_empleados').textContent = `Total de Empleados: ${totalEmpleados}`;
-    document.getElementById('total_empleados').style.display = 'block'; 
+    document.getElementById('total_empleados').style.display = 'block';
     document.getElementById('tabla_empleados').style.display = totalEmpleados > 0 ? 'block' : 'none';
-    sumarHorasPorProceso();
 }
 function validarHorasInicioFinIguales() {
     const filasEmpleados = document.querySelectorAll('#empleados_tbody tr');
@@ -182,7 +180,7 @@ function validarHorasInicioFinIguales() {
     });
 
     if (!valid) {
-        showAlert(mensajeAlerta);
+        showAlert(mensajeAlerta, 'danger');
     }
 
     return valid;
@@ -257,7 +255,6 @@ function validarHorasRegistradas() {
 
     return valid;
 }
-
 
 
 
@@ -449,10 +446,10 @@ function ajustarHoraFin(codigoEmp, procesoNum) {
         return;
     }
 
-    if (!inicioField || !finField) {
+   /*  if (!inicioField || !finField) {
         console.error(`No se encontraron los elementos de entrada para el proceso ${procesoNum} y el empleado ${codigoEmp}`);
         return;
-    }
+    } */
 
     // Obtener la hora de fin del proceso anterior
     if (procesoNum > 1) {

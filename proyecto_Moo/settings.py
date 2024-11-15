@@ -145,4 +145,4 @@ LOGIN_REDIRECT_URL = 'home'
 LOGOUT_REDIRECT_URL = 'home'
 # settings.py
 LOGIN_URL = 'login'
-DATA_UPLOAD_MAX_NUMBER_FIELDS = 100000  # Ajusta este valor según tus necesidades
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 1000000  # Ajusta este valor según tus necesidades

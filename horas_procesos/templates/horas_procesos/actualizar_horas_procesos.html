@@ -1,0 +1,96 @@
+{% extends 'core/base.html' %}
+{% load static %}
+{% block title %}Actualizar Horas de Procesos{% endblock %}
+{% block content %}
+<form method="get" action="{% url 'horas_procesos:actualizar_horas_procesos' %}">
+    <div class="form-group">
+        <label for="departamento">Filtrar por Departamento:</label>
+        <select name="departamento" id="departamento" class="form-control">
+            <option value="">Todos</option>
+            {% for depto in departamentos %}
+            <option value="{{ depto }}" {% if depto == departamento_seleccionado %}selected{% endif %}>{{ depto }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="form-group">
+        <label for="fecha">Filtrar por Fecha:</label>
+        <input type="date" name="fecha" id="fecha" class="form-control" value="{{ fecha_seleccionada|date:'Y-m-d' }}">
+    </div>
+    <button type="submit" class="btn btn-primary">Filtrar</button>
+</form>
+
+<form method="post" action="{% url 'horas_procesos:actualizar_horas_procesos' %}">
+    {% csrf_token %}
+    <h2 class="text-center my-4">Actualizar Horas de Procesos</h2>
+    <div id="tabla_empleados" class="table-responsive">
+        <table class="table table-bordered table-hover table-sm">
+            <thead class="thead-dark">
+                <tr>
+                    <th>Codigo_Emp</th>
+                    <th>Nombre</th>
+                    <th>Departamento</th>
+                    <th>Procesos</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for registro in registros_combinados %}
+                <tr>
+                    <td>{{ registro.codigo_emp }}</td>
+                    <td>{{ registro.nombre_emp }}</td>
+                    <td>{{ registro.depto_emp }}</td>
+                    <td>
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover table-sm mb-0">
+                                <thead class="thead-light">
+                                    <tr>
+                                        <th>ID_Proceso</th>
+                                        <th>Nombre_Proceso</th>
+                                        <th>HoraEntrada</th>
+                                        <th>HoraSalida</th>
+                                        <th>Hrs</th>
+                                        <th>TotalHrs</th>
+                                        <th>HrsExtras</th>
+                                        <th>Inasistencia</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for proceso in registro.procesos %}
+                                    <tr>
+                                        <td>{{ proceso.id_hrspro }}</td>
+                                        <td>{{ proceso.id_pro.nombre_proceso }}</td>
+                                        <td>
+                                            <input type="text" name="horaentrada_{{ proceso.id_hrspro }}" value="{{ proceso.horaentrada }}" class="form-control">
+                                        </td>
+                                        <td>
+                                            <input type="text" name="horasalida_{{ proceso.id_hrspro }}" value="{{ proceso.horasalida }}" class="form-control">
+                                        </td>
+                                        <td>
+                                            <input type="text" name="hrs_{{ proceso.id_hrspro }}" value="{{ proceso.hrs|floatformat:2 }}" class="form-control">
+                                        </td>
+                                        <td>
+                                            <input type="text" name="totalhrs_{{ proceso.id_hrspro }}" value="{{ proceso.totalhrs|floatformat:2 }}" class="form-control">
+                                        </td>
+                                        <td>
+                                            <input type="text" name="hrsextras_{{ proceso.id_hrspro }}" value="{{ proceso.hrsextras|floatformat:2 }}" class="form-control">
+                                        </td>
+                                        <td>
+                                            <input type="checkbox" name="inasistencia_{{ proceso.id_hrspro }}" {% if proceso.asistencia == 0 %}checked{% endif %}>
+                                        </td>
+                                        <td>
+                                            <button type="submit" name="edit" value="{{ proceso.id_hrspro }}" class="btn btn-primary">Editar</button>
+                                            <button type="submit" name="delete" value="{{ proceso.id_hrspro }}" class="btn btn-danger">Eliminar</button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</form>
+{% endblock %}

@@ -74,19 +74,17 @@
         <button class="close-btn" onclick="cerrarAlerta()">×</button>
         <span class="alerta-mensaje"></span>
     </div>
-    <form method="post" onsubmit="return validarFormulario()">
+    <form method="post" action="{% url 'horas_procesos:gestion_horas_procesos' %}" onsubmit="return validarFormulario()">
         {% csrf_token %}
         <p class="text-center">Reporte Diario de Coordinador</p>
         <div class="mb-4">
-            
             <label for="fecha" class="form-label">Fecha:</label>
             <p id="fecha" class="form-control-plaintext"></p>
         </div>
         <div class="text-center mt-4">
-            <a href="{% url 'horas_procesos:editar_registros' %}" class="btn btn-secondary">Editar Registros Pasados</a>
+            <a href="{% url 'horas_procesos:actualizar_horas_procesos' %}" class="btn btn-secondary">Administracion de Registros</a>
         </div>
         <div class="mb-4">
-            
             <label for="depto_select" class="form-label">Selecciona un Departamento:</label>
             <select id="depto_select" class="form-select" onchange="filtrarEmpleados()">
                 <option value="" selected>Departamento</option>
@@ -96,7 +94,6 @@
             </select>
         </div>
         <div class="mb-4">
-            
             <p id="total_empleados" class="form-label" style="display: none;">Total de Empleados: 0</p>   
         </div>
         <div id="tabla_empleados" class="table-wrapper" style="display: none;">
@@ -108,54 +105,16 @@
                         <th>Empleado</th>
                         <th>Departamento</th>
                         <th>Inasistencia</th>
-                        <th>
-                            <select class="form-select form-select-sm" name="proceso1_header" onchange="toggleProcesoInputs(1)">
-                                <option value="" disabled selected>Proceso 1</option>
-                                {% for proceso in procesos %}
-                                <option value="{{ proceso.id_pro }}">{{ proceso.nombre_pro }}</option>
-                                {% endfor %}
-                            </select>
-                        </th>
-                        <th>
-                            <select class="form-select form-select-sm" name="proceso2_header" onchange="toggleProcesoInputs(2)">
-                                <option value="" disabled selected>Proceso 2</option>
-                                {% for proceso in procesos %}
-                                <option value="{{ proceso.id_pro }}">{{ proceso.nombre_pro }}</option>
-                                {% endfor %}
-                            </select>
-                        </th>
-                        <th>
-                            <select class="form-select form-select-sm" name="proceso3_header" onchange="toggleProcesoInputs(3)">
-                                <option value="" disabled selected>Proceso 3</option>
-                                {% for proceso in procesos %}
-                                <option value="{{ proceso.id_pro }}">{{ proceso.nombre_pro }}</option>
-                                {% endfor %}
-                            </select>
-                        </th>
-                        <th>
-                            <select class="form-select form-select-sm" name="proceso4_header" onchange="toggleProcesoInputs(4)">
-                                <option value="" disabled selected>Proceso 4</option>
-                                {% for proceso in procesos %}
-                                <option value="{{ proceso.id_pro }}">{{ proceso.nombre_pro }}</option>
-                                {% endfor %}
-                            </select>
-                        </th>
-                        <th>
-                            <select class="form-select form-select-sm" name="proceso5_header" onchange="toggleProcesoInputs(5)">
-                                <option value="" disabled selected>Proceso 5</option>
-                                {% for proceso in procesos %}
-                                <option value="{{ proceso.id_pro }}">{{ proceso.nombre_pro }}</option>
-                                {% endfor %}
-                            </select>
-                        </th>
-                        <th>
-                            <select class="form-select form-select-sm" name="proceso6_header" onchange="toggleProcesoInputs(6)">
-                                <option value="" disabled selected>Proceso 6</option>
-                                {% for proceso in procesos %}
-                                <option value="{{ proceso.id_pro }}">{{ proceso.nombre_pro }}</option>
-                                {% endfor %}
-                            </select>
-                        </th>
+                        {% for i in rango_procesos %}
+                            <th>
+                                <select class="form-select form-select-sm" name="proceso{{ i }}_header" onchange="toggleProcesoInputs({{ i }})">
+                                    <option value="" disabled selected>Proceso {{ i }}</option>
+                                    {% for proceso in procesos %}
+                                    <option value="{{ proceso.id_pro }}">{{ proceso.nombre_pro }}</option>
+                                    {% endfor %}
+                                </select>
+                            </th>
+                        {% endfor %}
                         <th>Horas Extras</th>
                         <th>Total</th>
                     </tr>
@@ -168,10 +127,10 @@
                         <td>{{ empleado.nombre_emp }}</td>
                         <td>{{ empleado.depto_emp }}</td>
                         <td>
-                            <input type="checkbox" class="form-check-input" name="inasistencia_{{ empleado.codigo_emp }}" onchange="toggleInputs('{{ empleado.codigo_emp }}')">
+                            <input type="checkbox" class="form-check-input inasistencia-checkbox" name="inasistencia_{{ empleado.codigo_emp }}" onchange="toggleInputs('{{ empleado.codigo_emp }}')">
                             <label for="inasistencia_{{ empleado.codigo_emp }}"></label>
                         </td>
-                        {% for i in "123456" %}
+                        {% for i in rango_procesos %}
                         <td>
                             <input type="checkbox" class="form-check-input copy-checkbox" data-proceso="{{ i }}" data-emp="{{ empleado.codigo_emp }}" onchange="handleCheckboxChange(event)">
                             <label for="copy-checkbox">
@@ -198,7 +157,7 @@
                 <tfoot>
                     <tr>
                         <td colspan="5" class="text-end"><strong>Total Horas:</strong></td>
-                        {% for i in "123456" %}
+                        {% for i in rango_procesos %}
                         <td id="total_proceso{{ i }}" class="text-center">0.00</td>
                         {% endfor %}
                         <td colspan="2"></td>
