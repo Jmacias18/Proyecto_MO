@@ -5,6 +5,11 @@ from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 from django.urls import reverse_lazy
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
+from django.contrib import messages
+from django.shortcuts import redirect
+import logging
+
+logger = logging.getLogger(__name__)
 
 def staff_required(user):
     return user.is_staff
@@ -34,3 +39,18 @@ class UserDeleteView(DeleteView):
     model = User
     template_name = 'usuarios/user_confirm_delete.html'
     success_url = reverse_lazy('usuarios:user_list')
+
+    def delete(self, request, *args, **kwargs):
+        # Obtener el usuario que se intenta eliminar
+        self.object = self.get_object()
+        logger.debug(f"Attempting to delete user: {self.object.username}")
+        
+        # Verificar si el usuario intenta eliminarse a sí mismo
+        if self.object == request.user:
+            logger.debug("User attempted to delete themselves.")
+            messages.error(request, "No puedes eliminar tu propio usuario.")
+            # Redirigir a la lista de usuarios en caso de error
+            return redirect(self.success_url)
+
+        # Proceder con la eliminación si la validación pasa
+        return super().delete(request, *args, **kwargs)

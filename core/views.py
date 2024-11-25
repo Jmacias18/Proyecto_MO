@@ -32,3 +32,4 @@ def sync_databases_view(request):
         except subprocess.CalledProcessError as e:
             return JsonResponse({'status': 'error', 'message': str(e)})
     return JsonResponse({'status': 'error', 'message': 'Método no permitido.'})
+

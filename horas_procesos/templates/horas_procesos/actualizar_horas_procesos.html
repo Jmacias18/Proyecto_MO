@@ -1,96 +1,575 @@
 {% extends 'core/base.html' %}
-{% load static %}
-{% block title %}Actualizar Horas de Procesos{% endblock %}
-{% block content %}
-<form method="get" action="{% url 'horas_procesos:actualizar_horas_procesos' %}">
-    <div class="form-group">
-        <label for="departamento">Filtrar por Departamento:</label>
-        <select name="departamento" id="departamento" class="form-control">
-            <option value="">Todos</option>
-            {% for depto in departamentos %}
-            <option value="{{ depto }}" {% if depto == departamento_seleccionado %}selected{% endif %}>{{ depto }}</option>
-            {% endfor %}
-        </select>
-    </div>
-    <div class="form-group">
-        <label for="fecha">Filtrar por Fecha:</label>
-        <input type="date" name="fecha" id="fecha" class="form-control" value="{{ fecha_seleccionada|date:'Y-m-d' }}">
-    </div>
-    <button type="submit" class="btn btn-primary">Filtrar</button>
-</form>
 
-<form method="post" action="{% url 'horas_procesos:actualizar_horas_procesos' %}">
-    {% csrf_token %}
-    <h2 class="text-center my-4">Actualizar Horas de Procesos</h2>
-    <div id="tabla_empleados" class="table-responsive">
-        <table class="table table-bordered table-hover table-sm">
-            <thead class="thead-dark">
-                <tr>
-                    <th>Codigo_Emp</th>
-                    <th>Nombre</th>
-                    <th>Departamento</th>
-                    <th>Procesos</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for registro in registros_combinados %}
-                <tr>
-                    <td>{{ registro.codigo_emp }}</td>
-                    <td>{{ registro.nombre_emp }}</td>
-                    <td>{{ registro.depto_emp }}</td>
-                    <td>
-                        <div class="table-responsive">
-                            <table class="table table-bordered table-hover table-sm mb-0">
-                                <thead class="thead-light">
-                                    <tr>
-                                        <th>ID_Proceso</th>
-                                        <th>Nombre_Proceso</th>
-                                        <th>HoraEntrada</th>
-                                        <th>HoraSalida</th>
-                                        <th>Hrs</th>
-                                        <th>TotalHrs</th>
-                                        <th>HrsExtras</th>
-                                        <th>Inasistencia</th>
-                                        <th>Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for proceso in registro.procesos %}
-                                    <tr>
-                                        <td>{{ proceso.id_hrspro }}</td>
-                                        <td>{{ proceso.id_pro.nombre_proceso }}</td>
-                                        <td>
-                                            <input type="text" name="horaentrada_{{ proceso.id_hrspro }}" value="{{ proceso.horaentrada }}" class="form-control">
-                                        </td>
-                                        <td>
-                                            <input type="text" name="horasalida_{{ proceso.id_hrspro }}" value="{{ proceso.horasalida }}" class="form-control">
-                                        </td>
-                                        <td>
-                                            <input type="text" name="hrs_{{ proceso.id_hrspro }}" value="{{ proceso.hrs|floatformat:2 }}" class="form-control">
-                                        </td>
-                                        <td>
-                                            <input type="text" name="totalhrs_{{ proceso.id_hrspro }}" value="{{ proceso.totalhrs|floatformat:2 }}" class="form-control">
-                                        </td>
-                                        <td>
-                                            <input type="text" name="hrsextras_{{ proceso.id_hrspro }}" value="{{ proceso.hrsextras|floatformat:2 }}" class="form-control">
-                                        </td>
-                                        <td>
-                                            <input type="checkbox" name="inasistencia_{{ proceso.id_hrspro }}" {% if proceso.asistencia == 0 %}checked{% endif %}>
-                                        </td>
-                                        <td>
-                                            <button type="submit" name="edit" value="{{ proceso.id_hrspro }}" class="btn btn-primary">Editar</button>
-                                            <button type="submit" name="delete" value="{{ proceso.id_hrspro }}" class="btn btn-danger">Eliminar</button>
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</form>
+{% block title %}Gestión Horas de Procesos{% endblock %}
+{% block head %}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 {% endblock %}
+{% block content %}
+<style>
+    .table-wrapper {
+        overflow-x: auto;
+        margin-top: 20px;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    th, td {
+        padding: 10px;
+        text-align: center;
+        border: 1px solid #ddd;
+    }
+
+    th {
+        background-color: #f2f2f2;
+        font-weight: bold;
+    }
+
+    tr:nth-child(even) {
+        background-color: #f9f9f9;
+    }
+
+    tr:hover {
+        background-color: #f1f1f1;
+    }
+
+    .form-control-sm {
+        width: 100%;
+    }
+
+    .detalle-procesos {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        font-size: 14px;
+        color: #333;
+    }
+
+    .detalle-procesos td {
+        flex: 1 1 auto;
+        min-width: 150px;
+        background-color: #f8f9fa;
+        padding: 5px;
+        border-radius: 5px;
+        text-align: center;
+    }
+
+    .total-horas {
+        background-color: #e9ecef;
+        font-weight: bold;
+        padding: 15px;
+    }
+
+    .detalle-horas {
+        background-color: #f8f9fa;
+        padding: 15px;
+    }
+
+    .alerta-centrada {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 1050;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        max-width: 300px;
+        text-align: center;
+        background-color: white;
+        border: 1px solid #ccc;
+    }
+
+    .alerta-centrada .close-btn {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: none;
+        border: none;
+        font-size: 20px;
+        cursor: pointer;
+    }
+
+    .back-icon {
+        font-size: 20px;
+        cursor: pointer;
+        margin-bottom: 20px;
+        margin-top: 20px;
+        display: block;
+        color: #333;
+    }
+    .nav-item {
+        margin-right: 15px; /* Ajusta este valor según sea necesario */
+    }
+</style>
+<br><br>
+<a href="{% url 'horas_procesos:gestion_horas_procesos' %}" class="back-icon">
+    <i class="fas fa-arrow-left"></i> Volver
+</a>
+{% block extra_scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.16.9/xlsx.full.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        if (window.location.pathname.includes('/horas_procesos/actualizar_horas_procesos/')) {
+            const navbar = document.querySelector('.navbar-nav.ms-auto');
+            const logoutButton = navbar.querySelector('form[action="/accounts/logout/"]').closest('li');
+            const syncButton = document.createElement('li');
+            syncButton.className = 'nav-item';
+            syncButton.innerHTML = `
+                <button id="sync-to-server-button" class="nav-link btn btn-link" style="padding: 0;">Sincronizar Procesos</button>
+            `;
+            navbar.insertBefore(syncButton, logoutButton);
+
+            document.getElementById('sync-to-server-button').addEventListener('click', function(event) {
+                event.preventDefault();  // Evitar el comportamiento predeterminado del botón
+                fetch("{% url 'horas_procesos:sync_to_server' %}", {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    alert(data.message);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Ocurrió un error durante la sincronización.');
+                });
+            });
+        }
+    });
+const actualizarTotalHoras = () => {
+    try {
+        const totalHorasPorEmpleado = {};
+        const totalHorasPorProceso = {};
+
+        // Sumar las horas de todos los procesos por empleado
+        document.querySelectorAll('input[name^="hrs_"]').forEach(input => {
+            const id = input.name.split('_')[1];
+            const row = document.querySelector(`tr[data-id="${id}"]`);
+            if (!row) {
+                console.error(`Fila con data-id="${id}" no encontrada`);
+                return;
+            }
+            const codigoEmp = row.dataset.codigoEmp;
+            const proceso = document.querySelector(`select[name="proceso_${id}"]`).selectedOptions[0].textContent;
+            const horas = parseFloat(input.value) || 0;
+
+            if (!totalHorasPorEmpleado[codigoEmp]) {
+                totalHorasPorEmpleado[codigoEmp] = 0;
+            }
+
+            if (!totalHorasPorProceso[proceso]) {
+                totalHorasPorProceso[proceso] = 0;
+            }
+
+            totalHorasPorEmpleado[codigoEmp] += horas;
+            totalHorasPorProceso[proceso] += horas;
+        });
+
+        // Asignar el valor de TotalHrs a todos los procesos del empleado
+        document.querySelectorAll('input[name^="totalhrs_"]').forEach(input => {
+            const id = input.name.split('_')[1];
+            const codigoEmp = document.querySelector(`tr[data-id="${id}"]`).dataset.codigoEmp;
+            input.value = totalHorasPorEmpleado[codigoEmp].toFixed(2);
+        });
+
+        // Mostrar el detalle de horas por proceso
+        const detalleProcesos = Object.entries(totalHorasPorProceso)
+            .map(([proceso, horas]) => `<td>${proceso}: ${horas.toFixed(2)} horas</td>`)
+            .join('');
+        document.getElementById('detalle_procesos_container').innerHTML = `<table><tr>${detalleProcesos}</tr></table>`;
+
+        // Actualizar el total de horas de todos los empleados
+        const total = Object.values(totalHorasPorEmpleado).reduce((sum, value) => sum + value, 0);
+        document.getElementById('total_proceso').textContent = total.toFixed(2);
+
+    } catch (error) {
+        console.error("Error actualizando el total de horas:", error);
+    }
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Configurar todos los campos como solo lectura al cargar la página, excepto los campos de selección de departamento y filtrado por fecha
+    document.querySelectorAll('input, select').forEach(input => {
+        if (input.name !== 'departamento' && input.name !== 'fecha') {
+            input.setAttribute('readonly', true);
+            input.setAttribute('disabled', true);
+        }
+    });
+
+    // Agregar evento al botón "Editar"
+    document.getElementById('editar-btn').addEventListener('click', () => {
+        document.querySelectorAll('input, select').forEach(input => {
+            if (input.name !== 'departamento' && input.name !== 'fecha') {
+                input.removeAttribute('readonly');
+                input.removeAttribute('disabled');
+            }
+        });
+        document.getElementById('guardar-btn').removeAttribute('disabled');
+    });
+
+    // Agregar evento al botón "Exportar a Excel"
+    document.getElementById('exportar-btn').addEventListener('click', () => {
+        exportarTablaAExcel('tabla-horas-procesos', 'HorasProcesos.xlsx');
+    });
+
+    document.querySelectorAll('input[name^="horaentrada_"], input[name^="horasalida_"], input[name^="hrsextras_"], select[name^="proceso_"]').forEach(input => {
+        input.setAttribute('data-original-value', input.value);
+        input.addEventListener('change', (event) => {
+            const id = event.target.name.split('_')[1];
+            if (event.target.tagName.toLowerCase() === 'select') {
+                actualizarProceso(id);
+            } else {
+                validarHoras(id);
+                actualizarHoras(id);
+            }
+            actualizarTotalHoras();
+        });
+    });
+
+    document.querySelectorAll('input[name^="inasistencia_"]').forEach(input => {
+        input.addEventListener('change', (event) => {
+            const id = event.target.name.split('_')[1];
+            const codigoEmp = document.querySelector(`tr[data-id="${id}"]`).dataset.codigoEmp;
+            toggleInasistencia(id, codigoEmp);
+        });
+    });
+
+    document.getElementById('guardar-btn').addEventListener('click', (event) => {
+        let valid = true;
+        document.querySelectorAll('input[name^="horaentrada_"], input[name^="horasalida_"]').forEach(input => {
+            const id = input.name.split('_')[1];
+            if (!validarHoras(id)) {
+                valid = false;
+            }
+        });
+
+        if (!valid) {
+            showAlert('Corrige los errores antes de guardar.', 'danger');
+            return;
+        }
+
+        const { cambios, borrados } = contarCambiosYBorrados();
+        const mensaje = `Se realizaron ${cambios} cambios y se eliminarán ${borrados} registros. ¿Deseas continuar?`;
+        document.getElementById('confirmMessage').textContent = mensaje;
+        const confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
+        confirmModal.show();
+
+        document.getElementById('confirmSubmit').addEventListener('click', () => {
+            // Asegurarse de que todos los procesos tengan el valor de TotalHrs antes de enviar el formulario
+            document.querySelectorAll('input[name^="totalhrs_"]').forEach(input => {
+                const codigoEmp = input.name.split('_')[1];
+                const totalHrs = document.querySelector(`input[name="totalhrs_${codigoEmp}"]`).value;
+                document.querySelectorAll(`tr[data-codigo-emp="${codigoEmp}"] input[name^="totalhrs_"]`).forEach(procesoInput => {
+                    procesoInput.value = totalHrs;
+                });
+            });
+
+            document.getElementById('form-actualizar').submit();
+        });
+    });
+
+    // Llamar a actualizarTotalHoras al cargar la página
+    actualizarTotalHoras();
+});
+
+const exportarTablaAExcel = (idTabla, nombreArchivo) => {
+    const tabla = document.getElementById(idTabla);
+    const wb = XLSX.utils.table_to_book(tabla, { sheet: "Sheet1" });
+    XLSX.writeFile(wb, nombreArchivo);
+};
+
+const validarHoras = (id) => {
+    const entrada = document.querySelector(`input[name="horaentrada_${id}"]`).value;
+    const salida = document.querySelector(`input[name="horasalida_${id}"]`).value;
+
+    if (!entrada || !salida) {
+        showAlert('Faltan datos de hora.', 'danger');
+        return false;
+    }
+
+    const [horaEntrada, minutoEntrada] = entrada.split(':').map(Number);
+    const [horaSalida, minutoSalida] = salida.split(':').map(Number);
+
+    const inicio = new Date(0, 0, 0, horaEntrada, minutoEntrada);
+    const fin = new Date(0, 0, 0, horaSalida, minutoSalida);
+    let diferencia = (fin - inicio) / 1000 / 60 / 60;
+
+    if (diferencia < 0) {
+        diferencia += 24;
+    }
+
+    if (diferencia >= 14) {
+        showAlert('La diferencia entre la hora de entrada y la hora de salida no puede ser igual o superior a 14 horas.', 'danger');
+        document.querySelector(`input[name="horasalida_${id}"]`).value = '';
+        return false;
+    }
+
+    if (entrada === salida) {
+        showAlert('La hora de entrada y la hora de salida no pueden ser iguales.', 'danger');
+        document.querySelector(`input[name="horasalida_${id}"]`).value = '';
+        return false;
+    }
+
+    return true;
+};
+
+const validarHorasExtras = (input) => {
+    const value = input.value;
+    if (isNaN(value) || value < 0) {
+        showAlert('Las horas extras deben ser un número positivo.', 'danger');
+        input.value = '';
+    }
+};
+
+const contarCambiosYBorrados = () => {
+    let cambios = 0;
+    let borrados = 0;
+
+    document.querySelectorAll('input[name^="horaentrada_"], input[name^="horasalida_"], select[name^="proceso_"]').forEach(input => {
+        const originalValue = input.getAttribute('data-original-value');
+        if (input.value !== originalValue) {
+            cambios++;
+        }
+    });
+
+    document.querySelectorAll('.eliminar-checkbox:checked').forEach(checkbox => {
+        borrados++;
+    });
+
+    return { cambios, borrados };
+};
+
+const toggleInasistencia = (id, codigoEmp) => {
+    const inasistenciaCheckbox = document.querySelector(`input[name="inasistencia_${id}"]`);
+    if (!inasistenciaCheckbox) {
+        console.error(`Checkbox inasistencia_${id} no encontrado`);
+        return;
+    }
+    const isChecked = inasistenciaCheckbox.checked;
+
+    document.querySelectorAll(`tr[data-codigo-emp="${codigoEmp}"] input, tr[data-codigo-emp="${codigoEmp}"] select`).forEach(input => {
+        try {
+            if (isChecked) {
+                // Guardar el valor original
+                if (!input.hasAttribute('data-original-value')) {
+                    input.setAttribute('data-original-value', input.value);
+                }
+                // Cambiar valor a '0' o desmarcar checkbox
+                if (input.type === 'checkbox') {
+                    input.checked = false;
+                } else if (input.type === 'time') {
+                    input.value = '00:00';
+                } else {
+                    input.value = '0';
+                }
+            } else {
+                // Restaurar el valor original
+                const originalValue = input.getAttribute('data-original-value') || '';
+                if (input.type === 'checkbox') {
+                    input.checked = originalValue === 'true';
+                } else {
+                    input.value = originalValue;
+                }
+            }
+        } catch (error) {
+            console.error(`Error al procesar el input: ${input.name}`, error);
+        }
+    });
+
+    if (typeof actualizarTotalHoras === 'function') {
+        actualizarTotalHoras();
+    } else {
+        console.warn('La función actualizarTotalHoras no está definida');
+    }
+};
+
+function showAlert(message, type) {
+    const alerta = document.getElementById('alerta');
+    alerta.querySelector('.alerta-mensaje').innerHTML = message.replace(/\n/g, '<br>'); // Reemplazar saltos de línea con <br>
+    alerta.className = `alerta-centrada alert alert-${type}`;
+    alerta.style.display = 'block';
+}
+
+function cerrarAlerta() {
+    const alerta = document.getElementById('alerta');
+    alerta.style.display = 'none';
+}
+
+const actualizarHoras = (id) => {
+    try {
+        const entrada = document.querySelector(`input[name="horaentrada_${id}"]`).value;
+        const salida = document.querySelector(`input[name="horasalida_${id}"]`).value;
+
+        if (!entrada || !salida) {
+            console.warn(`Faltan datos de hora en el proceso ${id}.`);
+            return;
+        }
+
+        const [horaEntrada, minutoEntrada] = entrada.split(':').map(Number);
+        const [horaSalida, minutoSalida] = salida.split(':').map(Number);
+
+        const inicio = new Date(0, 0, 0, horaEntrada, minutoEntrada);
+        const fin = new Date(0, 0, 0, horaSalida, minutoSalida);
+        let diferencia = (fin - inicio) / 1000 / 60 / 60;
+
+        if (diferencia < 0) {
+            diferencia += 24;
+        }
+
+        const hrsInput = document.querySelector(`input[name="hrs_${id}"]`);
+        hrsInput.value = diferencia.toFixed(2);
+
+        actualizarTotalHoras();
+    } catch (error) {
+        console.error(`Error actualizando horas para el proceso ${id}:`, error);
+    }
+};
+</script>
+{% endblock %}
+
+<div class="container mt-4">
+    <form method="get" action="{% url 'horas_procesos:actualizar_horas_procesos' %}">
+        <div class="mb-4">
+            <h4 class="text-center my-4">Gestión Horas de Procesos</h4>
+            <label for="depto_select" class="form-label">Selecciona un Departamento:</label>
+            <select id="depto_select" name="departamento" class="form-select">
+                <option value="" selected>Departamento</option>
+                {% for depto in departamentos %}
+                <option value="{{ depto }}" {% if depto == departamento_seleccionado %}selected{% endif %}>{{ depto }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="fecha">Filtrar por Fecha:</label>
+            <input type="date" id="fecha" name="fecha" class="form-control" value="{{ fecha }}">
+        </div>
+        <div class="text-center">
+            <button type="submit" class="btn btn-primary mt-3">Filtrar</button>
+            {% if registros_combinados %}
+            <button type="button" class="btn btn-secondary mt-3" id="editar-btn">Editar</button>
+            <button type="button" class="btn btn-success mt-3" id="exportar-btn">Exportar a Excel</button>
+            {% endif %}
+        </div>
+        
+    </form>
+
+    {% if registros_combinados %}
+    <form method="post" action="{% url 'horas_procesos:actualizar_horas_procesos' %}" id="form-actualizar">
+        {% csrf_token %}
+        <div class="table-responsive mt-4">
+            <table id="tabla-horas-procesos" class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Código Emp</th>
+                        <th>Empleado</th>
+                        <th>Departamento</th>
+                        <th>Proceso</th>
+                        <th>Hora Entrada</th>
+                        <th>Hora Salida</th>
+                        <th>Horas</th>
+                        <th>Total Horas</th>
+                        <th>Horas Extras</th>
+                        <th>Inasistencia</th>
+                        <th>Borrar</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for registro in registros_combinados %}
+                    {% for proceso in registro.procesos %}
+                    <tr data-codigo-emp="{{ registro.codigo_emp }}" data-id="{{ proceso.id_hrspro }}">
+                        {% if forloop.first %}
+                        <td rowspan="{{ registro.procesos|length }}">{{ registro.codigo_emp }}</td>
+                        <td rowspan="{{ registro.procesos|length }}">{{ registro.nombre_emp }}</td>
+                        <td rowspan="{{ registro.procesos|length }}">{{ registro.depto_emp }}</td>
+                        {% endif %}
+                        <td>
+                            <select name="proceso_{{ proceso.id_hrspro }}" class="form-select form-select-sm" data-original-value="{{ proceso.id_pro }}">
+                                {% for p in procesos %}
+                                <option value="{{ p.id_pro }}" {% if p.id_pro == proceso.id_pro %}selected{% endif %}>{{ p.nombre_pro }}</option>
+                                {% endfor %}
+                            </select>
+                        </td>
+                        <td>
+                            <input type="time" name="horaentrada_{{ proceso.id_hrspro }}" class="form-control form-control-sm mb-2"
+                                value="{{ proceso.horaentrada }}" step="60" data-original-value="{{ proceso.horaentrada }}">
+                        </td>
+                        <td>
+                            <input type="time" name="horasalida_{{ proceso.id_hrspro }}" class="form-control form-control-sm mb-2"
+                                value="{{ proceso.horasalida }}" step="60" data-original-value="{{ proceso.horasalida }}">
+                        </td>
+                        <td>
+                            <input type="text" name="hrs_{{ proceso.id_hrspro }}" class="form-control form-control-sm mb-2" 
+                                value="{{ proceso.hrs|floatformat:2 }}" data-original-value="{{ proceso.hrs|floatformat:2 }}" readonly>
+                        </td>
+                        <td>
+                            <input type="text" name="totalhrs_{{ proceso.id_hrspro }}" class="form-control form-control-sm mb-2" 
+                                value="0.00" readonly>
+                        </td>
+                        <td>
+                            <input type="number" name="hrsextras_{{ proceso.id_hrspro }}" class="form-control form-control-sm mb-2" 
+                                value="{{ proceso.hrsextras|floatformat:2 }}" min="0" step="0.01" data-original-value="{{ proceso.hrsextras|floatformat:2 }}">
+                        </td>
+                        <td>
+                            <input type="checkbox" name="inasistencia_{{ proceso.id_hrspro }}" 
+                                {% if proceso.asistencia == 0 %}checked{% endif %}>
+                        </td>
+                        <td>
+                            <input type="checkbox" class="eliminar-checkbox" name="eliminar_{{ proceso.id_hrspro }}" data-id="{{ proceso.id_hrspro }}">
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="9" class="text-start detalle-horas" id="detalle_procesos_container">
+                            <!-- Detalle de procesos se insertará aquí -->
+                        </td>
+                        <td colspan="2" class="text-end total-horas">
+                            <strong>Total Horas:</strong>
+                            <span id="total_proceso" class="text-center">0.00</span>
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        <div class="text-center">
+            <button type="button" class="btn btn-primary mt-3" id="guardar-btn" disabled>Guardar</button>
+            
+        </div>
+    </form>
+    {% endif %}
+</div>
+
+<!-- Modal de confirmación -->
+<div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmModalLabel">Confirmación</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p id="confirmMessage"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="confirmSubmit">Confirmar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Contenedor para mostrar alertas -->
+<div id="alerta" class="alerta-centrada alert" style="display: none;">
+    <span class="alerta-mensaje"></span>
+    <button type="button" class="close" onclick="cerrarAlerta()">&times;</button>
+</div>
+{% endblock %}
+

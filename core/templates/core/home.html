@@ -9,28 +9,12 @@
             const syncButton = document.createElement('li');
             syncButton.className = 'nav-item';
             syncButton.innerHTML = `
-                <a id="sync-button" class="nav-link" href="#">Sincronizar Bases de Datos</a>
+                <form id="sync-form" method="post" action="{% url 'core:sync_databases' %}">
+                    <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+                    <button type="submit" class="nav-link btn btn-link" style="padding: 0;">Sincronizar Bases de Datos</button>
+                </form>
             `;
             navbarRight.insertBefore(syncButton, navbarRight.firstChild);
-
-            document.getElementById('sync-button').addEventListener('click', function(event) {
-                event.preventDefault();  // Evitar el comportamiento predeterminado del enlace
-                fetch("{% url 'core:sync_databases' %}", {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': '{{ csrf_token }}',
-                        'Content-Type': 'application/json'
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    alert(data.message);
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('Ocurrió un error durante la sincronización.');
-                });
-            });
         } else if (window.location.pathname === '/horas_procesos/gestion_horas_procesos/') {
             const syncButton = document.createElement('li');
             syncButton.className = 'nav-item';
@@ -41,7 +25,7 @@
 
             document.getElementById('sync-to-server-button').addEventListener('click', function(event) {
                 event.preventDefault();  // Evitar el comportamiento predeterminado del enlace
-                fetch("{% url 'horas_procesos:sync_to_server' %}", {
+                fetch("{% url 'core:sync_databases' %}", {
                     method: 'POST',
                     headers: {
                         'X-CSRFToken': '{{ csrf_token }}',
@@ -60,6 +44,12 @@
         }
     });
 </script>
+<style>
+    .nav-item {
+        margin-right: 15px; /* Ajusta este valor según sea necesario */
+      }
+</style>
+    
 {% endblock %}
 {% block content %}
 <header class="text-white" style="background-image: url('{% static 'core/assets/fondoHome.png' %}'); background-position: center; background-size: cover; height: 60vh; display: flex; align-items: center; justify-content: center;">

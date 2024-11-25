@@ -8,7 +8,9 @@ from django.db.models import Sum
 from django.views.decorators.csrf import csrf_exempt
 import os
 import subprocess
+import json
 from django.http import JsonResponse
+from django.urls import reverse
 def gestion_horas_procesos(request):
     if request.method == 'POST':
         for empleado in Empleados.objects.all():
@@ -95,65 +97,96 @@ from .models import Horasprocesos, Empleados
 from collections import defaultdict
 from datetime import date
 
-
-
 def actualizar_horas_procesos(request):
     departamento_seleccionado = request.GET.get('departamento', None)
     fecha_seleccionada = request.GET.get('fecha', None)
     
-    registros = Horasprocesos.objects.all()
-    empleados = Empleados.objects.all()
-    empleados_dict = {empleado.codigo_emp: empleado.depto_emp for empleado in empleados}
-
-    if departamento_seleccionado:
-        empleados = empleados.filter(depto_emp=departamento_seleccionado)
-        registros = registros.filter(codigo_emp__depto_emp=departamento_seleccionado)
-    
-    if fecha_seleccionada:
-        fecha_seleccionada = datetime.strptime(fecha_seleccionada, '%Y-%m-%d').date()
-        registros = registros.filter(fecha_hrspro=fecha_seleccionada)
-
-    # Agrupar registros por empleado
-    registros_por_empleado = defaultdict(list)
-    for registro in registros:
-        registros_por_empleado[registro.codigo_emp.codigo_emp].append(registro)
-
-    # Crear una lista de registros combinados
     registros_combinados = []
-    for codigo_emp, registros in registros_por_empleado.items():
-        registro_combinado = {
-            'codigo_emp': codigo_emp,
-            'nombre_emp': registros[0].codigo_emp.nombre_emp,
-            'depto_emp': empleados_dict[codigo_emp],
-            'procesos': registros
-        }
-        registros_combinados.append(registro_combinado)
+    if departamento_seleccionado or fecha_seleccionada:
+        registros = Horasprocesos.objects.all()
+        empleados = Empleados.objects.all()
+        empleados_dict = {empleado.codigo_emp: empleado.depto_emp for empleado in empleados}
+
+        if departamento_seleccionado:
+            empleados = empleados.filter(depto_emp=departamento_seleccionado)
+            registros = registros.filter(codigo_emp__depto_emp=departamento_seleccionado)
+        
+        if fecha_seleccionada:
+            fecha_seleccionada = datetime.strptime(fecha_seleccionada, '%Y-%m-%d').date()
+            registros = registros.filter(fecha_hrspro=fecha_seleccionada)
+
+        # Agrupar registros por empleado
+        registros_por_empleado = defaultdict(list)
+        for registro in registros:
+            registros_por_empleado[registro.codigo_emp.codigo_emp].append(registro)
+
+        # Crear una lista de registros combinados
+        for codigo_emp, registros in registros_por_empleado.items():
+            registro_combinado = {
+                'codigo_emp': codigo_emp,
+                'nombre_emp': registros[0].codigo_emp.nombre_emp,
+                'depto_emp': empleados_dict[codigo_emp],
+                'procesos': registros
+            }
+            registros_combinados.append(registro_combinado)
 
     departamentos = Empleados.objects.values_list('depto_emp', flat=True).distinct()
+    procesos = Procesos.objects.all()
 
     if request.method == 'POST':
-        if 'edit' in request.POST:
-            # Editar registro
-            registro_id = request.POST.get('edit')
-            registro = get_object_or_404(Horasprocesos, id_hrspro=registro_id)
-            registro.horaentrada = request.POST.get(f'horaentrada_{registro_id}')
-            registro.horasalida = request.POST.get(f'horasalida_{registro_id}')
-            registro.hrs = float(request.POST.get(f'hrs_{registro_id}').replace(',', '.'))
-            registro.totalhrs = float(request.POST.get(f'totalhrs_{registro_id}').replace(',', '.'))
-            registro.hrsextras = float(request.POST.get(f'hrsextras_{registro_id}').replace(',', '.'))
-            registro.asistencia = 0 if request.POST.get(f'inasistencia_{registro_id}') else 1
-            registro.save()
-            return redirect('horas_procesos:actualizar_horas_procesos')
-        elif 'delete' in request.POST:
-            # Eliminar registro
-            registro_id = request.POST.get('delete')
-            registro = get_object_or_404(Horasprocesos, id_hrspro=registro_id)
-            registro.delete()
-            return redirect('horas_procesos:actualizar_horas_procesos')
+        eliminar_ids = []
+        for key, value in request.POST.items():
+            if key.startswith('horaentrada_'):
+                id_hrspro = key.split('_')[1]
+                proceso = Horasprocesos.objects.get(id_hrspro=id_hrspro)
+                proceso.horaentrada = request.POST.get(f'horaentrada_{id_hrspro}')
+                proceso.horasalida = request.POST.get(f'horasalida_{id_hrspro}')
+                proceso.hrs = request.POST.get(f'hrs_{id_hrspro}')
+                proceso.totalhrs = request.POST.get(f'totalhrs_{id_hrspro}')
+                proceso.hrsextras = request.POST.get(f'hrsextras_{id_hrspro}')
+                proceso.asistencia = 0 if request.POST.get(f'inasistencia_{id_hrspro}') else 1
+                proceso.id_pro = request.POST.get(f'proceso_{id_hrspro}')  # Actualizar el proceso
+                proceso.save()
+            elif key.startswith('eliminar_') and value == 'on':
+                eliminar_ids.append(key.split('_')[1])
+        
+        for id_hrspro in eliminar_ids:
+            proceso = Horasprocesos.objects.get(id_hrspro=id_hrspro)
+            proceso.delete()
+
+        return redirect(reverse('horas_procesos:actualizar_horas_procesos'))
 
     return render(request, 'horas_procesos/actualizar_horas_procesos.html', {
         'registros_combinados': registros_combinados,
         'departamentos': departamentos,
+        'procesos': procesos,
         'departamento_seleccionado': departamento_seleccionado,
         'fecha_seleccionada': fecha_seleccionada,
     })
+
+@csrf_exempt
+def eliminar_proceso(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        ids = data.get('ids', [])
+        for id_hrspro in ids:
+            registro = get_object_or_404(Horasprocesos, id_hrspro=id_hrspro)
+            registro.delete()
+        return JsonResponse({'status': 'success'})
+    return JsonResponse({'status': 'error'}, status=400)
+
+from django.http import HttpResponse
+import csv
+
+def exportar_excel(request):
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="horas_procesos.csv"'
+
+    writer = csv.writer(response)
+    writer.writerow(['Código Emp', 'Empleado', 'Departamento', 'Proceso', 'Hora Entrada', 'Hora Salida', 'Hrs', 'Total Hrs', 'Hrs Extras', 'Inasistencia'])
+
+    registros = Horasprocesos.objects.all()
+    for registro in registros:
+        writer.writerow([registro.codigo_emp.codigo_emp, registro.codigo_emp.nombre_emp, registro.codigo_emp.depto_emp, registro.id_pro, registro.horaentrada, registro.horasalida, registro.hrs, registro.totalhrs, registro.hrsextras, registro.asistencia])
+
+    return response

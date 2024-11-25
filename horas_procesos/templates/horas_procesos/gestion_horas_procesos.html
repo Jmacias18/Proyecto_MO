@@ -1,19 +1,21 @@
 {% extends 'core/base.html' %}
 {% load static %}
-{% block title %}Gestión de Procesos y Horas Extras{% endblock %}
+{% block title %}Gestión de Procesos{% endblock %}
 {% block navbar_extra %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         if (window.location.pathname === '/horas_procesos/gestion_horas_procesos/') {
             const navbar = document.querySelector('.navbar-nav.ms-auto');
+            const logoutButton = navbar.querySelector('form[action="/accounts/logout/"]').closest('li');
             const syncButton = document.createElement('li');
             syncButton.className = 'nav-item';
             syncButton.innerHTML = `
-                <button id="sync-to-server-button" class="nav-link">Sincronizar Procesos</button>
+                <button id="sync-to-server-button" class="nav-link btn btn-link" style="padding: 0;">Sincronizar Procesos</button>
             `;
-            navbar.appendChild(syncButton);
+            navbar.insertBefore(syncButton, logoutButton);
 
-            document.getElementById('sync-to-server-button').addEventListener('click', function() {
+            document.getElementById('sync-to-server-button').addEventListener('click', function(event) {
+                event.preventDefault();  // Evitar el comportamiento predeterminado del botón
                 fetch("{% url 'horas_procesos:sync_to_server' %}", {
                     method: 'POST',
                     headers: {
@@ -36,8 +38,6 @@
     function validarFormulario() {
         return validarHorasRegistradas() && validarHorasInicioFinIguales(); 
     }
-
-  
 </script>
 {% endblock %}
 {% block content %}
@@ -66,9 +66,12 @@
         font-size: 20px;
         cursor: pointer;
     }
+    .nav-item {
+        margin-right: 15px; /* Ajusta este valor según sea necesario */
+    }
 </style>
 <div class="container mt-4">
-    <h2 class="mb-4 text-center">Gestión de Procesos y Horas Extras</h2>
+    <h2 class="mb-4 text-center">Gestión de Procesos</h2>
    
     <div id="alerta" class="alerta-centrada" style="display: none;">
         <button class="close-btn" onclick="cerrarAlerta()">×</button>
@@ -76,7 +79,8 @@
     </div>
     <form method="post" action="{% url 'horas_procesos:gestion_horas_procesos' %}" onsubmit="return validarFormulario()">
         {% csrf_token %}
-        <p class="text-center">Reporte Diario de Coordinador</p>
+        
+        <h4 class="text-center my-4">Reporte Diario de Coordinador</h4>
         <div class="mb-4">
             <label for="fecha" class="form-label">Fecha:</label>
             <p id="fecha" class="form-control-plaintext"></p>
