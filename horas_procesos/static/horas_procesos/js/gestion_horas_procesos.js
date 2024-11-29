@@ -4,6 +4,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('tabla_empleados').style.display = 'none';
 
+    const guardarBtn = document.getElementById('guardar-btn');
+    const procesoSelects = document.querySelectorAll('select[name^="proceso"]');
+
+    // Función para verificar si algún proceso está seleccionado
+    function verificarSeleccionProcesos() {
+        let algunoSeleccionado = false;
+        procesoSelects.forEach(select => {
+            if (select.value) {
+                algunoSeleccionado = true;
+            }
+        });
+        guardarBtn.disabled = !algunoSeleccionado;
+    }
+
+    // Agregar evento change a todos los selectores de procesos
+    procesoSelects.forEach(select => {
+        select.addEventListener('change', verificarSeleccionProcesos);
+    });
+
+    // Verificar la selección de procesos al cargar la página
+    verificarSeleccionProcesos();
+
     document.getElementById('empleados_tbody').addEventListener('change', (event) => {
         const target = event.target;
         if (target.classList.contains('copy-checkbox')) {
@@ -18,7 +40,6 @@ document.addEventListener('DOMContentLoaded', () => {
             calcularTotalHoras(codigoEmp, 0);
         }
     });
-
     document.querySelectorAll('[name^="horas_extras_"]').forEach(input => {
         input.addEventListener('input', () => {
             const codigoEmp = input.name.split('_')[2];
@@ -36,6 +57,9 @@ document.addEventListener('DOMContentLoaded', () => {
     form.addEventListener('submit', (event) => {
         if (!validarHorasRegistradas() || !validarHorasInicioFinIguales()) {
             event.preventDefault(); // Evitar el envío del formulario si la validación falla
+        } else {
+            event.preventDefault(); // Evitar el envío del formulario por defecto
+            prepararDatosParaEnvio(); // Llamar a la función para preparar y enviar los datos
         }
     });
 
@@ -46,7 +70,99 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
+function prepararDatosParaEnvio() {
+    const datos = {
+        departamento: document.getElementById('depto_select').value,
+        empleados: []
+    };
+    const filasEmpleados = document.querySelectorAll('#empleados_tbody tr');
 
+    filasEmpleados.forEach(fila => {
+        if (fila.style.display !== 'none') { // Solo procesar empleados visibles
+            const codigoEmp = fila.dataset.codigo_emp;
+            const procesos = [];
+
+            for (let i = 1; i <= 6; i++) {
+                const procesoSelect = document.querySelector(`[name="proceso${i}_header"]`);
+                const inicio = document.querySelector(`[name="inicio_proceso${i}_${codigoEmp}"]`);
+                const fin = document.querySelector(`[name="fin_proceso${i}_${codigoEmp}"]`);
+                const total = document.querySelector(`[name="total_proceso${i}_${codigoEmp}"]`);
+
+                if (procesoSelect && procesoSelect.value && !inicio.disabled && !fin.disabled) {
+                    if (inicio.value && fin.value) {
+                        procesos.push({
+                            procesoId: procesoSelect.value,
+                            inicio: inicio.value,
+                            fin: fin.value,
+                            total: total.value
+                        });
+                    }
+                }
+            }
+
+            const horasExtras = document.querySelector(`[name="horas_extras_${codigoEmp}"]`).value || 0;
+            const totalHoras = document.querySelector(`[name="total_${codigoEmp}"]`).value || 0;
+
+            if (procesos.length > 0 || horasExtras > 0) {
+                datos.empleados.push({
+                    codigoEmp: codigoEmp,
+                    procesos: procesos,
+                    horasExtras: horasExtras,
+                    totalHoras: totalHoras
+                });
+            }
+        }
+    });
+
+    console.log("Datos a enviar:", datos);  // Verificar los datos antes de enviarlos
+
+    // Enviar datos al servidor
+    fetch('/horas_procesos/gestion_horas_procesos/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify(datos)
+    })
+    .then(response => {
+        console.log("Estado de la respuesta:", response.status);  // Verificar el estado de la respuesta
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log("Respuesta del servidor:", data);  // Verificar la respuesta del servidor
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Éxito',
+                text: 'Se envió correctamente.',
+                timer: 2000,
+                showConfirmButton: false
+            });
+
+            // Recargar la página después de 2 segundos
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: `Error al enviar el formulario: ${data.error}`
+            });
+        }
+    })
+    .catch(error => {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: `Error al enviar el formulario: ${error}`
+        });
+    });
+}
 document.querySelectorAll('[name^="horas_extras_"]').forEach(input => {
     input.addEventListener('input', () => {
         const codigoEmp = input.name.split('_')[2];
@@ -279,7 +395,60 @@ function verificarHorasDuplicadas(codigoEmp) {
 
     return mensaje;
 }
+function handleCheckboxChange(event) {
+    const checkbox = event.target;
+    const proceso = checkbox.dataset.proceso;
+    const emp = checkbox.dataset.emp;
+    const row = checkbox.closest('tr');
+    const prevRow = getPreviousRowWithProceso(row, proceso);
 
+    const inicioInput = row.querySelector(`input[name="inicio_proceso${proceso}_${emp}"]`);
+    const finInput = row.querySelector(`input[name="fin_proceso${proceso}_${emp}"]`);
+
+    // Validar que los elementos de entrada existen
+    if (!inicioInput || !finInput) {
+        console.error(`No se encontraron los elementos de entrada para el proceso ${proceso} y el empleado ${emp}`);
+        return;
+    }
+
+    if (checkbox.checked) {
+        if (prevRow) {
+            const prevInicio = prevRow.querySelector(`input[name="inicio_proceso${proceso}_${prevRow.dataset.codigo_emp}"]`).value;
+            const prevFin = prevRow.querySelector(`input[name="fin_proceso${proceso}_${prevRow.dataset.codigo_emp}"]`).value;
+
+            inicioInput.dataset.originalValue = inicioInput.value;
+            finInput.dataset.originalValue = finInput.value;
+
+            inicioInput.value = prevInicio;
+            finInput.value = prevFin;
+
+            calcularTotalHoras(emp, proceso);
+        } else {
+            console.warn(`No se encontró una fila anterior con el proceso ${proceso} para el empleado ${emp}`);
+        }
+    } else {
+        inicioInput.value = inicioInput.dataset.originalValue || '';
+        finInput.value = finInput.dataset.originalValue || '';
+
+        calcularTotalHoras(emp, proceso);
+    }
+
+    sumarHorasPorProceso();
+}
+
+function getPreviousRowWithProceso(currentRow, proceso) {
+    const deptoActual = currentRow.getAttribute('data-depto');
+    let prevRow = currentRow.previousElementSibling;
+    while (prevRow) {
+        const prevInicioInput = prevRow.querySelector(`input[name="inicio_proceso${proceso}_${prevRow.dataset.codigo_emp}"]`);
+        const prevFinInput = prevRow.querySelector(`input[name="fin_proceso${proceso}_${prevRow.dataset.codigo_emp}"]`);
+        if (prevRow.getAttribute('data-depto') === deptoActual && prevInicioInput && prevFinInput && prevInicioInput.value && prevFinInput.value) {
+            return prevRow;
+        }
+        prevRow = prevRow.previousElementSibling;
+    }
+    return null;
+}
 function handleDeleteCheckboxChange(event) {
     const checkbox = event.target;
     const row = checkbox.closest('tr');
@@ -312,73 +481,6 @@ function handleDeleteCheckboxChange(event) {
     calcularTotalHoras(codigoEmp, procesoNum);
     sumarHorasPorProceso();
 }
-function handleCheckboxChange(event) {
-    const checkbox = event.target;
-    const proceso = checkbox.dataset.proceso;
-    const emp = checkbox.dataset.emp;
-    const row = checkbox.closest('tr');
-    const prevRow = getPreviousRowWithProceso(row, proceso);
-
-    const inicioInput = row.querySelector(`input[name="inicio_proceso${proceso}_${emp}"]`);
-    const finInput = row.querySelector(`input[name="fin_proceso${proceso}_${emp}"]`);
-
-    // Validar que los elementos de entrada existen
-    if (!inicioInput || !finInput) {
-        console.error(`No se encontraron los elementos de entrada para el proceso ${proceso} y el empleado ${emp}`);
-        return;
-    }
-
-    if (checkbox.checked) {
-        if (prevRow) {
-            const prevInicio = prevRow.querySelector(`input[name="inicio_proceso${proceso}_${prevRow.dataset.codigo_emp}"]`).value;
-            const prevFin = prevRow.querySelector(`input[name="fin_proceso${proceso}_${prevRow.dataset.codigo_emp}"]`).value;
-
-            inicioInput.dataset.originalValue = inicioInput.value;
-            finInput.dataset.originalValue = finInput.value;
-
-            inicioInput.value = prevInicio;
-            finInput.value = prevFin;
-
-            calcularTotalHoras(emp, proceso);
-        }
-    } else {
-        inicioInput.value = inicioInput.dataset.originalValue || '';
-        finInput.value = finInput.dataset.originalValue || '';
-
-        calcularTotalHoras(emp, proceso);
-    }
-
-    sumarHorasPorProceso();
-}
-
-function getPreviousRowWithProceso(currentRow, proceso) {
-    const deptoActual = currentRow.getAttribute('data-depto');
-    let prevRow = currentRow.previousElementSibling;
-    while (prevRow) {
-        const prevInicioInput = prevRow.querySelector(`input[name="inicio_proceso${proceso}_${prevRow.dataset.codigo_emp}"]`);
-        const prevFinInput = prevRow.querySelector(`input[name="fin_proceso${proceso}_${prevRow.dataset.codigo_emp}"]`);
-        if (prevRow.getAttribute('data-depto') === deptoActual && prevInicioInput && prevFinInput && prevInicioInput.value && prevFinInput.value) {
-            return prevRow;
-        }
-        prevRow = prevRow.previousElementSibling;
-    }
-    return null;
-}
-
-function getPreviousRow(currentRow, proceso) {
-    const deptoActual = currentRow.getAttribute('data-depto');
-    let prevRow = currentRow.previousElementSibling;
-    while (prevRow) {
-        if (prevRow.getAttribute('data-depto') === deptoActual &&
-            prevRow.querySelector(`input[name="inicio_proceso${proceso}_${prevRow.dataset.codigo_emp}"]`)) {
-            return prevRow;
-        }
-        prevRow = prevRow.previousElementSibling;
-    }
-    return null;
-}
-
-
 
 function toggleProcesoInputs(procesoNum) {
     const procesoSelect = document.querySelector(`[name="proceso${procesoNum}_header"]`);
@@ -414,20 +516,26 @@ function toggleProcesoInputs(procesoNum) {
         const inicioInput = fila.querySelector(`[name="inicio_proceso${procesoNum}_${codigoEmp}"]`);
         const finInput = fila.querySelector(`[name="fin_proceso${procesoNum}_${codigoEmp}"]`);
         if (selectedValue) {
-            inicioInput.disabled = false;
-            finInput.disabled = false;
+            if (inicioInput && finInput) {
+                inicioInput.disabled = false;
+                finInput.disabled = false;
+            } else {
+                console.error(`No se encontraron los elementos de entrada para el proceso ${procesoNum} y el empleado ${codigoEmp}`);
+            }
         } else {
-            inicioInput.disabled = true;
-            finInput.disabled = true;
-            inicioInput.value = '';
-            finInput.value = '';
+            if (inicioInput && finInput) {
+                inicioInput.disabled = true;
+                finInput.disabled = true;
+                inicioInput.value = '';
+                finInput.value = '';
+            }
         }
     });
 
     // Recalcula las horas cada vez que se selecciona un proceso
     document.querySelectorAll('#empleados_tbody tr').forEach(fila => {
         const codigoEmp = fila.dataset.codigo_emp;
-        if (procesoSelect.value) {
+        if (procesoSelect.value && fila.style.display !== 'none') { // Solo procesar empleados visibles
             calcularTotalHoras(codigoEmp, procesoNum);
         }
     });
@@ -445,11 +553,6 @@ function ajustarHoraFin(codigoEmp, procesoNum) {
         console.error(`El proceso ${procesoNum} no está seleccionado para el empleado ${codigoEmp}`);
         return;
     }
-
-   /*  if (!inicioField || !finField) {
-        console.error(`No se encontraron los elementos de entrada para el proceso ${procesoNum} y el empleado ${codigoEmp}`);
-        return;
-    } */
 
     // Obtener la hora de fin del proceso anterior
     if (procesoNum > 1) {
@@ -498,8 +601,8 @@ function ajustarHoraFin(codigoEmp, procesoNum) {
 }
 
 function calcularTotalHoras(codigoEmp, procesoNum) {
-    const inicio = document.querySelector(`[name="inicio_proceso${procesoNum}_${codigoEmp}"]`).value;
-    const fin = document.querySelector(`[name="fin_proceso${procesoNum}_${codigoEmp}"]`).value;
+    const inicio = document.querySelector(`[name="inicio_proceso${procesoNum}_${codigoEmp}"]`);
+    const fin = document.querySelector(`[name="fin_proceso${procesoNum}_${codigoEmp}"]`);
     const totalField = document.querySelector(`[name="total_proceso${procesoNum}_${codigoEmp}"]`);
 
     // Validar que los elementos de entrada existen
@@ -508,9 +611,9 @@ function calcularTotalHoras(codigoEmp, procesoNum) {
         return;
     }
 
-    if (inicio && fin) {
-        const [inicioHoras, inicioMinutos] = inicio.split(':').map(Number);
-        const [finHoras, finMinutos] = fin.split(':').map(Number);
+    if (inicio.value && fin.value) {
+        const [inicioHoras, inicioMinutos] = inicio.value.split(':').map(Number);
+        const [finHoras, finMinutos] = fin.value.split(':').map(Number);
 
         // Validar que las horas y minutos son números válidos
         if (isNaN(inicioHoras) || isNaN(inicioMinutos) || isNaN(finHoras) || isNaN(finMinutos)) {

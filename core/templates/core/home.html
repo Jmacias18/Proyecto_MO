@@ -15,6 +15,28 @@
                 </form>
             `;
             navbarRight.insertBefore(syncButton, navbarRight.firstChild);
+
+            document.getElementById('sync-form').addEventListener('submit', function(event) {
+                event.preventDefault();  // Evitar el comportamiento predeterminado del formulario
+                fetch("{% url 'core:sync_databases' %}", {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        alert('Sincronización completada con éxito.');
+                    } else {
+                        alert('Error en la sincronización: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    alert('Error en la sincronización: ' + error.message);
+                });
+            });
         } else if (window.location.pathname === '/horas_procesos/gestion_horas_procesos/') {
             const syncButton = document.createElement('li');
             syncButton.className = 'nav-item';
@@ -34,11 +56,14 @@
                 })
                 .then(response => response.json())
                 .then(data => {
-                    alert(data.message);
+                    if (data.status === 'success') {
+                        alert('Sincronización completada con éxito.');
+                    } else {
+                        alert('Error en la sincronización: ' + data.message);
+                    }
                 })
                 .catch(error => {
-                    console.error('Error:', error);
-                    alert('Ocurrió un error durante la sincronización.');
+                    alert('Error en la sincronización: ' + error.message);
                 });
             });
         }

@@ -11,6 +11,8 @@ import subprocess
 import json
 from django.http import JsonResponse
 from django.urls import reverse
+
+
 def gestion_horas_procesos(request):
     if request.method == 'POST':
         for empleado in Empleados.objects.all():
@@ -77,8 +79,6 @@ def gestion_horas_procesos(request):
         'departamentos': departamentos,
         'rango_procesos': rango_procesos,  # Pasar el rango al contexto
     })
-
-
 @csrf_exempt
 def sync_to_server_view(request):
     if request.method == 'POST':
@@ -107,7 +107,7 @@ def actualizar_horas_procesos(request):
         empleados = Empleados.objects.all()
         empleados_dict = {empleado.codigo_emp: empleado.depto_emp for empleado in empleados}
 
-        if departamento_seleccionado:
+        if departamento_seleccionado and departamento_seleccionado != "":
             empleados = empleados.filter(depto_emp=departamento_seleccionado)
             registros = registros.filter(codigo_emp__depto_emp=departamento_seleccionado)
         
@@ -146,13 +146,22 @@ def actualizar_horas_procesos(request):
                 proceso.hrsextras = request.POST.get(f'hrsextras_{id_hrspro}')
                 proceso.asistencia = 0 if request.POST.get(f'inasistencia_{id_hrspro}') else 1
                 proceso.id_pro = request.POST.get(f'proceso_{id_hrspro}')  # Actualizar el proceso
+                if proceso.asistencia == 0:
+                    proceso.horaentrada = '00:00:00.0000000'
+                    proceso.horasalida = '00:00:00.0000000'
+                    proceso.hrs = 0
+                    proceso.totalhrs = 0
+                    proceso.hrsextras = 0
+                    proceso.id_pro = 0
                 proceso.save()
+                print(f"Updated proceso {id_hrspro}: asistencia={proceso.asistencia}, horaentrada={proceso.horaentrada}, horasalida={proceso.horasalida}")
             elif key.startswith('eliminar_') and value == 'on':
                 eliminar_ids.append(key.split('_')[1])
         
         for id_hrspro in eliminar_ids:
             proceso = Horasprocesos.objects.get(id_hrspro=id_hrspro)
             proceso.delete()
+            print(f"Deleted proceso {id_hrspro}")
 
         return redirect(reverse('horas_procesos:actualizar_horas_procesos'))
 
@@ -163,7 +172,6 @@ def actualizar_horas_procesos(request):
         'departamento_seleccionado': departamento_seleccionado,
         'fecha_seleccionada': fecha_seleccionada,
     })
-
 @csrf_exempt
 def eliminar_proceso(request):
     if request.method == 'POST':
