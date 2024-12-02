@@ -27,13 +27,24 @@ def sync_table(local_conn, remote_conn, table_name):
         rows = local_cur.fetchall()
         columns = [desc[0] for desc in local_cur.description]
 
-        # Limpiar la tabla remota
-        remote_cur.execute(f"DELETE FROM {table_name}")
-
-        # Insertar los datos en la tabla remota
+        # Preparar la consulta de inserción o actualización
         placeholders = ', '.join(['?'] * len(columns))
-        insert_query = f"INSERT INTO {table_name} ({', '.join(columns)}) VALUES ({placeholders})"
-        remote_cur.executemany(insert_query, rows)
+        update_columns = ', '.join([f"{col}=source.{col}" for col in columns])
+        primary_key = 'ID_HrsProcesos'  # Nombre correcto de la columna de clave primaria
+        insert_query = f"""
+            MERGE INTO {table_name} AS target
+            USING (VALUES ({placeholders})) AS source ({', '.join(columns)})
+            ON target.{primary_key} = source.{primary_key}
+            WHEN MATCHED THEN
+                UPDATE SET {update_columns}
+            WHEN NOT MATCHED THEN
+                INSERT ({', '.join(columns)}) VALUES ({placeholders});
+        """
+
+        # Insertar o actualizar los datos en la tabla remota
+        for row in rows:
+            row_data = tuple(row)  # Convertir la fila a una tupla
+            remote_cur.execute(insert_query, row_data + row_data)  # Duplicar los parámetros para la cláusula INSERT
 
         # Confirmar los cambios en la base de datos remota
         remote_conn.commit()
@@ -41,10 +52,6 @@ def sync_table(local_conn, remote_conn, table_name):
         # Actualizar el campo SYNC a 1 en la tabla local
         local_cur.execute(f"UPDATE {table_name} SET SYNC = 1")
         local_conn.commit()
-
-        # Actualizar el campo SYNC a 1 en la tabla remota
-        remote_cur.execute(f"UPDATE {table_name} SET SYNC = 1")
-        remote_conn.commit()
 
 def sync_databases():
     # Conectar a las bases de datos local y remota
