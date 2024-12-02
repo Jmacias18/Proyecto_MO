@@ -2,8 +2,11 @@
 
 {% block title %}Gestión Horas de Procesos{% endblock %}
 {% block head %}
+    <meta name="csrf-token" content="{{ csrf_token }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/5.1.3/css/bootstrap.min.css" rel="stylesheet">
+    
 {% endblock %}
 {% block content %}
 <style>
@@ -98,6 +101,8 @@
 {% block extra_scripts %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.16.9/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/5.1.3/js/bootstrap.bundle.min.js"></script>
+
 <script>
     function showAlert(message, type) {
         const alerta = document.getElementById('alerta');
@@ -110,86 +115,70 @@
         const alerta = document.getElementById('alerta');
         alerta.style.display = 'none';
     }
+    
     document.addEventListener('DOMContentLoaded', function() {
         const guardarBtn = document.getElementById('guardar-btn');
         const form = document.getElementById('form-actualizar');
-        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        const csrfTokenMeta = document.querySelector('meta[name="csrf-token"]');
+        const csrfToken = csrfTokenMeta ? csrfTokenMeta.getAttribute('content') : '';
+    
+        if (!csrfToken) {
+            console.error('CSRF token not found');
+            return;
+        }
     
         guardarBtn.addEventListener('click', function(event) {
             event.preventDefault();
     
             if (!form.checkValidity()) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Formulario no válido',
-                    text: 'Por favor completa todos los campos requeridos.'
-                });
+                showAlert('Formulario no válido. Por favor completa todos los campos requeridos.', 'danger');
                 return;
             }
     
-            Swal.fire({
-                title: '¿Estás seguro?',
-                text: "¿Deseas enviar el formulario?",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonText: 'Sí, enviar',
-                cancelButtonText: 'Cancelar'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    const formData = new FormData(form);
-                    const jsonData = {};
-                    formData.forEach((value, key) => {
-                        jsonData[key] = value;
-                    });
+            const formData = new FormData(form);
+            const jsonData = {};
+            formData.forEach((value, key) => {
+                jsonData[key] = value;
+            });
     
-                    fetch(form.action, {
-                        method: 'POST',
-                        headers: {
-                            'X-CSRFToken': csrfToken,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(jsonData)
-                    })
-                    .then(response => {
-                        if (!response.ok) {
-                            return response.json().then(errData => {
-                                throw new Error(errData.message || 'Error en el servidor');
-                            });
-                        }
-                        return response.json();
-                    })
-                    .then(data => {
-                        if (data.success) {
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Éxito',
-                                text: 'Se envió correctamente.',
-                                timer: 2000,
-                                showConfirmButton: false
-                            });
-                            setTimeout(() => {
-                                window.location.reload();
-                            }, 2000);
-                        } else {
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Error',
-                                text: `Error al enviar el formulario: ${data.error}`
-                            });
-                        }
-                    })
-                    .catch(error => {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error',
-                            text: `Error al enviar el formulario: ${error.message}`
-                        });
+            console.log(JSON.stringify(jsonData));
+    
+            fetch(form.action, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(jsonData)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(errData => {
+                        throw new Error(errData.message || 'Error en el servidor');
                     });
                 }
+                return response.json();
+            })
+            .then(data => {
+                const responseModal = new bootstrap.Modal(document.getElementById('responseModal'));
+                const responseModalBody = document.getElementById('responseModalBody');
+                if (data.success) {
+                    responseModalBody.textContent = 'Datos enviados correctamente.';
+                } else {
+                    responseModalBody.textContent = 'Error al enviar los datos: ' + data.error;
+                }
+                responseModal.show();
+            })
+            .catch(error => {
+                const responseModal = new bootstrap.Modal(document.getElementById('responseModal'));
+                const responseModalBody = document.getElementById('responseModalBody');
+                responseModalBody.textContent = 'Ocurrió un error al enviar los datos: ' + error.message;
+                responseModal.show();
             });
         });
     });
-    
+
     document.addEventListener('DOMContentLoaded', function() {
         if (window.location.pathname.includes('/horas_procesos/actualizar_horas_procesos/')) {
             const navbar = document.querySelector('.navbar-nav.ms-auto');
@@ -313,8 +302,10 @@
                         input.value = '00:00:00.0000000';
                     }
                 });
-    
-                document.getElementById('form-actualizar').submit();
+                
+
+                //guardar();
+               document.getElementById('form-actualizar').submit();
             });
         });
     
@@ -365,7 +356,7 @@
         try {
             const totalHorasPorEmpleado = {};
             const totalHorasPorProceso = {};
-
+    
             // Sumar las horas de todos los procesos por empleado
             document.querySelectorAll('input[name^="hrs_"]').forEach(input => {
                 const id = input.name.split('_')[1];
@@ -377,36 +368,36 @@
                 const codigoEmp = row.dataset.codigoEmp;
                 const proceso = document.querySelector(`select[name="proceso_${id}"]`).selectedOptions[0].textContent;
                 const horas = parseFloat(input.value) || 0;
-
+    
                 if (!totalHorasPorEmpleado[codigoEmp]) {
                     totalHorasPorEmpleado[codigoEmp] = 0;
                 }
-
+    
                 if (!totalHorasPorProceso[proceso]) {
                     totalHorasPorProceso[proceso] = 0;
                 }
-
+    
                 totalHorasPorEmpleado[codigoEmp] += horas;
                 totalHorasPorProceso[proceso] += horas;
             });
-
+    
             // Asignar el valor de TotalHrs a todos los procesos del empleado
             document.querySelectorAll('input[name^="totalhrs_"]').forEach(input => {
                 const id = input.name.split('_')[1];
                 const codigoEmp = document.querySelector(`tr[data-id="${id}"]`).dataset.codigoEmp;
                 input.value = totalHorasPorEmpleado[codigoEmp].toFixed(2);
             });
-
+    
             // Mostrar el detalle de horas por proceso
             const detalleProcesos = Object.entries(totalHorasPorProceso)
                 .map(([proceso, horas]) => `<td>${proceso}: ${horas.toFixed(2)} horas</td>`)
                 .join('');
             document.getElementById('detalle_procesos_container').innerHTML = `<table><tr>${detalleProcesos}</tr></table>`;
-
+    
             // Actualizar el total de horas de todos los empleados
             const total = Object.values(totalHorasPorEmpleado).reduce((sum, value) => sum + value, 0);
             document.getElementById('total_proceso').textContent = total.toFixed(2);
-
+    
         } catch (error) {
             console.error("Error actualizando el total de horas:", error);
         }
@@ -678,6 +669,36 @@
     {% endif %}
 </div>
 
+{% if messages %}
+    <div>
+        {% for message in messages %}
+            <!-- Modal de respuesta -->
+            <div class="modal fade" id="responseModal" tabindex="-1" aria-labelledby="responseModalLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="responseModalLabel">Mensaje</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body" id="responseModalBody">
+                            {{ message }}
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var responseModal = new bootstrap.Modal(document.getElementById('responseModal'));
+            responseModal.show();
+        });
+    </script>
+{% endif %}
+
 <!-- Modal de confirmación -->
 <div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
     <div class="modal-dialog">
@@ -696,9 +717,6 @@
         </div>
     </div>
 </div>
-
-<!-- Contenedor para mostrar alertas -->
-
 {% endblock %}
 
 

@@ -59,7 +59,29 @@ document.addEventListener('DOMContentLoaded', () => {
             event.preventDefault(); // Evitar el envío del formulario si la validación falla
         } else {
             event.preventDefault(); // Evitar el envío del formulario por defecto
-            prepararDatosParaEnvio(); // Llamar a la función para preparar y enviar los datos
+            const formData = new FormData(form);
+
+            fetch(form.action, {  // Use form action URL
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                const responseModal = new bootstrap.Modal(document.getElementById('responseModal'));
+                const responseModalBody = document.getElementById('responseModalBody');
+                if (data.success) {
+                    responseModalBody.textContent = 'Datos enviados correctamente.';
+                } else {
+                    responseModalBody.textContent = 'Error al enviar los datos: ' + data.message;
+                }
+                responseModal.show();
+            })
+            .catch(error => {
+                const responseModal = new bootstrap.Modal(document.getElementById('responseModal'));
+                const responseModalBody = document.getElementById('responseModalBody');
+                responseModalBody.textContent = 'Ocurrió un error al enviar los datos: ' + error.message;
+                responseModal.show();
+            });
         }
     });
 
@@ -172,13 +194,13 @@ document.querySelectorAll('[name^="horas_extras_"]').forEach(input => {
 });
 
 
+
 function showAlert(message, type) {
     const alerta = document.getElementById('alerta');
     alerta.querySelector('.alerta-mensaje').innerHTML = message.replace(/\n/g, '<br>'); // Reemplazar saltos de línea con <br>
     alerta.className = `alerta-centrada alert alert-${type}`;
     alerta.style.display = 'block';
 }
-
 function cerrarAlerta() {
     const alerta = document.getElementById('alerta');
     alerta.style.display = 'none';
@@ -486,28 +508,30 @@ function toggleProcesoInputs(procesoNum) {
     const procesoSelect = document.querySelector(`[name="proceso${procesoNum}_header"]`);
     const selectedValue = procesoSelect.value;
 
-    // Deshabilitar la opción seleccionada en todos los selectores de proceso posteriores
+    //Deshabilitar la opción seleccionada en todos los selectores de proceso posteriores
     for (let i = 1; i <= 6; i++) {
-        const otherSelect = document.querySelector(`[name="proceso${i}_header"]`);
-        const options = otherSelect.querySelectorAll('option');
-        options.forEach(option => {
-            if (option.value === selectedValue) {
-                option.disabled = true;
-            } else {
-                // Verificar si la opción está seleccionada en algún proceso anterior
-                let isSelectedInPrevious = false;
-                for (let j = 1; j <= 6; j++) {
-                    if (j !== i) {
-                        const previousSelect = document.querySelector(`[name="proceso${j}_header"]`);
-                        if (previousSelect.value === option.value) {
-                            isSelectedInPrevious = true;
-                            break;
+        if(procesoNum !== i){  
+            const otherSelect = document.querySelector(`[name="proceso${i}_header"]`);
+            const options = otherSelect.querySelectorAll('option');
+            options.forEach(option => {
+                if (option.value === selectedValue) {
+                    option.disabled = true;
+                } else {
+                    // Verificar si la opción está seleccionada en algún proceso anterior
+                    let isSelectedInPrevious = false;
+                    for (let j = 1; j <= 6; j++) {
+                        if (j !== i) {
+                            const previousSelect = document.querySelector(`[name="proceso${j}_header"]`);
+                            if (previousSelect.value === option.value) {
+                                isSelectedInPrevious = true;
+                                break;
+                            }
                         }
                     }
+                    option.disabled = isSelectedInPrevious;
                 }
-                option.disabled = isSelectedInPrevious;
-            }
-        });
+            });
+        }
     }
 
     // Habilitar los campos de entrada correspondientes al proceso seleccionado

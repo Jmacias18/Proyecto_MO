@@ -11,6 +11,7 @@ import subprocess
 import json
 from django.http import JsonResponse
 from django.urls import reverse
+from django.contrib import messages
 
 
 def gestion_horas_procesos(request):
@@ -64,6 +65,7 @@ def gestion_horas_procesos(request):
                             autorizado=False,
                             sync=False
                         )
+        messages.success(request, '¡Las horas de los procesos se registraron exitosamente!')    
         return redirect('horas_procesos:gestion_horas_procesos')
     else:
         form = HorasProcesosForm()
@@ -163,8 +165,13 @@ def actualizar_horas_procesos(request):
             proceso.delete()
             print(f"Deleted proceso {id_hrspro}")
 
-        return redirect(reverse('horas_procesos:actualizar_horas_procesos'))
+        #return redirect(reverse('horas_procesos:actualizar_horas_procesos'))
 
+        messages.success(request, '¡El proceso se actualizó exitosamente!')
+
+        
+        return redirect(reverse('horas_procesos:actualizar_horas_procesos'))
+    
     return render(request, 'horas_procesos/actualizar_horas_procesos.html', {
         'registros_combinados': registros_combinados,
         'departamentos': departamentos,
