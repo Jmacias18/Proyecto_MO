@@ -17,8 +17,22 @@ local_conn_info = {
     'trusted_connection': 'yes'
 }
 
-# Lista de tablas a sincronizar
-tables_to_sync = ['Empleados', 'Asistencias']
+def get_connection(conn_info):
+    if 'trusted_connection' in conn_info and conn_info['trusted_connection'] == 'yes':
+        return pyodbc.connect(
+            driver=conn_info['driver'],
+            server=conn_info['server'],
+            database=conn_info['database'],
+            trusted_connection='yes'
+        )
+    else:
+        return pyodbc.connect(
+            driver=conn_info['driver'],
+            server=conn_info['server'],
+            database=conn_info['database'],
+            uid=conn_info['uid'],
+            pwd=conn_info['pwd']
+        )
 
 def sync_table(remote_conn, local_conn, table_name):
     with remote_conn.cursor() as remote_cur, local_conn.cursor() as local_cur:
@@ -27,31 +41,44 @@ def sync_table(remote_conn, local_conn, table_name):
         rows = remote_cur.fetchall()
         columns = [desc[0] for desc in remote_cur.description]
 
-        # Limpiar la tabla local
-        local_cur.execute(f"DELETE FROM {table_name}")
+        # Activar IDENTITY_INSERT para la tabla
+        local_cur.execute(f"SET IDENTITY_INSERT {table_name} ON")
 
-        # Insertar los datos en la tabla local
-        placeholders = ', '.join(['?'] * len(columns))
-        insert_query = f"INSERT INTO {table_name} ({', '.join(columns)}) VALUES ({placeholders})"
-        local_cur.executemany(insert_query, rows)
+        # Insertar o actualizar los datos en la tabla local
+        for row in rows:
+            row_dict = dict(zip(columns, row))
+            try:
+                local_cur.execute(
+                    f"INSERT INTO {table_name} (ID_Pro, Nombre_Pro, Estado_Pro) VALUES (?, ?, ?)",
+                    row_dict['ID_Pro'], row_dict['Nombre_Pro'], row_dict['Estado_Pro']
+                )
+            except pyodbc.IntegrityError:
+                local_cur.execute(
+                    f"UPDATE {table_name} SET Nombre_Pro = ?, Estado_Pro = ? WHERE ID_Pro = ?",
+                    row_dict['Nombre_Pro'], row_dict['Estado_Pro'], row_dict['ID_Pro']
+                )
+
+        # Desactivar IDENTITY_INSERT para la tabla
+        local_cur.execute(f"SET IDENTITY_INSERT {table_name} OFF")
 
         # Confirmar los cambios en la base de datos local
         local_conn.commit()
 
 def sync_databases():
-    # Conectar a las bases de datos remota y local
-    remote_conn = pyodbc.connect(**remote_conn_info)
-    local_conn = pyodbc.connect(**local_conn_info)
+    # Conectar a las bases de datos local y remota
+    local_conn = get_connection(local_conn_info)
+    remote_conn = get_connection(remote_conn_info)
 
     try:
+        tables_to_sync = ['Procesos']  # Lista de tablas a sincronizar
         for table in tables_to_sync:
             print(f"Sincronizando tabla {table}...")
             sync_table(remote_conn, local_conn, table)
             print(f"Tabla {table} sincronizada con éxito.")
     finally:
         # Cerrar las conexiones a las bases de datos
-        remote_conn.close()
         local_conn.close()
+        remote_conn.close()
 
 if __name__ == "__main__":
     sync_databases()

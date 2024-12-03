@@ -18,7 +18,7 @@ local_conn_info = {
 }
 
 # Lista de tablas a sincronizar
-tables_to_sync = ['HorasProcesos']
+tables_to_sync = ['HorasProcesos', 'Procesos']
 
 def sync_table(local_conn, remote_conn, table_name):
     with local_conn.cursor() as local_cur, remote_conn.cursor() as remote_cur:
@@ -27,10 +27,16 @@ def sync_table(local_conn, remote_conn, table_name):
         rows = local_cur.fetchall()
         columns = [desc[0] for desc in local_cur.description]
 
-        # Preparar la consulta de inserción o actualización
+        # Determinar la clave primaria y preparar la consulta de inserción o actualización
+        if table_name == 'HorasProcesos':
+            primary_key = 'ID_HrsProcesos'
+        elif table_name == 'Procesos':
+            primary_key = 'ID_Pro'
+        else:
+            raise ValueError(f"Clave primaria no definida para la tabla {table_name}")
+
         placeholders = ', '.join(['?'] * len(columns))
-        update_columns = ', '.join([f"{col}=source.{col}" for col in columns])
-        primary_key = 'ID_HrsProcesos'  # Nombre correcto de la columna de clave primaria
+        update_columns = ', '.join([f"{col}=source.{col}" for col in columns if col != primary_key])
         insert_query = f"""
             MERGE INTO {table_name} AS target
             USING (VALUES ({placeholders})) AS source ({', '.join(columns)})
@@ -41,17 +47,21 @@ def sync_table(local_conn, remote_conn, table_name):
                 INSERT ({', '.join(columns)}) VALUES ({placeholders});
         """
 
+        # Activar IDENTITY_INSERT para la tabla si es necesario
+        if table_name == 'Procesos':
+            remote_cur.execute(f"SET IDENTITY_INSERT {table_name} ON")
+
         # Insertar o actualizar los datos en la tabla remota
         for row in rows:
             row_data = tuple(row)  # Convertir la fila a una tupla
             remote_cur.execute(insert_query, row_data + row_data)  # Duplicar los parámetros para la cláusula INSERT
 
+        # Desactivar IDENTITY_INSERT para la tabla si es necesario
+        if table_name == 'Procesos':
+            remote_cur.execute(f"SET IDENTITY_INSERT {table_name} OFF")
+
         # Confirmar los cambios en la base de datos remota
         remote_conn.commit()
-
-        # Actualizar el campo SYNC a 1 en la tabla local
-        local_cur.execute(f"UPDATE {table_name} SET SYNC = 1")
-        local_conn.commit()
 
 def sync_databases():
     # Conectar a las bases de datos local y remota
