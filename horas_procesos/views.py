@@ -191,57 +191,17 @@ def eliminar_proceso(request):
 
 from django.http import HttpResponse
 import csv
-from openpyxl import Workbook
-import locale
-# Establecer la configuración regional para formatear la fecha en español
-locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8')
 
-def exportar_a_excel(request):
-    departamento_seleccionado = request.GET.get('departamento', None)
-    fecha_seleccionada = request.GET.get('fecha', None)
-    
+
+def exportar_excel(request):
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="horas_procesos.csv"'
+
+    writer = csv.writer(response)
+    writer.writerow(['Código Emp', 'Empleado', 'Departamento', 'Proceso', 'Hora Entrada', 'Hora Salida', 'Hrs', 'Total Hrs', 'Hrs Extras', 'Inasistencia'])
+
     registros = Horasprocesos.objects.all()
-    if departamento_seleccionado and departamento_seleccionado != "":
-        registros = registros.filter(codigo_emp__depto_emp=departamento_seleccionado)
-    
-    if fecha_seleccionada:
-        try:
-            fecha_seleccionada = datetime.strptime(fecha_seleccionada, '%Y-%m-%d').date()
-            registros = registros.filter(fecha_hrspro=fecha_seleccionada)
-        except ValueError:
-            return HttpResponse("Formato de fecha no válido. Use el formato YYYY-MM-DD.", status=400)
-
-    # Crear un libro de trabajo y una hoja
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Horas Procesos"
-
-    # Escribir los encabezados
-    headers = ['Código Emp', 'Empleado', 'Departamento', 'Proceso', 'Fecha', 'Hora Entrada', 'Hora Salida', 'Hrs', 'Total Hrs', 'Hrs Extras', 'Inasistencia']
-    ws.append(headers)
-
-    # Escribir los datos en el archivo Excel
     for registro in registros:
-        # Formatear la fecha en el formato "DD/MM/YYYY"
-        fecha_formateada = registro.fecha_hrspro.strftime('%d/%m/%Y')
-        
-        # Agregar una nueva fila al archivo Excel con los datos del registro
-        ws.append([
-            registro.codigo_emp.codigo_emp,  # Código del empleado
-            registro.codigo_emp.nombre_emp,  # Nombre del empleado
-            registro.codigo_emp.depto_emp,   # Departamento del empleado
-            registro.id_pro,                 # Proceso
-            fecha_formateada,                # Fecha formateada
-            registro.horaentrada,            # Hora de entrada
-            registro.horasalida,             # Hora de salida
-            registro.hrs,                    # Horas
-            registro.totalhrs,               # Total de horas
-            registro.hrsextras,              # Horas extras
-            'No' if registro.asistencia else 'Sí'  # Inasistencia
-        ])
+        writer.writerow([registro.codigo_emp.codigo_emp, registro.codigo_emp.nombre_emp, registro.codigo_emp.depto_emp, registro.id_pro, registro.horaentrada, registro.horasalida, registro.hrs, registro.totalhrs, registro.hrsextras, registro.asistencia])
 
-    # Crear una respuesta HTTP con el archivo Excel
-    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    response['Content-Disposition'] = 'attachment; filename=horas_procesos.xlsx'
-    wb.save(response)
     return response

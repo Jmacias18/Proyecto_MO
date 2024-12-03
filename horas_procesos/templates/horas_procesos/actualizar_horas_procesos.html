@@ -569,11 +569,7 @@
             <button type="submit" class="btn btn-primary mt-3">Filtrar</button>
             {% if registros_combinados %}
                 <button type="button" class="btn btn-secondary mt-3" id="editar-btn">Editar</button>
-                <form method="get" action="{% url 'horas_procesos:exportar_a_excel' %}" style="display: inline;">
-                    <input type="hidden" name="departamento" value="{{ departamento_seleccionado }}">
-                    <input type="hidden" name="fecha" value="{{ fecha_seleccionada }}">
-                    <button type="submit" class="btn btn-success mt-3">Exportar a Excel</button>
-                </form>
+                <button type="button" class="btn btn-success mt-3" id="exportar-btn">Exportar a Excel</button>
             {% endif %}
         </div>
         
