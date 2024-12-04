@@ -78,6 +78,18 @@
     .nav-item {
         margin-right: 15px; /* Ajusta este valor según sea necesario */
     }
+    .table-bordered th, .table-bordered td {
+        border: 2px solid #000; /* Aumentar el grosor del borde */
+    }
+    .table-hover tbody tr:hover {
+        background-color: #f5f5f5; /* Cambiar el color de fondo al pasar el ratón */
+    }
+    .form-control {
+        border: 2px solid #000; /* Aumentar el grosor del borde de los campos de entrada */
+    }
+    .form-check-input {
+        border: 2px solid #000; /* Aumentar el grosor del borde de los checkboxes */
+    }
 </style>
 <div class="container mt-4">
     <h2 class="mb-4 text-center">Gestión de Procesos</h2>
@@ -129,6 +141,7 @@
                             </th>
                         {% endfor %}
                         <th>Horas Extras</th>
+                        <th>No.Emp</th>
                         <th>Total</th>
                     </tr>
                 </thead>
@@ -161,6 +174,7 @@
                         <td>
                             <input type="number" class="form-control form-control-sm" name="horas_extras_{{ empleado.codigo_emp }}" onchange="calcularTotalHoras('{{ empleado.codigo_emp }}')">
                         </td>
+                        <td>{{ empleado.codigo_emp }}</td>
                         <td>
                             <input type="number" class="form-control form-control-sm" name="total_{{ empleado.codigo_emp }}" readonly>
                         </td>

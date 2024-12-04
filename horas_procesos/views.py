@@ -39,7 +39,7 @@ def gestion_horas_procesos(request):
                     sync=False
                 )
             else:
-                for i in range(1, 7):
+                for i in range(1, 16):
                     id_proceso = request.POST.get(f'proceso{i}_header')
                     hora_entrada = request.POST.get(f'inicio_proceso{i}_{codigo_emp}') or None
                     hora_salida = request.POST.get(f'fin_proceso{i}_{codigo_emp}') or None
@@ -73,7 +73,7 @@ def gestion_horas_procesos(request):
     empleados = Empleados.objects.all()
     procesos = Procesos.objects.filter(estado_pro=True)  # Filtrar solo los procesos activos
     departamentos = Empleados.objects.values_list('depto_emp', flat=True).distinct()
-    rango_procesos = range(1, 7)  # Generar el rango de números del 1 al 6
+    rango_procesos = range(1, 16)  # Generar el rango de números del 1 al 6
     return render(request, 'horas_procesos/gestion_horas_procesos.html', {
         'form': form,
         'empleados': empleados,
