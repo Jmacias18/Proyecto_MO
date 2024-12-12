@@ -30,13 +30,15 @@ def sync_table(local_conn, remote_conn, table_name):
         # Determinar la clave primaria y preparar la consulta de inserción o actualización
         if table_name == 'HorasProcesos':
             primary_key = 'ID_HrsProcesos'
+            # Asegurarse de que el campo SYNC se actualice a 1
+            update_columns = ', '.join([f"{col}=source.{col}" for col in columns if col != primary_key and col != 'SYNC']) + ", SYNC=1"
         elif table_name == 'Procesos':
             primary_key = 'ID_Pro'
+            update_columns = ', '.join([f"{col}=source.{col}" for col in columns if col != primary_key])
         else:
             raise ValueError(f"Clave primaria no definida para la tabla {table_name}")
 
         placeholders = ', '.join(['?'] * len(columns))
-        update_columns = ', '.join([f"{col}=source.{col}" for col in columns if col != primary_key])
         insert_query = f"""
             MERGE INTO {table_name} AS target
             USING (VALUES ({placeholders})) AS source ({', '.join(columns)})

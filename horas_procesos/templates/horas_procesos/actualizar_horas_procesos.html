@@ -88,6 +88,50 @@
     .nav-item {
         margin-right: 15px; /* Ajusta este valor según sea necesario */
     }
+
+    #resumen-asistencia {
+        display: none; /* Ocultar por defecto */
+        margin-top: 20px;
+    }
+
+    #resumen-asistencia h4 {
+        font-size: 1rem; /* Ajustar el tamaño de fuente para que coincida con los elementos <li> */
+        margin: 0;
+    }
+
+    #resumen-asistencia ul {
+        display: flex;
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    #resumen-asistencia li {
+        margin-right: 15px;
+        font-size: 1rem; /* Ajustar el tamaño de fuente para que coincida con el encabezado <h4> */
+    }
+
+    .nav-item {
+        margin-right: 15px; /* Ajusta este valor según sea necesario */
+    }
+    #resumen-asistencia {
+        display: none; /* Ocultar por defecto */
+        margin-top: 20px;
+    }
+    #resumen-asistencia h4 {
+        font-size: 1rem; /* Ajustar el tamaño de fuente para que coincida con los elementos <li> */
+        margin: 0;
+    }
+    #resumen-asistencia ul {
+        display: flex;
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    #resumen-asistencia li {
+        margin-right: 15px;
+        font-size: 1rem; /* Ajustar el tamaño de fuente para que coincida con el encabezado <h4> */
+    }
 </style>
 <br><br>
 <!-- Contenedor para mostrar alertas -->
@@ -96,14 +140,86 @@
     <button type="button" class="close" onclick="cerrarAlerta()">&times;</button>
 </div>
 <a href="{% url 'horas_procesos:gestion_horas_procesos' %}" class="back-icon">
-    <i class="fas fa-arrow-left"></i> Volver
+    <i class="fas fa-arrow-left"></i>
 </a>
 {% block extra_scripts %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.16.9/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/5.1.3/js/bootstrap.bundle.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 
 <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const resumenAsistencia = document.getElementById('resumen-asistencia');
+        const deptoSelect = document.getElementById('depto_select');
+    
+        const actualizarResumenAsistencia = () => {
+            const resumen = {
+                F: 0,
+                D: 0,
+                P: 0,
+                RT: 0,
+                V: 0,
+                INC: 0,
+                S: 0,
+                B: 0,
+                R: 0,
+                NI: 0,
+                ASI: 0
+            };
+    
+            document.querySelectorAll('select[name^="tipo_inasistencia_"]').forEach(select => {
+                const value = select.value;
+                if (resumen.hasOwnProperty(value)) {
+                    resumen[value]++;
+                }
+            });
+    
+            for (const key in resumen) {
+                const spanElement = document.getElementById(`resumen-${key}`);
+                spanElement.textContent = resumen[key];
+            }
+        };
+    
+        const mostrarResumenAsistencia = () => {
+            if (deptoSelect.value) {
+                resumenAsistencia.style.display = 'block';
+            } else {
+                resumenAsistencia.style.display = 'none';
+            }
+        };
+    
+        deptoSelect.addEventListener('change', () => {
+            actualizarResumenAsistencia();
+            mostrarResumenAsistencia();
+        });
+    
+        document.querySelectorAll('select[name^="tipo_inasistencia_"]').forEach(select => {
+            select.addEventListener('change', (event) => {
+                const id = event.target.name.split('_')[1];
+                const row = document.querySelector(`tr[data-id="${id}"]`);
+                if (!row) {
+                    console.error(`Fila con data-id="${id}" no encontrada`);
+                    return;
+                }
+                const codigoEmp = row.dataset.codigoEmp;
+                toggleInasistencia(id, codigoEmp);
+    
+                const mensaje = `Se marcará la inasistencia para el empleado ${codigoEmp}. ¿Deseas continuar?`;
+                document.getElementById('confirmMessage').textContent = mensaje;
+                const confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
+                confirmModal.show();
+    
+                document.getElementById('confirmSubmit').addEventListener('click', () => {
+                    document.getElementById('form-actualizar').submit();
+                });
+            });
+        });
+    
+        // Inicializar el resumen al cargar la página
+        actualizarResumenAsistencia();
+        mostrarResumenAsistencia();
+    });
     function showAlert(message, type) {
         const alerta = document.getElementById('alerta');
         alerta.querySelector('.alerta-mensaje').innerHTML = message.replace(/\n/g, '<br>'); // Reemplazar saltos de línea con <br>
@@ -115,6 +231,7 @@
         const alerta = document.getElementById('alerta');
         alerta.style.display = 'none';
     }
+    
     
     document.addEventListener('DOMContentLoaded', function() {
         const guardarBtn = document.getElementById('guardar-btn');
@@ -247,46 +364,28 @@
             });
         });
     
-        // Agregar evento change a los checkboxes de inasistencia
-        document.querySelectorAll('input[name^="inasistencia_"]').forEach(input => {
-            input.addEventListener('change', (event) => {
-                const id = event.target.name.split('_')[1];
-                const codigoEmp = document.querySelector(`tr[data-id="${id}"]`).dataset.codigoEmp;
-                toggleInasistencia(id, codigoEmp);
-    
-                // Mostrar el modal de confirmación cuando se marca una inasistencia
-                const mensaje = `Se marcará la inasistencia para el empleado ${codigoEmp}. ¿Deseas continuar?`;
-                document.getElementById('confirmMessage').textContent = mensaje;
-                const confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
-                confirmModal.show();
-    
-                document.getElementById('confirmSubmit').addEventListener('click', () => {
-                    document.getElementById('form-actualizar').submit();
-                });
-            });
-        });
-    
+        
         document.getElementById('guardar-btn').addEventListener('click', (event) => {
             let valid = true;
             document.querySelectorAll('input[name^="horaentrada_"], input[name^="horasalida_"]').forEach(input => {
                 const id = input.name.split('_')[1];
-                const inasistencia = document.querySelector(`input[name="inasistencia_${id}"]`).checked;
+                const inasistencia = ['F', 'D', 'P', 'V', 'INC', 'S', 'B', 'R'].includes(document.querySelector(`select[name="tipo_inasistencia_${id}"]`).value);
                 if (!inasistencia && !validarHoras(id)) {
                     valid = false;
                 }
             });
-    
+        
             if (!valid) {
                 showAlert('Corrige los errores antes de guardar.', 'danger');
                 return;
             }
-    
+        
             const { cambios, borrados } = contarCambiosYBorrados();
             const mensaje = `Se realizaron ${cambios} cambios y se eliminarán ${borrados} registros. ¿Deseas continuar?`;
             document.getElementById('confirmMessage').textContent = mensaje;
             const confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
             confirmModal.show();
-    
+        
             document.getElementById('confirmSubmit').addEventListener('click', () => {
                 // Asegurarse de que todos los procesos tengan el valor de TotalHrs antes de enviar el formulario
                 document.querySelectorAll('input[name^="totalhrs_"]').forEach(input => {
@@ -296,19 +395,17 @@
                         procesoInput.value = totalHrs;
                     });
                 });
-    
+        
                 document.querySelectorAll('input[type="time"]').forEach(input => {
                     if (input.value === '') {
                         input.value = '00:00:00.0000000';
                     }
                 });
-                
-
-                //guardar();
-               document.getElementById('form-actualizar').submit();
+        
+                document.getElementById('form-actualizar').submit();
             });
         });
-    
+        
         // Llamar a actualizarTotalHoras al cargar la página
         actualizarTotalHoras();
     });
@@ -317,7 +414,12 @@
         const entrada = document.querySelector(`input[name="horaentrada_${id}"]`).value;
         const salida = document.querySelector(`input[name="horasalida_${id}"]`).value;
     
-        const inasistencia = document.querySelector(`input[name="inasistencia_${id}"]`).checked;
+        const select = document.querySelector(`select[name="tipo_inasistencia_${id}"]`);
+        if (!select) {
+            console.error(`Select con name="tipo_inasistencia_${id}" no encontrado`);
+            return false;
+        }
+        const inasistencia = ['F', 'D', 'P', 'V', 'INC', 'S', 'B', 'R'].includes(select.value);
         if (inasistencia) {
             return true; // Saltar validación si está marcado como inasistencia
         }
@@ -390,6 +492,7 @@
     
             // Mostrar el detalle de horas por proceso
             const detalleProcesos = Object.entries(totalHorasPorProceso)
+                .filter(([proceso, horas]) => proceso !== "Sin Proceso")    // Filtrar el proceso "Sin Proceso"
                 .map(([proceso, horas]) => `<td>${proceso}: ${horas.toFixed(2)} horas</td>`)
                 .join('');
             document.getElementById('detalle_procesos_container').innerHTML = `<table><tr>${detalleProcesos}</tr></table>`;
@@ -490,6 +593,28 @@
         XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
         XLSX.writeFile(wb, nombreArchivo);
     };
+    const toggleInasistencia = (id, codigoEmp) => {
+        const select = document.querySelector(`select[name="tipo_inasistencia_${id}"]`);
+        const inasistencia = ['F', 'D', 'P', 'V', 'INC', 'S', 'B', 'R'].includes(select.value);
+    
+        if (inasistencia) {
+            document.querySelector(`input[name="horaentrada_${id}"]`).value = '00:00:00';
+            document.querySelector(`input[name="horasalida_${id}"]`).value = '00:00:00';
+            document.querySelector(`input[name="hrs_${id}"]`).value = '0';
+            document.querySelector(`input[name="totalhrs_${id}"]`).value = '0';
+            document.querySelector(`input[name="hrsextras_${id}"]`).value = '0';
+            document.querySelector(`select[name="proceso_${id}"]`).value = '';
+            document.querySelector(`select[name="producto_${id}"]`).value = '';
+        } else {
+            document.querySelector(`input[name="horaentrada_${id}"]`).removeAttribute('readonly');
+            document.querySelector(`input[name="horasalida_${id}"]`).removeAttribute('readonly');
+            document.querySelector(`input[name="hrs_${id}"]`).removeAttribute('readonly');
+            document.querySelector(`input[name="totalhrs_${id}"]`).removeAttribute('readonly');
+            document.querySelector(`input[name="hrsextras_${id}"]`).removeAttribute('readonly');
+            document.querySelector(`select[name="proceso_${id}"]`).removeAttribute('disabled');
+            document.querySelector(`select[name="producto_${id}"]`).removeAttribute('disabled');
+        }
+    };
 
     
 
@@ -497,7 +622,7 @@
         let cambios = 0;
         let borrados = 0;
     
-        document.querySelectorAll('input[name^="horaentrada_"], input[name^="horasalida_"], select[name^="proceso_"], input[name^="inasistencia_"]').forEach(input => {
+        document.querySelectorAll('input[name^="horaentrada_"], input[name^="horasalida_"], select[name^="proceso_"], select[name^="tipo_inasistencia_"]').forEach(input => {
             const originalValue = input.getAttribute('data-original-value');
             if (input.type === 'checkbox') {
                 if (input.checked.toString() !== originalValue) {
@@ -510,8 +635,10 @@
             }
         });
     
-        document.querySelectorAll('.eliminar-checkbox:checked').forEach(checkbox => {
-            borrados++;
+        document.querySelectorAll('select[name^="eliminar_"]').forEach(select => {
+            if (select.value === 'on') {
+                borrados++;
+            }
         });
     
         return { cambios, borrados };
@@ -573,14 +700,35 @@
             {% endif %}
         </div>
         
+        
     </form>
 
     {% if registros_combinados %}
     <form method="post" action="{% url 'horas_procesos:actualizar_horas_procesos' %}" id="form-actualizar">
         {% csrf_token %}
         <div class="table-responsive mt-4">
-            <table id="tabla-horas-procesos" class="table table-striped">
+            <table id="tabla-horas-procesos" class="table table-striped table-sm">
                 <thead>
+                    <tr>
+                        <td colspan="16" class="text-start">
+                            <div id="resumen-asistencia" style="display: block;">
+                                <h4 class="text-center">RESUMEN DE ASISTENCIA:</h4>
+                                <ul class="list-unstyled text-center">
+                                    <li>FALTA: <span id="resumen-F">0</span></li>
+                                    <li>DESCANSO: <span id="resumen-D">0</span></li>
+                                    <li>PERMISO: <span id="resumen-P">0</span></li>
+                                    <li>RETARDO: <span id="resumen-RT">0</span></li>
+                                    <li>VACACIONES: <span id="resumen-V">0</span></li>
+                                    <li>INCAPACIDAD: <span id="resumen-INC">0</span></li>
+                                    <li>SUSPENCION: <span id="resumen-S">0</span></li>
+                                    <li>BAJA: <span id="resumen-B">0</span></li>
+                                    <li>RENUNCIA: <span id="resumen-R">0</span></li>
+                                    <li>NUEVO INGRESO: <span id="resumen-NI">0</span></li>
+                                    <li>ASISTENCIA: <span id="resumen-ASI">0</span></li>
+                                </ul>
+                            </div>
+                        </td>
+                    </tr>
                     <tr>
                         <th>Código Emp</th>
                         <th>Empleado</th>
@@ -593,12 +741,16 @@
                         <th>Total Horas</th>
                         <th>Horas Extras</th>
                         <th>Inasistencia</th>
+                        <th>Creado Por:</th>
+                        <th>Modificado Por:</th>
+                        <th>F/Modificacion</th>
                         <th>
                             <img src="/static/icons/borrar.png" alt="Borrar" style="width: 15px; height: 15px;">
                         </th>
                     </tr>
                 </thead>
                 <tbody>
+                    
                     {% for registro in registros_combinados %}
                     {% for proceso in registro.procesos %}
                     <tr data-codigo-emp="{{ registro.codigo_emp }}" data-id="{{ proceso.id_hrspro }}">
@@ -609,8 +761,15 @@
                         {% endif %}
                         <td>
                             <select name="proceso_{{ proceso.id_hrspro }}" class="form-select form-select-sm" data-original-value="{{ proceso.id_pro }}">
+                                <option value="0" {% if proceso.id_pro == 0 %}selected{% endif %}>Sin Proceso</option>
                                 {% for p in procesos %}
                                 <option value="{{ p.id_pro }}" {% if p.id_pro == proceso.id_pro %}selected{% endif %}>{{ p.nombre_pro }}</option>
+                                {% endfor %}
+                            </select>
+                            <select name="producto_{{ proceso.id_hrspro }}" class="form-select form-select-sm mb-2">
+                                <option value="" {% if proceso.id_producto is none %}selected{% endif %}>Sin Producto</option>
+                                {% for producto in productos %}
+                                <option value="{{ producto.ID_Producto }}" {% if producto.ID_Producto == proceso.id_producto %}selected{% endif %}>{{ producto.DescripcionProd }}</option>
                                 {% endfor %}
                             </select>
                         </td>
@@ -619,11 +778,13 @@
                         </td>
                         <td>
                             <input type="time" name="horaentrada_{{ proceso.id_hrspro }}" class="form-control form-control-sm mb-2"
-                                value="{{ proceso.horaentrada }}" step="60" data-original-value="{{ proceso.horaentrada }}">
+                                value="{% if proceso.horaentrada == '00:00:00.0000000' %}00:00{% else %}{{ proceso.horaentrada|slice:":5" }}{% endif %}" 
+                                step="60" data-original-value="{{ proceso.horaentrada }}">
                         </td>
                         <td>
                             <input type="time" name="horasalida_{{ proceso.id_hrspro }}" class="form-control form-control-sm mb-2"
-                                value="{{ proceso.horasalida }}" step="60" data-original-value="{{ proceso.horasalida }}">
+                                value="{% if proceso.horasalida == '00:00:00.0000000' %}00:00{% else %}{{ proceso.horasalida|slice:":5" }}{% endif %}" 
+                                step="60" data-original-value="{{ proceso.horasalida }}">
                         </td>
                         <td>
                             <input type="text" name="hrs_{{ proceso.id_hrspro }}" class="form-control form-control-sm mb-2" 
@@ -638,9 +799,21 @@
                                 value="{{ proceso.hrsextras|floatformat:2 }}" min="0" step="0.01" data-original-value="{{ proceso.hrsextras|floatformat:2 }}">
                         </td>
                         <td>
-                            <input type="checkbox" name="inasistencia_{{ proceso.id_hrspro }}" value="1" 
-                                   {% if proceso.asistencia == 0 %}checked{% endif %}
-                                   data-original-value="{% if proceso.asistencia == 0 %}true{% else %}false{% endif %}">
+                            <select name="tipo_inasistencia_{{ proceso.id_hrspro }}" class="form-select form-select-sm">
+                                <option value="" selected>Asistencia</option>
+                                {% for tipo in tipos_inasistencia %}
+                                <option value="{{ tipo.ID_Asis }}" {% if proceso.ID_Asis == tipo.ID_Asis %}selected{% endif %}>{{ tipo.Descripcion }}</option>
+                                {% endfor %}
+                            </select>
+                        </td>
+                        <td>
+                            <p class="form-control-plaintext mb-2">{{ proceso.ucreado }}</p>
+                        </td>
+                        <td>
+                            <p class="form-control-plaintext mb-2">{% if proceso.umod %}{{ proceso.umod }}{% else %}NO MODFICADO{% endif %}</p>
+                        </td>
+                        <td>
+                            <p class="form-control-plaintext mb-2">{% if proceso.fmod %}{{ proceso.fmod }}{% else %}NO MODIFICADO{% endif %}</p>
                         </td>
                         <td>
                             <input type="checkbox" class="eliminar-checkbox" name="eliminar_{{ proceso.id_hrspro }}" data-id="{{ proceso.id_hrspro }}">
@@ -654,11 +827,12 @@
                         <td colspan="9" class="text-start detalle-horas" id="detalle_procesos_container">
                             <!-- Detalle de procesos se insertará aquí -->
                         </td>
-                        <td colspan="2" class="text-end total-horas">
+                        <td colspan="12" class="text-end total-horas text-center">
                             <strong>Total Horas:</strong>
                             <span id="total_proceso" class="text-center">0.00</span>
                         </td>
                     </tr>
+                
                 </tfoot>
             </table>
         </div>

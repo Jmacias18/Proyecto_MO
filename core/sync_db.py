@@ -41,25 +41,42 @@ def sync_table(remote_conn, local_conn, table_name):
         rows = remote_cur.fetchall()
         columns = [desc[0] for desc in remote_cur.description]
 
-        # Activar IDENTITY_INSERT para la tabla
-        local_cur.execute(f"SET IDENTITY_INSERT {table_name} ON")
+        # Determinar la clave primaria y las columnas para la tabla
+        if table_name == 'Procesos':
+            primary_key = 'ID_Pro'
+            insert_columns = ['ID_Pro', 'Nombre_Pro', 'Estado_Pro']
+            update_columns = ['Nombre_Pro', 'Estado_Pro']
+        elif table_name == 'Empleados':
+            primary_key = 'Codigo_Emp'
+            insert_columns = ['Codigo_Emp', 'Nombre_Emp', 'Depto_Emp', 'Puesto_Emp', 'Tipo_Puesto', 'Turno_emp', 'Supervisor']
+            update_columns = ['Nombre_Emp', 'Depto_Emp', 'Puesto_Emp', 'Tipo_Puesto', 'Turno_emp', 'Supervisor']
+        else:
+            raise ValueError(f"Clave primaria no definida para la tabla {table_name}")
+
+        placeholders = ', '.join(['?'] * len(insert_columns))
+        update_set = ', '.join([f"{col}=?" for col in update_columns])
+
+        # Activar IDENTITY_INSERT para la tabla si es necesario
+        if table_name == 'Procesos':
+            local_cur.execute(f"SET IDENTITY_INSERT {table_name} ON")
 
         # Insertar o actualizar los datos en la tabla local
         for row in rows:
             row_dict = dict(zip(columns, row))
             try:
                 local_cur.execute(
-                    f"INSERT INTO {table_name} (ID_Pro, Nombre_Pro, Estado_Pro) VALUES (?, ?, ?)",
-                    row_dict['ID_Pro'], row_dict['Nombre_Pro'], row_dict['Estado_Pro']
+                    f"INSERT INTO {table_name} ({', '.join(insert_columns)}) VALUES ({placeholders})",
+                    [row_dict[col] for col in insert_columns]
                 )
             except pyodbc.IntegrityError:
                 local_cur.execute(
-                    f"UPDATE {table_name} SET Nombre_Pro = ?, Estado_Pro = ? WHERE ID_Pro = ?",
-                    row_dict['Nombre_Pro'], row_dict['Estado_Pro'], row_dict['ID_Pro']
+                    f"UPDATE {table_name} SET {update_set} WHERE {primary_key} = ?",
+                    [row_dict[col] for col in update_columns] + [row_dict[primary_key]]
                 )
 
-        # Desactivar IDENTITY_INSERT para la tabla
-        local_cur.execute(f"SET IDENTITY_INSERT {table_name} OFF")
+        # Desactivar IDENTITY_INSERT para la tabla si es necesario
+        if table_name == 'Procesos':
+            local_cur.execute(f"SET IDENTITY_INSERT {table_name} OFF")
 
         # Confirmar los cambios en la base de datos local
         local_conn.commit()
@@ -70,7 +87,7 @@ def sync_databases():
     remote_conn = get_connection(remote_conn_info)
 
     try:
-        tables_to_sync = ['Procesos']  # Lista de tablas a sincronizar
+        tables_to_sync = ['Procesos', 'Empleados']  # Lista de tablas a sincronizar
         for table in tables_to_sync:
             print(f"Sincronizando tabla {table}...")
             sync_table(remote_conn, local_conn, table)

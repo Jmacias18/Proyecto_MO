@@ -13,6 +13,7 @@ class Empleados(models.Model):
         return self.nombre_emp
 
     class Meta:
+        managed = True
         db_table = 'Empleados'
 
 

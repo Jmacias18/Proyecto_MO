@@ -12,6 +12,64 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        const resumenAsistencia = document.getElementById('resumen-asistencia');
+        const deptoSelect = document.getElementById('depto_select');
+    
+        {% comment %} const actualizarResumenAsistencia = () => {
+            const resumen = {
+                F: 0,
+                D: 0,
+                P: 0,
+                RT: 0,
+                V: 0,
+                INC: 0,
+                S: 0,
+                B: 0,
+                R: 0,
+                NI: 0,
+                ASI: 0
+                
+            };
+            const selectedDepto = deptoSelect.value;
+    
+            document.querySelectorAll('select[name^="tipo_inasistencia_"]').forEach(select => {
+                const value = select.value;
+                if (resumen.hasOwnProperty(value)) {
+                    resumen[value]++;
+                }
+            });
+    
+            for (const key in resumen) {
+                const spanElement = document.getElementById(`resumen-${key}`);
+                if (spanElement) {
+                    spanElement.textContent = resumen[key];
+                }
+            }
+        };
+    
+        const mostrarResumenAsistencia = () => {
+            if (deptoSelect.value) {
+                resumenAsistencia.style.display = 'block';
+            } else {
+                resumenAsistencia.style.display = 'none';
+            }
+        };
+    
+        deptoSelect.addEventListener('change', () => {
+            actualizarResumenAsistencia();
+            mostrarResumenAsistencia();
+        });
+    
+        document.querySelectorAll('select[name^="tipo_inasistencia_"]').forEach(select => {
+            select.addEventListener('change', actualizarResumenAsistencia);
+        });
+    
+        // Inicializar el resumen al cargar la página
+        actualizarResumenAsistencia();
+        mostrarResumenAsistencia();
+    }); {% endcomment %}
+
+    document.addEventListener('DOMContentLoaded', function () {
         if (window.location.pathname === '/horas_procesos/gestion_horas_procesos/') {
             const navbar = document.querySelector('.navbar-nav.ms-auto');
             const logoutButton = navbar.querySelector('form[action="/accounts/logout/"]').closest('li');
@@ -22,8 +80,8 @@
             `;
             navbar.insertBefore(syncButton, logoutButton);
 
-            document.getElementById('sync-to-server-button').addEventListener('click', function(event) {
-                event.preventDefault();  // Evitar el comportamiento predeterminado del botón
+            document.getElementById('sync-to-server-button').addEventListener('click', function (event) {
+                event.preventDefault(); // Evitar el comportamiento predeterminado del botón
                 fetch("{% url 'horas_procesos:sync_to_server' %}", {
                     method: 'POST',
                     headers: {
@@ -31,22 +89,24 @@
                         'Content-Type': 'application/json'
                     }
                 })
-                .then(response => response.json())
-                .then(data => {
-                    alert(data.message);
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('Ocurrió un error durante la sincronización.');
-                });
+                    .then(response => response.json())
+                    .then(data => {
+                        alert(data.message);
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Ocurrió un error durante la sincronización.');
+                    });
             });
         }
     });
 
+    // Validar el formulario al enviarlo
     function validarFormulario() {
-        return validarHorasRegistradas() && validarHorasInicioFinIguales(); 
+        return validarHorasRegistradas() && validarHorasInicioFinIguales();
     }
 </script>
+
 {% endblock %}
 {% block content %}
 <style>
@@ -90,6 +150,25 @@
     .form-check-input {
         border: 2px solid #000; /* Aumentar el grosor del borde de los checkboxes */
     }
+    #resumen-asistencia {
+        display: no;
+        align-items: center;
+        gap: 10px;
+    }
+    #resumen-asistencia h4 {
+        font-size: 1rem; /* Ajustar el tamaño de fuente para que coincida con los elementos <li> */
+        margin: 0;
+    }
+    #resumen-asistencia ul {
+        display: flex;
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    #resumen-asistencia li {
+        margin-right: 15px;
+        font-size: 1rem; /* Ajustar el tamaño de fuente para que coincida con el encabezado <h4> */
+    }
 </style>
 <div class="container mt-4">
     <h2 class="mb-4 text-center">Gestión de Procesos</h2>
@@ -106,9 +185,12 @@
             <label for="fecha" class="form-label">Fecha:</label>
             <p id="fecha" class="form-control-plaintext"></p>
         </div>
+        
         <div class="text-center mt-4">
             <a href="{% url 'horas_procesos:actualizar_horas_procesos' %}" class="btn btn-secondary">Administracion de Registros</a>
         </div>
+        
+        
         <div class="mb-4">
             <label for="depto_select" class="form-label">Selecciona un Departamento:</label>
             <select id="depto_select" class="form-select" onchange="filtrarEmpleados()">
@@ -121,9 +203,28 @@
         <div class="mb-4">
             <p id="total_empleados" class="form-label" style="display: none;">Total de Empleados: 0</p>   
         </div>
+        
         <div id="tabla_empleados" class="table-wrapper" style="display: none;">
             <table class="table table-bordered table-hover table-sm">
                 <thead class="thead-dark">
+                    <td colspan="24" class="text-start">
+                        <div id="resumen-asistencia" style="display: none;">
+                            <h4 class="text-center">RESUMEN DE ASISTENCIA:</h4>
+                            <ul class="list-unstyled text-center">
+                                <li>FALTA: <span id="resumen-F">0</span></li>
+                                <li>DESCANSO: <span id="resumen-D">0</span></li>
+                                <li>PERMISO: <span id="resumen-P">0</span></li>
+                                <li>RETARDO: <span id="resumen-RT">0</span></li>
+                                <li>VACACIONES: <span id="resumen-V">0</span></li>
+                                <li>INCAPACIDAD: <span id="resumen-INC">0</span></li>
+                                <li>SUSPENCION: <span id="resumen-S">0</span></li>
+                                <li>BAJA: <span id="resumen-B">0</span></li>
+                                <li>RENUNCIA: <span id="resumen-R">0</span></li>
+                                <li>NUEVO INGRESO: <span id="resumen-NI">0</span></li>
+                                <li>ASISTENCIA: <span id="resumen-ASI">0</span></li>
+                            </ul>
+                        </div>
+                    </td>
                     <tr>
                         <th></th>
                         <th>No.Emp</th>
@@ -138,11 +239,17 @@
                                     <option value="{{ proceso.id_pro }}">{{ proceso.nombre_pro }}</option>
                                     {% endfor %}
                                 </select>
+                                <select class="form-select form-select-sm mt-2" name="producto{{ i }}_header">
+                                    <option value="" disabled selected>Producto</option>
+                                    {% for producto in productos %}
+                                    <option value="{{ producto.ID_Producto }}">{{ producto.DescripcionProd }}</option>
+                                    {% endfor %}
+                                </select>
                             </th>
                         {% endfor %}
                         <th>Horas Extras</th>
-                        <th>No.Emp</th>
                         <th>Total</th>
+                        <th>No.Emp</th>
                     </tr>
                 </thead>
                 <tbody id="empleados_tbody">
@@ -153,8 +260,14 @@
                         <td>{{ empleado.nombre_emp }}</td>
                         <td>{{ empleado.depto_emp }}</td>
                         <td>
-                            <input type="checkbox" class="form-check-input inasistencia-checkbox" name="inasistencia_{{ empleado.codigo_emp }}" onchange="toggleInputs('{{ empleado.codigo_emp }}')">
-                            <label for="inasistencia_{{ empleado.codigo_emp }}"></label>
+                            <select class="form-select form-select-sm" name="tipo_inasistencia_{{ empleado.codigo_emp }}" onchange="toggleInputs('{{ empleado.codigo_emp }}')">
+                                {% if empleado.tipo_inasistencia == "ASISTENCIA" %}
+                                <option value="ASISTENCIA" selected>ASISTENCIA</option>
+                                {% endif %}
+                                {% for tipo in tipos_inasistencia %}
+                                <option value="{{ tipo.ID_Asis }}" data-descripcion="{{ tipo.Descripcion }}" {% if empleado.tipo_inasistencia == tipo.ID_Asis %}selected{% endif %}>{{ tipo.Descripcion }}</option>
+                                {% endfor %}
+                            </select>
                         </td>
                         {% for i in rango_procesos %}
                         <td>
@@ -174,10 +287,11 @@
                         <td>
                             <input type="number" class="form-control form-control-sm" name="horas_extras_{{ empleado.codigo_emp }}" onchange="calcularTotalHoras('{{ empleado.codigo_emp }}')">
                         </td>
-                        <td>{{ empleado.codigo_emp }}</td>
+                        
                         <td>
                             <input type="number" class="form-control form-control-sm" name="total_{{ empleado.codigo_emp }}" readonly>
                         </td>
+                        <td>{{ empleado.codigo_emp }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
