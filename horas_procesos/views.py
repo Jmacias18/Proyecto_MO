@@ -31,8 +31,65 @@ def get_spf_info_connection():
         trusted_connection=spf_info_conn_info['trusted_connection']
     )
 
+# Conexión a la base de datos TempusAccesos
+tempus_accesos_conn_info = {
+    'driver': '{ODBC Driver 17 for SQL Server}',
+    'server': 'localhost\\SQLEXPRESS',
+    'database': 'TempusAccesos',
+    'trusted_connection': 'yes'
+}
+
+def get_tempus_accesos_connection():
+    return pyodbc.connect(
+        driver=tempus_accesos_conn_info['driver'],
+        server=tempus_accesos_conn_info['server'],
+        database=tempus_accesos_conn_info['database'],
+        trusted_connection=tempus_accesos_conn_info['trusted_connection']
+    )
+
+import locale
+from datetime import datetime
+
+# Establecer la configuración regional a español
+locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8')
+
+def obtener_datos_tempus_accesos():
+    conn = get_tempus_accesos_connection()
+    cursor = conn.cursor()
+
+    # Obtener los datos de la tabla USERINFO
+    cursor.execute("SELECT USERID, Badgenumber FROM USERINFO")
+    userinfo = cursor.fetchall()
+
+    # Crear un diccionario para mapear USERID a Badgenumber
+    userid_to_badgenumber = {row.USERID: str(row.Badgenumber).strip() for row in userinfo}
+    print("USERID to Badgenumber mapping:", userid_to_badgenumber)
+
+    # Obtener los datos de la tabla CHECKINOUT
+    cursor.execute("SELECT USERID, CHECKTIME FROM CHECKINOUT WHERE CAST(CHECKTIME AS DATE) = CAST(GETDATE() AS DATE)")
+    checkinout = cursor.fetchall()
+
+    # Crear un diccionario para almacenar los registros de entrada de hoy
+    registros_entrada = {}
+    for row in checkinout:
+        if row.USERID in userid_to_badgenumber:
+            badgenumber = userid_to_badgenumber[row.USERID]
+            # Eliminar el prefijo '130' si está presente
+            if badgenumber.startswith('130'):
+                badgenumber = badgenumber[3:]
+            # Mantener solo los últimos 4 dígitos
+            badgenumber = badgenumber[-4:]
+            registros_entrada[badgenumber] = row.CHECKTIME
+
+    print("Registros de entrada:", registros_entrada)
+
+    conn.close()
+    return registros_entrada
 
 def gestion_horas_procesos(request):
+    dia_actual = datetime.now().strftime('%A').capitalize()  # Definir dia_actual en ambos métodos
+    print(f"Día actual en español: {dia_actual}")
+
     if request.method == 'POST':
         # Obtener los tipos de inasistencia de la base de datos SPF_Info
         spf_info_conn = get_spf_info_connection()
@@ -44,93 +101,234 @@ def gestion_horas_procesos(request):
         # Crear un diccionario para mapear la descripción al ID_Asis
         descripcion_a_id = {tipo[1]: tipo[0] for tipo in tipos_inasistencia}
 
-        for empleado in Empleados.objects.all():
-            codigo_emp = empleado.codigo_emp
-            tipo_inasistencia = request.POST.get(f'tipo_inasistencia_{codigo_emp}', '')  # Obtener el tipo de inasistencia
-            ID_Asis = tipo_inasistencia if tipo_inasistencia else None
-            inasistencia = ID_Asis in descripcion_a_id.values()  # Verificar si es una inasistencia
-            horas_extras = request.POST.get(f'horas_extras_{codigo_emp}', 0)
-            horas_extras = float(horas_extras) if horas_extras and horas_extras.strip() else 0
+        # Obtener los días de descanso de la tabla Turnos
+        spf_info_conn = get_spf_info_connection()
+        cursor = spf_info_conn.cursor()
+        cursor.execute("SELECT ID_Turno, Descanso FROM Turnos")
+        turnos = cursor.fetchall()
+        spf_info_conn.close()
 
-            if inasistencia and tipo_inasistencia not in ['NI', 'RT','ASI']:
-                # Insert a single record with zero hours
-                Horasprocesos.objects.create(
-                    fecha_hrspro=timezone.now().date(),
-                    codigo_emp=empleado,
-                    ID_Asis=ID_Asis,
-                    id_pro=0,
-                    horaentrada='00:00:00',
-                    horasalida='00:00:00',
-                    hrs=0,
-                    totalhrs=0,
-                    hrsextras=0,
-                    autorizado=False,
-                    sync=False,
-                    ucreado=request.user.username,  # Guardar el usuario que creó el registro
-                    umod=None,  # Guardar el usuario que modificó el registro
-                    fmod=None
-                )
-            
+        # Crear un diccionario para mapear el ID del turno a los días de descanso
+        descanso_por_turno = {turno[0]: [dia.strip().capitalize() for dia in turno[1].split('/')] if turno[1] else [] for turno in turnos}
+        print("Descanso por turno:", descanso_por_turno)
+
+        # Obtener los ID_Asis para los diferentes tipos de inasistencia
+        id_asistencia = descripcion_a_id.get('ASISTENCIA')
+        id_descanso = descripcion_a_id.get('DESCANSO')
+        id_falta = descripcion_a_id.get('FALTA')
+        id_permiso = descripcion_a_id.get('PERMISO')
+        id_vacaciones = descripcion_a_id.get('VACACIONES')
+        id_incapacidad = descripcion_a_id.get('INCAPACIDAD')
+        id_suspension = descripcion_a_id.get('SUSPENCION')
+        id_baja = descripcion_a_id.get('BAJA')
+        id_renuncia = descripcion_a_id.get('RENUNCIA')
+        id_nuevo_ingreso = descripcion_a_id.get('NUEVO INGRESO')
+        id_retardo = descripcion_a_id.get('RETARDO')
+
+        # Crear un diccionario para mapear los tipos de inasistencia a sus respectivos IDs y mensajes
+        inasistencia_map = {
+            'ASI': (id_asistencia, 'ASISTENCIA'),
+            'D': (id_descanso, 'DESCANSO'),
+            'P': (id_permiso, 'PERMISO'),
+            'V': (id_vacaciones, 'VACACIONES'),
+            'INC': (id_incapacidad, 'INCAPACIDAD'),
+            'S': (id_suspension, 'SUSPENCION'),
+            'B': (id_baja, 'BAJA'),
+            'R': (id_renuncia, 'RENUNCIA'),
+            'NI': (id_nuevo_ingreso, 'NUEVO INGRESO'),
+            'RT': (id_retardo, 'RETARDO')
+        }
+
+        # Obtener los datos de TempusAccesos
+        registros_entrada = obtener_datos_tempus_accesos()
+        print("Registros de entrada:", registros_entrada)
+
+        # Filtrar empleados por departamento seleccionado
+        departamento_seleccionado = request.POST.get('departamento')
+        empleados = Empleados.objects.filter(id_departamento=departamento_seleccionado)
+
+        for empleado in empleados:
+            codigo_emp = str(empleado.codigo_emp).strip()[-4:]  # Convertir a string y mantener solo los últimos 4 dígitos
+            print(f"Empleado {codigo_emp}: Badgenumber={codigo_emp}")
+
+            es_descanso = dia_actual in descanso_por_turno.get(str(empleado.id_turno), [])
+            print(f"Empleado {codigo_emp} - Turno {empleado.id_turno} - Día actual: {dia_actual} - Es descanso: {es_descanso}")
+
+            # Verificar si el empleado tiene una checada registrada
+            tiene_checada = codigo_emp in registros_entrada
+            print(f"Empleado {codigo_emp} - Tiene checada: {tiene_checada}")
+
+            # Obtener el tipo de inasistencia seleccionado en el formulario
+            tipo_inasistencia_seleccionado = request.POST.get(f'tipo_inasistencia_{codigo_emp}', 'F')
+
+            # Determinar el tipo de inasistencia basado en las checadas y el día de descanso
+            if tiene_checada:
+                tipo_inasistencia = tipo_inasistencia_seleccionado if tipo_inasistencia_seleccionado != 'F' else 'ASI'
+            elif es_descanso:
+                tipo_inasistencia = tipo_inasistencia_seleccionado if tipo_inasistencia_seleccionado != 'F' else 'D'
             else:
-                for i in range(1, 16):
-                    id_proceso = request.POST.get(f'proceso{i}_header')
-                    hora_entrada = request.POST.get(f'inicio_proceso{i}_{codigo_emp}') or None
-                    hora_salida = request.POST.get(f'fin_proceso{i}_{codigo_emp}') or None
-                    id_producto = request.POST.get(f'producto{i}_header')
+                tipo_inasistencia = tipo_inasistencia_seleccionado
 
-                    if id_proceso and hora_entrada and hora_salida:
-                        # Calcular las horas trabajadas
-                        formato = '%H:%M'
-                        hora_entrada_dt = datetime.strptime(hora_entrada, formato)
-                        hora_salida_dt = datetime.strptime(hora_salida, formato)
-                        diferencia = hora_salida_dt - hora_entrada_dt
-                        horas_trabajadas = diferencia.total_seconds() / 3600
+            # Asignar el ID_Asis y el mensaje correspondiente
+            ID_Asis, mensaje = inasistencia_map.get(tipo_inasistencia, (id_falta, 'FALTA'))
+            inasistencia = tipo_inasistencia in ['F', 'D', 'P', 'V', 'INC', 'S', 'B', 'R']
+            print(f"Empleado {codigo_emp} marcado como {mensaje}")
 
-                        Horasprocesos.objects.create(
-                            fecha_hrspro=timezone.now().date(),
-                            codigo_emp=empleado,
-                            ID_Asis=ID_Asis,
-                            id_pro=id_proceso,
-                            id_producto=id_producto,  
-                            horaentrada=hora_entrada,
-                            horasalida=hora_salida,
-                            hrs=horas_trabajadas,
-                            totalhrs=horas_trabajadas + horas_extras,
-                            hrsextras=horas_extras,
-                            autorizado=False,
-                            sync=False,
-                            ucreado=request.user.username,  # Guardar el usuario que creó el registro
-                            umod=None,  # Guardar el usuario que modificó el registro
-                            fmod=None
-                        )
+            try:
+                if inasistencia:
+                    # Insertar un solo registro con valores en cero para empleados con falta o inasistencia similar
+                    Horasprocesos.objects.create(
+                        fecha_hrspro=timezone.now().date(),
+                        codigo_emp=empleado,
+                        ID_Asis=ID_Asis,
+                        id_pro=0,
+                        id_producto=None,
+                        horaentrada='00:00:00',
+                        horasalida='00:00:00',
+                        hrs=0,
+                        totalhrs=0,
+                        hrsextras=0,
+                        autorizado=False,
+                        sync=False,
+                        ucreado=request.user.username,  # Guardar el usuario que creó el registro
+                        umod=None,  # Guardar el usuario que modificó el registro
+                        fmod=None
+                    )
+                    print(f"Registro de inasistencia creado para empleado {codigo_emp}")
+                else:
+                    # Insertar registros de horas de procesos solo si no es inasistencia
+                    for i in range(1, 16):
+                        id_proceso = request.POST.get(f'proceso{i}_header')
+                        hora_entrada = request.POST.get(f'inicio_proceso{i}_{codigo_emp}') or None
+                        hora_salida = request.POST.get(f'fin_proceso{i}_{codigo_emp}') or None
+                        id_producto = request.POST.get(f'producto{i}_header')
+                        horas_extras = request.POST.get(f'horas_extras_{codigo_emp}', 0)
+
+                        if id_proceso and hora_entrada and hora_salida:
+                            # Calcular las horas trabajadas
+                            formato = '%H:%M'
+                            hora_entrada_dt = datetime.strptime(hora_entrada, formato)
+                            hora_salida_dt = datetime.strptime(hora_salida, formato)
+                            diferencia = hora_salida_dt - hora_entrada_dt
+                            horas_trabajadas = diferencia.total_seconds() / 3600
+
+                            # Convertir horas_extras a float
+                            horas_extras = float(horas_extras)
+
+                            Horasprocesos.objects.create(
+                                fecha_hrspro=timezone.now().date(),
+                                codigo_emp=empleado,
+                                ID_Asis=ID_Asis,
+                                id_pro=id_proceso,
+                                id_producto=id_producto,  
+                                horaentrada=hora_entrada,
+                                horasalida=hora_salida,
+                                hrs=horas_trabajadas,
+                                totalhrs=horas_trabajadas + horas_extras,
+                                hrsextras=horas_extras,
+                                autorizado=False,
+                                sync=False,
+                                ucreado=request.user.username,  # Guardar el usuario que creó el registro
+                                umod=None,  # Guardar el usuario que modificó el registro
+                                fmod=None
+                            )
+                            print(f"Registro de horas de proceso creado para empleado {codigo_emp}, proceso {id_proceso}")
+            except Exception as e:
+                print(f"Error al crear registro para empleado {codigo_emp}: {e}")
+
         messages.success(request, '¡Las horas de los procesos se registraron exitosamente!')    
         return redirect('horas_procesos:gestion_horas_procesos')
     else:
         form = HorasProcesosForm()
     
-    empleados = Empleados.objects.all()
+    # Filtrar empleados por departamento seleccionado
+    departamento_seleccionado = request.GET.get('departamento')
+    if departamento_seleccionado:
+        empleados = Empleados.objects.filter(id_departamento=departamento_seleccionado)
+    else:
+        empleados = Empleados.objects.filter(id_departamento__in=[12, 16, 17, 18, 19, 20, 21, 22, 23])
+
     procesos = Procesos.objects.filter(estado_pro=True)  # Filtrar solo los procesos activos
-    departamentos = Empleados.objects.values_list('depto_emp', flat=True).distinct()
+    departamentos = Empleados.objects.values_list('id_departamento', flat=True).distinct()
     rango_procesos = range(1, 16)  # Generar el rango de números del 1 al 16
 
     spf_info_conn = get_spf_info_connection()
     cursor = spf_info_conn.cursor()
     cursor.execute("SELECT ID_Producto, DescripcionProd FROM Productos")
     productos = cursor.fetchall()
-    
+
     # Obtener los tipos de inasistencia de la base de datos SPF_Info
     cursor.execute("SELECT ID_Asis, Descripcion FROM Tipo_Asist")
     tipos_inasistencia = cursor.fetchall()
+
+    # Crear un diccionario para mapear la descripción al ID_Asis
+    descripcion_a_id = {tipo[1]: tipo[0] for tipo in tipos_inasistencia}
+
+    # Obtener la descripción de los departamentos
+    cursor.execute("SELECT ID_Departamento, Descripcion FROM Departamentos")
+    departamentos = cursor.fetchall()
     spf_info_conn.close()
+
+    # Convertir departamentos a un diccionario
+    departamentos_dict = {depto[0]: depto[1] for depto in departamentos}
+
+    # Obtener los días de descanso para cada turno desde la base de datos SPF_Info
+    spf_info_conn = get_spf_info_connection()
+    cursor = spf_info_conn.cursor()
+    cursor.execute("SELECT ID_Turno, Descanso FROM Turnos")
+    turnos = cursor.fetchall()
+    spf_info_conn.close()
+    descanso_por_turno = {turno[0]: [dia.strip().capitalize() for dia in turno[1].split('/')] if turno[1] else [] for turno in turnos}
+
+    # Obtener los ID_Asis para ASISTENCIA y DESCANSO
+    id_asistencia = descripcion_a_id.get('ASISTENCIA')
+    id_descanso = descripcion_a_id.get('DESCANSO')
+
+    # Obtener los datos de TempusAccesos
+    registros_entrada = obtener_datos_tempus_accesos()
+
+    # Añadir la descripción del departamento a cada empleado
+    empleados_con_descripcion = []
+    for empleado in empleados:
+        codigo_emp = str(empleado.codigo_emp).strip()[-4:]  # Convertir a string y mantener solo los últimos 4 dígitos
+        es_descanso = dia_actual in descanso_por_turno.get(str(empleado.id_turno), [])
+        tipo_inasistencia = 'F' if codigo_emp not in registros_entrada else 'ASI'
+        
+        # Priorizar la checada sobre el día de descanso
+        if es_descanso and codigo_emp in registros_entrada:
+            tipo_inasistencia = 'ASI'
+        elif es_descanso:
+            tipo_inasistencia = 'D'
+        
+        empleado_dict = {
+            'codigo_emp': codigo_emp,
+            'nombre_emp': empleado.nombre_emp,
+            'id_departamento': empleado.id_departamento,
+            'descripcion_departamento': departamentos_dict.get(empleado.id_departamento, ''),
+            'id_turno': empleado.id_turno,  # Utilizar el campo correcto
+            'dias_descanso': descanso_por_turno.get(str(empleado.id_turno), []),  # Obtener los días de descanso
+            'es_descanso': es_descanso,  # Verificar si es día de descanso
+            'tipo_inasistencia': tipo_inasistencia  # Asignar tipo_inasistencia según el día de descanso y registros de entrada
+        }
+        empleados_con_descripcion.append(empleado_dict)
+
+    # Lista de IDs de departamentos a mostrar
+    departamentos_a_mostrar = [12, 16, 17, 18, 19, 20, 21, 22, 23]
+
+    # Agregar print para ver cómo se pasan los ID_Asis al HTML
+    print("Tipos de inasistencia:", tipos_inasistencia)
+
     return render(request, 'horas_procesos/gestion_horas_procesos.html', {
         'form': form,
-        'empleados': empleados,
+        'empleados': empleados_con_descripcion,
         'procesos': procesos,
-        'departamentos': departamentos,
+        'departamentos': [{'id_departamento': depto[0], 'descripcion': depto[1]} for depto in departamentos],
         'rango_procesos': rango_procesos,  # Pasar el rango al contexto
         'productos': productos,
-        'tipos_inasistencia': tipos_inasistencia  # Pasar los tipos de inasistencia al contexto
+        'tipos_inasistencia': tipos_inasistencia,  # Pasar los tipos de inasistencia al contexto
+        'departamentos_a_mostrar': departamentos_a_mostrar  # Pasar la lista de IDs de departamentos a mostrar al contexto
     })
+
 @csrf_exempt
 def sync_to_server_view(request):
     if request.method == 'POST':
@@ -146,19 +344,36 @@ def sync_to_server_view(request):
 
 
 
+
 def actualizar_horas_procesos(request):
     departamento_seleccionado = request.GET.get('departamento', None)
     fecha_seleccionada = request.GET.get('fecha', None)
     
     registros_combinados = []
+    departamentos = []
+
+    # Obtener la descripción de los departamentos
+    spf_info_conn = get_spf_info_connection()
+    cursor = spf_info_conn.cursor()
+    cursor.execute("SELECT ID_Departamento, Descripcion FROM Departamentos")
+    departamentos = cursor.fetchall()
+    spf_info_conn.close()
+
+    # Filtrar los departamentos con los IDs especificados
+    ids_departamentos = [12, 16, 17, 18, 19, 20, 21, 22, 23]
+    departamentos = [depto for depto in departamentos if depto[0] in ids_departamentos]
+    
+    # Convertir departamentos a un diccionario
+    departamentos_dict = {depto[0]: depto[1] for depto in departamentos}
+
     if departamento_seleccionado or fecha_seleccionada:
         registros = Horasprocesos.objects.all()
         empleados = Empleados.objects.all()
-        empleados_dict = {empleado.codigo_emp: empleado.depto_emp for empleado in empleados}
+        empleados_dict = {empleado.codigo_emp: empleado.id_departamento for empleado in empleados}
 
         if departamento_seleccionado and departamento_seleccionado != "":
-            empleados = empleados.filter(depto_emp=departamento_seleccionado)
-            registros = registros.filter(codigo_emp__depto_emp=departamento_seleccionado)
+            empleados = empleados.filter(id_departamento=departamento_seleccionado)
+            registros = registros.filter(codigo_emp__id_departamento=departamento_seleccionado)
         
         if fecha_seleccionada:
             try:
@@ -189,12 +404,14 @@ def actualizar_horas_procesos(request):
             registro_combinado = {
                 'codigo_emp': codigo_emp,
                 'nombre_emp': registros[0].codigo_emp.nombre_emp,
-                'depto_emp': empleados_dict[codigo_emp],
+                'depto_emp': departamentos_dict.get(empleados_dict[codigo_emp], ''),
                 'procesos': registros
             }
             registros_combinados.append(registro_combinado)
 
-    departamentos = Empleados.objects.values_list('depto_emp', flat=True).distinct()
+    # Convertir departamentos a un formato adecuado para el contexto
+    departamentos_context = [{'id_departamento': depto[0], 'descripcion': depto[1]} for depto in departamentos]
+
     procesos = Procesos.objects.all()
 
     if request.method == 'POST':
@@ -237,13 +454,14 @@ def actualizar_horas_procesos(request):
     cursor = spf_info_conn.cursor()
     cursor.execute("SELECT ID_Producto, DescripcionProd FROM Productos")
     productos = cursor.fetchall()
-    # Obtener los tipos de inasistencia de la base de datos SPF_Info
+    
     cursor.execute("SELECT ID_Asis, Descripcion FROM Tipo_Asist")
     tipos_inasistencia = cursor.fetchall()
     spf_info_conn.close()
+    
     return render(request, 'horas_procesos/actualizar_horas_procesos.html', {
         'registros_combinados': registros_combinados,
-        'departamentos': departamentos,
+        'departamentos': departamentos_context,
         'procesos': procesos,
         'departamento_seleccionado': departamento_seleccionado,
         'fecha_seleccionada': fecha_seleccionada,

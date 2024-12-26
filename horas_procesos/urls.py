@@ -10,7 +10,6 @@ urlpatterns = [
     path('eliminar_todos_procesos/', eliminar_proceso, name='eliminar_todos_procesos'),
     path('actualizar_proceso/<int:id_hrspro>/', actualizar_horas_procesos, name='actualizar_proceso'),
     path('exportar_a_excel/', exportar_a_excel, name='exportar_a_excel'),
-
-
+    
 ]
     

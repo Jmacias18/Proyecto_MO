@@ -14,8 +14,30 @@
     document.addEventListener('DOMContentLoaded', function() {
         const resumenAsistencia = document.getElementById('resumen-asistencia');
         const deptoSelect = document.getElementById('depto_select');
-    
-        {% comment %} const actualizarResumenAsistencia = () => {
+
+        // Función para obtener el día de la semana en español
+        function obtenerDiaSemanaEnEspanol(diaIngles) {
+            const diasSemana = {
+                "Sunday": "Domingo",
+                "Monday": "Lunes",
+                "Tuesday": "Martes",
+                "Wednesday": "Miércoles",
+                "Thursday": "Jueves",
+                "Friday": "Viernes",
+                "Saturday": "Sábado"
+            };
+            return diasSemana[diaIngles];
+        }
+
+        // Función para verificar si el día actual es un día de descanso para el turno del empleado
+        function esDiaDescanso(diasDescanso) {
+            const diaActualIngles = new Date().toLocaleString('en-US', { weekday: 'long' });
+            const diaActualEspanol = obtenerDiaSemanaEnEspanol(diaActualIngles);
+            return diasDescanso.includes(diaActualEspanol);
+        }
+
+        // Función para actualizar el resumen de asistencia
+        function actualizarResumenAsistencia() {
             const resumen = {
                 F: 0,
                 D: 0,
@@ -28,48 +50,55 @@
                 R: 0,
                 NI: 0,
                 ASI: 0
-                
             };
             const selectedDepto = deptoSelect.value;
-    
-            document.querySelectorAll('select[name^="tipo_inasistencia_"]').forEach(select => {
-                const value = select.value;
+            let filasEmpleados = document.querySelectorAll('#empleados_tbody tr');
+            filasEmpleados = Array.from(filasEmpleados);
+            filasEmpleados = filasEmpleados.filter(empleado => empleado.getAttribute('data-depto') === selectedDepto);
+            console.log(filasEmpleados);  
+
+            filasEmpleados.forEach(fila => {
+                const diasDescansoAttr = fila.getAttribute('data-dias_descanso');
+                const diasDescanso = diasDescansoAttr ? diasDescansoAttr.split(',') : [];
+                const codigoEmp = fila.getAttribute('data-codigo_emp');
+
+                const selectInasistencia = fila.querySelector(`select[name="tipo_inasistencia_${codigoEmp}"]`);
+                const value = selectInasistencia.value;
                 if (resumen.hasOwnProperty(value)) {
                     resumen[value]++;
                 }
             });
-    
+
             for (const key in resumen) {
                 const spanElement = document.getElementById(`resumen-${key}`);
                 if (spanElement) {
                     spanElement.textContent = resumen[key];
                 }
             }
-        };
-    
-        const mostrarResumenAsistencia = () => {
+        }
+
+        // Función para mostrar el resumen de asistencia
+        function mostrarResumenAsistencia() {
             if (deptoSelect.value) {
                 resumenAsistencia.style.display = 'block';
             } else {
                 resumenAsistencia.style.display = 'none';
-            }
-        };
-    
+            }   
+        }
+
         deptoSelect.addEventListener('change', () => {
             actualizarResumenAsistencia();
             mostrarResumenAsistencia();
         });
-    
+
         document.querySelectorAll('select[name^="tipo_inasistencia_"]').forEach(select => {
             select.addEventListener('change', actualizarResumenAsistencia);
         });
-    
+
         // Inicializar el resumen al cargar la página
         actualizarResumenAsistencia();
         mostrarResumenAsistencia();
-    }); {% endcomment %}
 
-    document.addEventListener('DOMContentLoaded', function () {
         if (window.location.pathname === '/horas_procesos/gestion_horas_procesos/') {
             const navbar = document.querySelector('.navbar-nav.ms-auto');
             const logoutButton = navbar.querySelector('form[action="/accounts/logout/"]').closest('li');
@@ -103,10 +132,10 @@
 
     // Validar el formulario al enviarlo
     function validarFormulario() {
-        return validarHorasRegistradas() && validarHorasInicioFinIguales();
+        //console.log('Validando formulario...');
+       return validarHorasRegistradas() && validarHorasInicioFinIguales();
     }
 </script>
-
 {% endblock %}
 {% block content %}
 <style>
@@ -177,7 +206,7 @@
         <button class="close-btn" onclick="cerrarAlerta()">×</button>
         <span class="alerta-mensaje"></span>
     </div>
-    <form id="horas-procesos-form" method="post" action="{% url 'horas_procesos:gestion_horas_procesos' %}" onsubmit="return validarFormulario()">
+    <form id="horas-procesos-form" method="POST" action="{% url 'horas_procesos:gestion_horas_procesos' %}" onsubmit="return validarFormulario()">
         {% csrf_token %}
         
         <h4 class="text-center my-4">Reporte Diario de Coordinador</h4>
@@ -190,16 +219,18 @@
             <a href="{% url 'horas_procesos:actualizar_horas_procesos' %}" class="btn btn-secondary">Administracion de Registros</a>
         </div>
         
-        
         <div class="mb-4">
             <label for="depto_select" class="form-label">Selecciona un Departamento:</label>
-            <select id="depto_select" class="form-select" onchange="filtrarEmpleados()">
-                <option value="" selected>Departamento</option>
-                {% for depto in departamentos %}
-                <option value="{{ depto }}">{{ depto }}</option>
+            <select id="depto_select" class="form-select" name="departamento" onchange="filtrarEmpleados()">
+                <option value="" selected="">Departamento</option>
+                {% for departamento in departamentos %}
+                    {% if departamento.id_departamento in departamentos_a_mostrar %}
+                        <option value="{{ departamento.id_departamento }}">{{ departamento.descripcion }}</option>
+                    {% endif %}
                 {% endfor %}
             </select>
         </div>
+        
         <div class="mb-4">
             <p id="total_empleados" class="form-label" style="display: none;">Total de Empleados: 0</p>   
         </div>
@@ -254,18 +285,21 @@
                 </thead>
                 <tbody id="empleados_tbody">
                     {% for empleado in empleados %}
-                    <tr data-depto="{{ empleado.depto_emp }}" data-codigo_emp="{{ empleado.codigo_emp }}">
+                    <tr data-depto="{{ empleado.id_departamento }}" data-depto-descripcion="{{ empleado.descripcion_departamento }}" data-codigo_emp="{{ empleado.codigo_emp }}" data-id_turno="{{ empleado.id_turno }}" data-dias_descanso="{{ empleado.dias_descanso|join:',' }}" data-es_descanso="{{ empleado.es_descanso }}">
                         <td class="employee-number">{{ forloop.counter }}</td>
                         <td>{{ empleado.codigo_emp }}</td>
                         <td>{{ empleado.nombre_emp }}</td>
-                        <td>{{ empleado.depto_emp }}</td>
+                        <td>{{ empleado.descripcion_departamento }}</td>
                         <td>
-                            <select class="form-select form-select-sm" name="tipo_inasistencia_{{ empleado.codigo_emp }}" onchange="toggleInputs('{{ empleado.codigo_emp }}')">
-                                {% if empleado.tipo_inasistencia == "ASISTENCIA" %}
-                                <option value="ASISTENCIA" selected>ASISTENCIA</option>
-                                {% endif %}
+                            <div style="display: none;">
+                                empleado.tipo_inasistencia: {{ empleado.tipo_inasistencia }},
                                 {% for tipo in tipos_inasistencia %}
-                                <option value="{{ tipo.ID_Asis }}" data-descripcion="{{ tipo.Descripcion }}" {% if empleado.tipo_inasistencia == tipo.ID_Asis %}selected{% endif %}>{{ tipo.Descripcion }}</option>
+                                    tipo.ID_Asis: {{ tipo.ID_Asis }},
+                                {% endfor %}
+                            </div>
+                            <select class="form-select form-select-sm" name="tipo_inasistencia_{{ empleado.codigo_emp }}" onchange="toggleInputs('{{ empleado.codigo_emp }}')">
+                                {% for tipo in tipos_inasistencia %}
+                                    <option value="{{ tipo.ID_Asis }}" {% if empleado.tipo_inasistencia == tipo.ID_Asis %}selected{% endif %}>{{ tipo.Descripcion }}</option>
                                 {% endfor %}
                             </select>
                         </td>

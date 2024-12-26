@@ -45,9 +45,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    document.querySelectorAll('[name^="horas_extras_"]').forEach(input => {
+        input.addEventListener('input', () => {
+            const codigoEmp = input.name.split('_')[2];
+            if (input.value < 0) input.value = 0; // No permitir valores negativos
+            calcularTotalHoras(codigoEmp, 0); // Recalcular el total
+        });
+    });
+
     document.getElementById('depto_select').addEventListener('change', () => {
         restablecerFormulario();
         filtrarEmpleados();
+        //filtrarDescanso();
     });
 
     const form = document.querySelector('form');
@@ -66,6 +75,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 const inasistencia = ['F', 'D', 'P', 'V', 'INC', 'S', 'B', 'R'].includes(tipoInasistencia);
                 
                 data.push({ codigoEmp, inasistencia });
+
+                // if (inasistencia) {
+                //     for (let i = 1; i <= 15; i++) {
+                //         const inicioField = document.querySelector(`[name="inicio_proceso${i}_${codigoEmp}"]`);
+                //         const finField = document.querySelector(`[name="fin_proceso${i}_${codigoEmp}"]`);
+                //         if (inicioField && finField) {
+                //             inicioField.value = '00:00:00';
+                //             finField.value = '00:00:00';
+                //         }
+                //     }
+                // }
             });
     
             const inasistencias = data.filter(empl => empl.inasistencia === true);
@@ -105,6 +125,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    form.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+            event.preventDefault(); // Evitar el envío del formulario al presionar Enter
+        }
+    });
+
     // Agregar evento change a todos los selectores de inasistencia
     document.querySelectorAll('select[name^="tipo_inasistencia_"]').forEach(select => {
         select.addEventListener('change', (event) => {
@@ -113,180 +139,169 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Agregar evento para marcar el campo como modificado por el usuario
-    document.querySelectorAll('input[name^="inicio_proceso"]').forEach(input => {
-        input.addEventListener('input', function() {
-            this.dataset.userModified = true;
+    function filtrarDescanso() {
+        // Seleccionar automáticamente "DESCANSO" si es día de descanso
+        let empleados = document.querySelectorAll('tr[data-codigo_emp]');
+        const deptoSeleccionado = document.getElementById('depto_select').value;
+        empleados = Array.from(empleados);
+        empleados = empleados.filter(empleado => empleado.getAttribute('data-depto') === deptoSeleccionado);
+      
+        empleados.forEach(empleado => {
+            const codigoEmp = empleado.getAttribute('data-codigo_emp');
+            const esDescanso = empleado.getAttribute('data-es_descanso') === 'true';
+            if (esDescanso) {
+                const tipoInasistenciaElement = document.querySelector(`select[name="tipo_inasistencia_${codigoEmp}"]`);
+                if (tipoInasistenciaElement) {
+                    tipoInasistenciaElement.value = 'D';
+                    toggleInputs(codigoEmp);
+                }
+            }
         });
-    });
-
-    // Verificar los valores de tipo_inasistencia en el DOM
-    document.querySelectorAll('select[name^="tipo_inasistencia_"]').forEach(select => {
-        const codigoEmp = select.name.split('_')[1];
-        console.log(`Empleado ${codigoEmp} - Tipo de inasistencia: ${select.value}`);
-    });
+    }
+    
+    // Agregar evento para marcar el campo como modificado por el usuario
+    function toggleInputs(codigoEmp) {
+        const tipoInasistenciaElement = document.querySelector(`select[name="tipo_inasistencia_${codigoEmp}"]`);
+        if (!tipoInasistenciaElement) {
+            console.error(`Elemento select[name="tipo_inasistencia_${codigoEmp}"] no encontrado`);
+            return;
+        }
+    
+        const tipoInasistencia = tipoInasistenciaElement.value;
+        const inasistencia = ['F', 'D', 'P', 'V', 'INC', 'S', 'B', 'R'].includes(tipoInasistencia);
+        const noDesbloquear = ['RT', 'NI', 'ASI'].includes(tipoInasistencia);
+        const inputs = document.querySelectorAll(`[name^="inicio_proceso"][name$="_${codigoEmp}"], [name^="fin_proceso"][name$="_${codigoEmp}"], [name="horas_extras_${codigoEmp}"]`);
+    
+        inputs.forEach(input => {
+            if (inasistencia) {
+                input.value = '--:--';
+                input.disabled = true;
+            } else if (!noDesbloquear) {
+                input.disabled = false; // Habilitar los campos si no hay inasistencia y no es RT o NI
+            }
+        });
+    
+        if (inasistencia) {
+            const totalElement = document.querySelector(`[name="total_${codigoEmp}"]`);
+            if (totalElement) {
+                totalElement.value = '0.00';
+            }
+    
+            // Restablecer los totales de horas por proceso
+            for (let i = 1; i <= 15; i++) {
+                const totalProcesoField = document.querySelector(`[name="total_proceso${i}_${codigoEmp}"]`);
+                if (totalProcesoField) {
+                    totalProcesoField.value = '0.00';
+                }
+            }
+        }
+    
+        sumarHorasPorProceso();
+    }
+    
+   
 });
 
-function verificarSeleccionProcesos() {
-    let algunoSeleccionado = false;
-    procesoSelects.forEach(select => {
-        if (select.value) {
-            algunoSeleccionado = true;
-        }
-    });
-   
-    guardarBtn.disabled = !algunoSeleccionado;
-}
-function toggleInputs(codigoEmp) {
-    const tipoInasistenciaElement = document.querySelector(`select[name="tipo_inasistencia_${codigoEmp}"]`);
-    if (!tipoInasistenciaElement) {
-        console.error(`Elemento select[name="tipo_inasistencia_${codigoEmp}"] no encontrado`);
-        return;
-    }
 
-    const tipoInasistencia = tipoInasistenciaElement.value;
-    const inasistencia = ['F', 'D', 'P', 'V', 'INC', 'S', 'B', 'R'].includes(tipoInasistencia);
-    const noDesbloquear = ['RT', 'NI', 'ASI'].includes(tipoInasistencia);
-    const inputs = document.querySelectorAll(`[name^="inicio_proceso"][name$="_${codigoEmp}"], [name^="fin_proceso"][name$="_${codigoEmp}"], [name="horas_extras_${codigoEmp}"]`);
 
-    inputs.forEach(input => {
-        if (inasistencia) {
-            input.value = '--:--';
-            input.disabled = true;
-        } else if (!noDesbloquear) {
-            input.disabled = false; // Habilitar los campos si no hay inasistencia y no es RT o NI
-        }
-    });
+function prepararDatosParaEnvio() {
+    const datos = {
+        departamento: document.getElementById('depto_select').value,
+        empleados: []
+    };
+    const filasEmpleados = document.querySelectorAll('#empleados_tbody tr');
 
-    if (inasistencia) {
-        const totalElement = document.querySelector(`[name="total_${codigoEmp}"]`);
-        if (totalElement) {
-            totalElement.value = '0.00';
-        }
+    filasEmpleados.forEach(fila => {
+        if (fila.style.display !== 'none') { // Solo procesar empleados visibles
+            const codigoEmp = fila.dataset.codigo_emp;
+            const procesos = [];
 
-        // Restablecer los totales de horas por proceso
-        for (let i = 1; i <= 15; i++) {
-            const totalProcesoField = document.querySelector(`[name="total_proceso${i}_${codigoEmp}"]`);
-            if (totalProcesoField) {
-                totalProcesoField.value = '0.00';
-            }
-        }
-    }
+            for (let i = 1; i <= 15; i++) {
+                const procesoSelect = document.querySelector(`[name="proceso${i}_header"]`);
+                const inicio = document.querySelector(`[name="inicio_proceso${i}_${codigoEmp}"]`);
+                const fin = document.querySelector(`[name="fin_proceso${i}_${codigoEmp}"]`);
+                const total = document.querySelector(`[name="total_proceso${i}_${codigoEmp}"]`);
 
-    sumarHorasPorProceso();
-}
-/* function filtrarDescanso() {
-    // Seleccionar automáticamente "DESCANSO" si es día de descanso
-    let empleados = document.querySelectorAll('tr[data-codigo_emp]');
-    const deptoSeleccionado = document.getElementById('depto_select').value;
-    empleados = Array.from(empleados);
-    empleados = empleados.filter(empleado => empleado.getAttribute('data-depto') === deptoSeleccionado);
-  
-    empleados.forEach(empleado => {
-        const codigoEmp = empleado.getAttribute('data-codigo_emp');
-        const esDescanso = empleado.getAttribute('data-es_descanso') === 'true';
-        if (esDescanso) {
-            const tipoInasistenciaElement = document.querySelector(`select[name="tipo_inasistencia_${codigoEmp}"]`);
-            if (tipoInasistenciaElement) {
-                tipoInasistenciaElement.value = 'D';
-                toggleInputs(codigoEmp);
-            }
-        }
-    });
-} */
-
-    function prepararDatosParaEnvio() {
-        const datos = {
-            departamento: document.getElementById('depto_select').value,
-            empleados: []
-        };
-        const filasEmpleados = document.querySelectorAll('#empleados_tbody tr');
-    
-        filasEmpleados.forEach(fila => {
-            if (fila.style.display !== 'none') { // Solo procesar empleados visibles
-                const codigoEmp = fila.dataset.codigo_emp;
-                const procesos = [];
-    
-                for (let i = 1; i <= 15; i++) {
-                    const procesoSelect = document.querySelector(`[name="proceso${i}_header"]`);
-                    const inicio = document.querySelector(`[name="inicio_proceso${i}_${codigoEmp}"]`);
-                    const fin = document.querySelector(`[name="fin_proceso${i}_${codigoEmp}"]`);
-                    const total = document.querySelector(`[name="total_proceso${i}_${codigoEmp}"]`);
-    
-                    if (procesoSelect && procesoSelect.value && !inicio.disabled && !fin.disabled) {
-                        if (inicio.value && fin.value) {
-                            procesos.push({
-                                procesoId: procesoSelect.value,
-                                inicio: inicio.value,
-                                fin: fin.value,
-                                total: total.value
-                            });
-                        }
+                if (procesoSelect && procesoSelect.value && !inicio.disabled && !fin.disabled) {
+                    if (inicio.value && fin.value) {
+                        procesos.push({
+                            procesoId: procesoSelect.value,
+                            inicio: inicio.value,
+                            fin: fin.value,
+                            total: total.value
+                        });
                     }
                 }
-    
-                const horasExtras = document.querySelector(`[name="horas_extras_${codigoEmp}"]`).value || 0;
-                const totalHoras = document.querySelector(`[name="total_${codigoEmp}"]`).value || 0;
-                const tipoInasistencia = document.querySelector(`select[name="tipo_inasistencia_${codigoEmp}"]`).value;
-    
+            }
+
+            const horasExtras = document.querySelector(`[name="horas_extras_${codigoEmp}"]`).value || 0;
+            const totalHoras = document.querySelector(`[name="total_${codigoEmp}"]`).value || 0;
+
+            if (procesos.length > 0 || horasExtras > 0) {
                 datos.empleados.push({
                     codigoEmp: codigoEmp,
                     procesos: procesos,
                     horasExtras: horasExtras,
-                    totalHoras: totalHoras,
-                    tipoInasistencia: tipoInasistencia
+                    totalHoras: totalHoras
                 });
             }
-        });
-    
-        // Enviar datos al servidor
-        fetch('/horas_procesos/gestion_horas_procesos/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-            },
-            body: JSON.stringify(datos)
-        })
-        .then(response => {
-            console.log("Estado de la respuesta:", response.status);  // Verificar el estado de la respuesta
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-            return response.json();
-        })
-        .then(data => {
-            console.log("Respuesta del servidor:", data);  // Verificar la respuesta del servidor
-            if (data.success) {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Éxito',
-                    text: 'Se envió correctamente.',
-                    timer: 2000,
-                    showConfirmButton: false
-                });
-    
-                // Recargar la página después de 2 segundos
-                setTimeout(() => {
-                    window.location.reload();
-                }, 2000);
-            } else {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: `Error al enviar el formulario: ${data.error}`
-                });
-            }
-        })
-        .catch(error => {
+        }
+    });
+
+    // Enviar datos al servidor
+    fetch('/horas_procesos/gestion_horas_procesos/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify(datos)
+    })
+    .then(response => {
+        console.log("Estado de la respuesta:", response.status);  // Verificar el estado de la respuesta
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log("Respuesta del servidor:", data);  // Verificar la respuesta del servidor
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Éxito',
+                text: 'Se envió correctamente.',
+                timer: 2000,
+                showConfirmButton: false
+            });
+
+            // Recargar la página después de 2 segundos
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+        } else {
             Swal.fire({
                 icon: 'error',
                 title: 'Error',
-                text: `Error al enviar el formulario: ${error}`
+                text: `Error al enviar el formulario: ${data.error}`
             });
+        }
+    })
+    .catch(error => {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: `Error al enviar el formulario: ${error}`
         });
-    }
-
+    });
+}
+document.querySelectorAll('[name^="horas_extras_"]').forEach(input => {
+    input.addEventListener('input', () => {
+        const codigoEmp = input.name.split('_')[2];
+        if (input.value < 0) input.value = 0; // No permitir valores negativos
+        calcularTotalHoras(codigoEmp, 0); // Recalcular el total
+    });
+});
 
 
 
@@ -419,6 +434,7 @@ function validarHorasInicioFinIguales() {
     return valid;
 }
 
+
 function validarHorasRegistradas() {
     const filasEmpleados = document.querySelectorAll('#empleados_tbody tr');
     const deptoSeleccionado = document.getElementById('depto_select').value;
@@ -478,7 +494,7 @@ function validarHorasRegistradas() {
                 mensajeAlerta += `El empleado con código ${codigoEmp} no tiene horas registradas en ningún proceso.\n`;
                 valid = false;
             }
-        } else if (['NI', 'RT', 'ASI'].includes(tipoInasistencia)) {
+        } else if (['NI', 'RT','ASI'].includes(tipoInasistencia)) {
             // No deshabilitar los campos ni poner las horas en 00:00:00 para "NUEVO INGRESO (NI)" o "RETARDO (RT)"
             for (let i = 1; i <= 15; i++) {
                 const inicio = document.querySelector(`[name="inicio_proceso${i}_${codigoEmp}"]`);
@@ -676,6 +692,7 @@ function toggleProcesoInputs(procesoNum) {
 }
 
 
+
 function ajustarHoraFin(codigoEmp, procesoNum) {
     const inicioField = document.querySelector(`[name="inicio_proceso${procesoNum}_${codigoEmp}"]`);
     const finField = document.querySelector(`[name="fin_proceso${procesoNum}_${codigoEmp}"]`);
@@ -735,6 +752,18 @@ function ajustarHoraFin(codigoEmp, procesoNum) {
     }
 }
 
+// Agregar evento input para marcar el campo como modificado por el usuario
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('input[name^="inicio_proceso"]').forEach(input => {
+        input.addEventListener('input', function() {
+            this.dataset.userModified = true;
+        });
+    });
+});
+
+
+
+
 
 function calcularTotalHoras(codigoEmp, procesoNum) {
     const inicio = document.querySelector(`[name="inicio_proceso${procesoNum}_${codigoEmp}"]`);
@@ -787,6 +816,7 @@ function calcularTotalHoras(codigoEmp, procesoNum) {
 
     sumarHorasPorProceso();
 }
+
 function sumarHorasPorProceso() {
     const totalHorasPorProceso = Array(15).fill(0);
 

@@ -4,7 +4,7 @@ import pyodbc
 remote_conn_info = {
     'driver': '{ODBC Driver 17 for SQL Server}',
     'server': r'QBSERVER\SQLEXPRESS',
-    'database': 'SPF_HRS_MO',
+    'database': 'SPF_Info',
     'uid': 'IT',
     'pwd': 'sqlSPF#2024'
 }
@@ -36,8 +36,17 @@ def get_connection(conn_info):
 
 def sync_table(remote_conn, local_conn, table_name):
     with remote_conn.cursor() as remote_cur, local_conn.cursor() as local_cur:
-        # Obtener los datos de la tabla remota
-        remote_cur.execute(f"SELECT * FROM {table_name}")
+        if table_name == 'Empleados':
+            # Obtener los datos de la tabla remota solo para los departamentos especificados
+            remote_cur.execute(f"""
+                SELECT * 
+                FROM {table_name} 
+                WHERE ID_Departamento IN (12, 16, 17, 18, 19, 20, 21, 22, 23)
+            """)
+        else:
+            # Obtener todos los datos de la tabla remota
+            remote_cur.execute(f"SELECT * FROM {table_name}")
+        
         rows = remote_cur.fetchall()
         columns = [desc[0] for desc in remote_cur.description]
 
@@ -48,8 +57,8 @@ def sync_table(remote_conn, local_conn, table_name):
             update_columns = ['Nombre_Pro', 'Estado_Pro']
         elif table_name == 'Empleados':
             primary_key = 'Codigo_Emp'
-            insert_columns = ['Codigo_Emp', 'Nombre_Emp', 'Depto_Emp', 'Puesto_Emp', 'Tipo_Puesto', 'Turno_emp', 'Supervisor']
-            update_columns = ['Nombre_Emp', 'Depto_Emp', 'Puesto_Emp', 'Tipo_Puesto', 'Turno_emp', 'Supervisor']
+            insert_columns = ['Codigo_Emp', 'Nombre_Emp', 'Estado', 'ID_Departamento', 'ID_Puesto', 'ID_Turno', 'ID_Supervisor']
+            update_columns = ['Nombre_Emp', 'Estado', 'ID_Departamento', 'ID_Puesto', 'ID_Turno', 'ID_Supervisor']
         else:
             raise ValueError(f"Clave primaria no definida para la tabla {table_name}")
 

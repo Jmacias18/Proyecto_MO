@@ -684,7 +684,9 @@
             <select id="depto_select" name="departamento" class="form-select">
                 <option value="" selected>Todos los Departamentos</option>
                 {% for depto in departamentos %}
-                <option value="{{ depto }}" {% if depto == departamento_seleccionado %}selected{% endif %}>{{ depto }}</option>
+                <option value="{{ depto.id_departamento }}" {% if depto.id_departamento == departamento_seleccionado %}selected{% endif %}>
+                    {{ depto.descripcion }}
+                </option>
                 {% endfor %}
             </select>
         </div>
@@ -711,7 +713,7 @@
                 <thead>
                     <tr>
                         <td colspan="16" class="text-start">
-                            <div id="resumen-asistencia" style="display: block;">
+                            <div id="resumen-asistencia">
                                 <h4 class="text-center">RESUMEN DE ASISTENCIA:</h4>
                                 <ul class="list-unstyled text-center">
                                     <li>FALTA: <span id="resumen-F">0</span></li>
@@ -800,7 +802,6 @@
                         </td>
                         <td>
                             <select name="tipo_inasistencia_{{ proceso.id_hrspro }}" class="form-select form-select-sm">
-                                <option value="" selected>Asistencia</option>
                                 {% for tipo in tipos_inasistencia %}
                                 <option value="{{ tipo.ID_Asis }}" {% if proceso.ID_Asis == tipo.ID_Asis %}selected{% endif %}>{{ tipo.Descripcion }}</option>
                                 {% endfor %}
