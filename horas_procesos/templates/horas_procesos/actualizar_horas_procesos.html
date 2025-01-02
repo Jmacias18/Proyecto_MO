@@ -182,11 +182,7 @@
         };
     
         const mostrarResumenAsistencia = () => {
-            if (deptoSelect.value) {
-                resumenAsistencia.style.display = 'block';
-            } else {
-                resumenAsistencia.style.display = 'none';
-            }
+            resumenAsistencia.style.display = 'block';
         };
     
         deptoSelect.addEventListener('change', () => {
@@ -233,7 +229,7 @@
     }
     
     
-    document.addEventListener('DOMContentLoaded', function() {
+    {% comment %} document.addEventListener('DOMContentLoaded', function() {
         const guardarBtn = document.getElementById('guardar-btn');
         const form = document.getElementById('form-actualizar');
         const csrfTokenMeta = document.querySelector('meta[name="csrf-token"]');
@@ -294,7 +290,7 @@
                 responseModal.show();
             });
         });
-    });
+    }); {% endcomment %}
 
     document.addEventListener('DOMContentLoaded', function() {
         if (window.location.pathname.includes('/horas_procesos/actualizar_horas_procesos/')) {
@@ -376,7 +372,7 @@
             });
         
             if (!valid) {
-                showAlert('Corrige los errores antes de guardar.', 'danger');
+                {% comment %} showAlert('Corrige los errores antes de guardar.', 'danger'); {% endcomment %}
                 return;
             }
         
@@ -413,45 +409,52 @@
     const validarHoras = (id) => {
         const entrada = document.querySelector(`input[name="horaentrada_${id}"]`).value;
         const salida = document.querySelector(`input[name="horasalida_${id}"]`).value;
-    
-        const select = document.querySelector(`select[name="tipo_inasistencia_${id}"]`);
-        if (!select) {
+
+        const selectInasistencia = document.querySelector(`select[name="tipo_inasistencia_${id}"]`);
+        if (!selectInasistencia) {
             console.error(`Select con name="tipo_inasistencia_${id}" no encontrado`);
             return false;
         }
-        const inasistencia = ['F', 'D', 'P', 'V', 'INC', 'S', 'B', 'R'].includes(select.value);
+        const inasistencia = ['F', 'D', 'P', 'V', 'INC', 'S', 'B', 'R'].includes(selectInasistencia.value);
         if (inasistencia) {
             return true; // Saltar validación si está marcado como inasistencia
         }
-    
-        if (!entrada || !salida) {
-            showAlert('Faltan datos de hora.', 'danger');
+
+        // Validar que si el tipo de inasistencia es NI, RT o ASI, haya un proceso seleccionado
+        const procesoSelect = document.querySelector(`select[name="proceso_${id}"]`);
+        if (['NI', 'RT', 'ASI'].includes(selectInasistencia.value) && procesoSelect.value === '0') {
+            showAlert('Debe seleccionar un proceso si el tipo de inasistencia es NUEVO INGRESO, RETARDO o ASISTENCIA.', 'danger');
             return false;
         }
-    
+
+        if (!entrada || !salida) {
+            showAlert('Falta Agregar Hora Inicio o Fin en Algun Proceso', 'danger');
+            return false;
+        }
+
         const [horaEntrada, minutoEntrada] = entrada.split(':').map(Number);
         const [horaSalida, minutoSalida] = salida.split(':').map(Number);
-    
+
         const inicio = new Date(0, 0, 0, horaEntrada, minutoEntrada);
         const fin = new Date(0, 0, 0, horaSalida, minutoSalida);
         let diferencia = (fin - inicio) / 1000 / 60 / 60;
-    
+
         if (diferencia < 0) {
             diferencia += 24;
         }
-    
+
         if (diferencia >= 14) {
             showAlert('La diferencia entre la hora de entrada y la hora de salida no puede ser igual o superior a 14 horas.', 'danger');
             document.querySelector(`input[name="horasalida_${id}"]`).value = '';
             return false;
         }
-    
+
         if (entrada === salida) {
             showAlert('La hora de entrada y la hora de salida no pueden ser iguales.', 'danger');
             document.querySelector(`input[name="horasalida_${id}"]`).value = '';
             return false;
         }
-    
+
         return true;
     };
     const actualizarTotalHoras = () => {
@@ -713,7 +716,7 @@
                 <thead>
                     <tr>
                         <td colspan="16" class="text-start">
-                            <div id="resumen-asistencia">
+                            <div id="resumen-asistencia" style="display: none;">
                                 <h4 class="text-center">RESUMEN DE ASISTENCIA:</h4>
                                 <ul class="list-unstyled text-center">
                                     <li>FALTA: <span id="resumen-F">0</span></li>
@@ -893,5 +896,4 @@
     </div>
 </div>
 {% endblock %}
-
 

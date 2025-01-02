@@ -14,6 +14,7 @@ from django.urls import reverse
 from django.contrib import messages
 import pyodbc
 from collections import defaultdict
+from django.core.cache import cache
 
 # Conexión a la base de datos SPF_Info
 spf_info_conn_info = {
@@ -58,7 +59,7 @@ def obtener_datos_tempus_accesos():
     cursor = conn.cursor()
 
     # Obtener los datos de la tabla USERINFO
-    cursor.execute("SELECT USERID, Badgenumber FROM USERINFO")
+    cursor.execute("SELECT USERID, Badgenumber FROM USERINFO WHERE Badgenumber LIKE '13%'")
     userinfo = cursor.fetchall()
 
     # Crear un diccionario para mapear USERID a Badgenumber
@@ -91,22 +92,26 @@ def gestion_horas_procesos(request):
     print(f"Día actual en español: {dia_actual}")
 
     if request.method == 'POST':
-        # Obtener los tipos de inasistencia de la base de datos SPF_Info
-        spf_info_conn = get_spf_info_connection()
-        cursor = spf_info_conn.cursor()
-        cursor.execute("SELECT ID_Asis, Descripcion FROM Tipo_Asist")
-        tipos_inasistencia = cursor.fetchall()
-        spf_info_conn.close()
+        tipos_inasistencia = cache.get('tipos_inasistencia')
+        if not tipos_inasistencia:
+            spf_info_conn = get_spf_info_connection()
+            cursor = spf_info_conn.cursor()
+            cursor.execute("SELECT ID_Asis, Descripcion FROM Tipo_Asist")
+            tipos_inasistencia = cursor.fetchall()
+            spf_info_conn.close()
+            cache.set('tipos_inasistencia', tipos_inasistencia, 3600)  # Cachear por 1 hora
 
         # Crear un diccionario para mapear la descripción al ID_Asis
         descripcion_a_id = {tipo[1]: tipo[0] for tipo in tipos_inasistencia}
 
-        # Obtener los días de descanso de la tabla Turnos
-        spf_info_conn = get_spf_info_connection()
-        cursor = spf_info_conn.cursor()
-        cursor.execute("SELECT ID_Turno, Descanso FROM Turnos")
-        turnos = cursor.fetchall()
-        spf_info_conn.close()
+        turnos = cache.get('turnos')
+        if not turnos:
+            spf_info_conn = get_spf_info_connection()
+            cursor = spf_info_conn.cursor()
+            cursor.execute("SELECT ID_Turno, Descanso FROM Turnos")
+            turnos = cursor.fetchall()
+            spf_info_conn.close()
+            cache.set('turnos', turnos, 3600)  # Cachear por 1 hora
 
         # Crear un diccionario para mapear el ID del turno a los días de descanso
         descanso_por_turno = {turno[0]: [dia.strip().capitalize() for dia in turno[1].split('/')] if turno[1] else [] for turno in turnos}
@@ -165,7 +170,7 @@ def gestion_horas_procesos(request):
             if tiene_checada:
                 tipo_inasistencia = tipo_inasistencia_seleccionado if tipo_inasistencia_seleccionado != 'F' else 'ASI'
             elif es_descanso:
-                tipo_inasistencia = tipo_inasistencia_seleccionado if tipo_inasistencia_seleccionado != 'F' else 'D'
+                tipo_inasistencia = 'D'
             else:
                 tipo_inasistencia = tipo_inasistencia_seleccionado
 
@@ -236,6 +241,7 @@ def gestion_horas_procesos(request):
             except Exception as e:
                 print(f"Error al crear registro para empleado {codigo_emp}: {e}")
 
+        
         messages.success(request, '¡Las horas de los procesos se registraron exitosamente!')    
         return redirect('horas_procesos:gestion_horas_procesos')
     else:
@@ -252,33 +258,49 @@ def gestion_horas_procesos(request):
     departamentos = Empleados.objects.values_list('id_departamento', flat=True).distinct()
     rango_procesos = range(1, 16)  # Generar el rango de números del 1 al 16
 
-    spf_info_conn = get_spf_info_connection()
-    cursor = spf_info_conn.cursor()
-    cursor.execute("SELECT ID_Producto, DescripcionProd FROM Productos")
-    productos = cursor.fetchall()
+    productos = cache.get('productos')
+    if not productos:
+        spf_info_conn = get_spf_info_connection()
+        cursor = spf_info_conn.cursor()
+        cursor.execute("SELECT ID_Producto, DescripcionProd FROM Productos")
+        productos = cursor.fetchall()
+        spf_info_conn.close()
+        cache.set('productos', productos, 3600)  # Cachear por 1 hora
 
-    # Obtener los tipos de inasistencia de la base de datos SPF_Info
-    cursor.execute("SELECT ID_Asis, Descripcion FROM Tipo_Asist")
-    tipos_inasistencia = cursor.fetchall()
+    tipos_inasistencia = cache.get('tipos_inasistencia')
+    if not tipos_inasistencia:
+        spf_info_conn = get_spf_info_connection()
+        cursor = spf_info_conn.cursor()
+        cursor.execute("SELECT ID_Asis, Descripcion FROM Tipo_Asist")
+        tipos_inasistencia = cursor.fetchall()
+        spf_info_conn.close()
+        cache.set('tipos_inasistencia', tipos_inasistencia, 3600)  # Cachear por 1 hora
 
     # Crear un diccionario para mapear la descripción al ID_Asis
     descripcion_a_id = {tipo[1]: tipo[0] for tipo in tipos_inasistencia}
 
+    turnos = cache.get('turnos')
+    if not turnos:
+        spf_info_conn = get_spf_info_connection()
+        cursor = spf_info_conn.cursor()
+        cursor.execute("SELECT ID_Turno, Descanso FROM Turnos")
+        turnos = cursor.fetchall()
+        spf_info_conn.close()
+        cache.set('turnos', turnos, 3600)  # Cachear por 1 hora
+
+    # Crear un diccionario para mapear el ID del turno a los días de descanso
+    descanso_por_turno = {turno[0]: [dia.strip().capitalize() for dia in turno[1].split('/')] if turno[1] else [] for turno in turnos}
+    print("Descanso por turno:", descanso_por_turno)
+
     # Obtener la descripción de los departamentos
+    spf_info_conn = get_spf_info_connection()
+    cursor = spf_info_conn.cursor()
     cursor.execute("SELECT ID_Departamento, Descripcion FROM Departamentos")
     departamentos = cursor.fetchall()
     spf_info_conn.close()
 
     # Convertir departamentos a un diccionario
     departamentos_dict = {depto[0]: depto[1] for depto in departamentos}
-
-    # Obtener los días de descanso para cada turno desde la base de datos SPF_Info
-    spf_info_conn = get_spf_info_connection()
-    cursor = spf_info_conn.cursor()
-    cursor.execute("SELECT ID_Turno, Descanso FROM Turnos")
-    turnos = cursor.fetchall()
-    spf_info_conn.close()
-    descanso_por_turno = {turno[0]: [dia.strip().capitalize() for dia in turno[1].split('/')] if turno[1] else [] for turno in turnos}
 
     # Obtener los ID_Asis para ASISTENCIA y DESCANSO
     id_asistencia = descripcion_a_id.get('ASISTENCIA')
@@ -299,7 +321,7 @@ def gestion_horas_procesos(request):
             tipo_inasistencia = 'ASI'
         elif es_descanso:
             tipo_inasistencia = 'D'
-        
+            
         empleado_dict = {
             'codigo_emp': codigo_emp,
             'nombre_emp': empleado.nombre_emp,
