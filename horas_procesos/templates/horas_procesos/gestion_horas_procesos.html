@@ -129,16 +129,42 @@
             });
         }
     });
+    function mostrarAnimacionCarga() {
+        const loadingSpinner = document.getElementById('loading-spinner');
+        if (loadingSpinner) {
+            loadingSpinner.style.display = 'block';
+        }
+    }
+    
+    function ocultarAnimacionCarga() {
+        const loadingSpinner = document.getElementById('loading-spinner');
+        if (loadingSpinner) {
+            loadingSpinner.style.display = 'none';
+        }
+    }
 
     // Validar el formulario al enviarlo
     function validarFormulario() {
-        //console.log('Validando formulario...');
-       return validarHorasRegistradas() && validarHorasInicioFinIguales();
+        if (validarHorasRegistradas() && validarHorasInicioFinIguales()) {
+            mostrarAnimacionCarga();
+            return true;
+        }
+        return false;
     }
 </script>
 {% endblock %}
 {% block content %}
 <style>
+    .loading-spinner {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 1050; /* Asegúrate de que esté por encima de otros elementos */
+        background-color: rgba(255, 255, 255, 0.8); /* Fondo semitransparente */
+        padding: 20px;
+        border-radius: 10px;
+    }
     .alerta-centrada {
         position: fixed;
         top: 50%;
@@ -344,6 +370,11 @@
             <button type="submit" class="btn btn-primary mt-3" id="guardar-btn">Guardar</button>
         </div>
     </form>
+    <div id="loading-spinner" class="loading-spinner" style="display: none;">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">Cargando...</span>
+        </div>
+    </div>
 </div>
 {% if messages %}
     <div>

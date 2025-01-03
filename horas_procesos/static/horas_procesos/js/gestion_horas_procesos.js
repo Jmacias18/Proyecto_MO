@@ -51,6 +51,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const codigoEmp = target.name.split('_')[2];
             if (target.value < 0) target.value = 0;
             calcularTotalHoras(codigoEmp, 0);
+            console.log('Llamando a calcularTotalHoras desde funcion1');
+            calcularTotalHoras('codigoEmp1', 1);
         }
     });
 
@@ -61,7 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Manejar envío del formulario
-    form.addEventListener('submit', (event) => {
+    /* form.addEventListener('submit', (event) => {
         if (!validarHorasRegistradas() || !validarHorasInicioFinIguales()) {
             event.preventDefault(); // Evitar el envío del formulario si la validación falla
         } else {
@@ -104,7 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 responseModal.show();
             });
         }
-    });
+    }); */
 
     // Agregar evento change a todos los selectores de inasistencia
     document.querySelectorAll('select[name^="tipo_inasistencia_"]').forEach(select => {
@@ -688,6 +690,8 @@ function handleCheckboxChange(event) {
 
     // Calcular y sumar horas después de cualquier cambio
     calcularTotalHoras(emp, proceso);
+    console.log('Llamando a calcularTotalHoras desde funcion2');
+    calcularTotalHoras('codigoEmp2', 1);
     sumarHorasPorProceso();
 }
 
@@ -768,6 +772,7 @@ function handleDeleteCheckboxChange(event) {
 
     // Calcular y sumar horas después de cualquier cambio
     calcularTotalHoras(codigoEmp, procesoNum);
+    console.log('Llamando a calcularTotalHoras desde funcion3');
     sumarHorasPorProceso();
 
     // Imprimir el array de recorridos en la consola
@@ -860,16 +865,17 @@ function toggleProcesoInputs(procesoNum) {
     });
 
     // Recalcula las horas cada vez que se selecciona un proceso
-    document.querySelectorAll('#empleados_tbody tr').forEach(fila => {
+    /* document.querySelectorAll('#empleados_tbody tr').forEach(fila => {
         const codigoEmp = fila.dataset.codigo_emp;
         const deptoEmpleado = fila.getAttribute('data-depto');
         if (deptoEmpleado === deptoSeleccionado && procesoSelect.value && fila.style.display !== 'none') { // Solo procesar empleados visibles
             calcularTotalHoras(codigoEmp, procesoNum);
+            console.log('Llamando a calcularTotalHoras desde funcion4');
             recorridos.push(`Recalculando horas para el proceso ${procesoNum} del empleado ${codigoEmp}`);
         }
-    });
+    }); */
 
-    /* sumarHorasPorProceso(); */
+    sumarHorasPorProceso(); 
 
     // Imprimir el array de recorridos en la consola
     console.log('Recorridos:toggleProcesoInputs', recorridos);
@@ -915,6 +921,7 @@ function ajustarHoraFin(codigoEmp, procesoNum) {
 
     finField.value = ajustarHora(inicioHoras, inicioMinutos);
     calcularTotalHoras(codigoEmp, procesoNum);
+    console.log('Llamando a calcularTotalHoras desde funcion5');
 
     let horas = inicioHoras;
     let minutos = inicioMinutos;
@@ -937,6 +944,7 @@ function ajustarHoraFin(codigoEmp, procesoNum) {
         siguienteFinField.value = ajustarHora(horas, minutos);
 
         calcularTotalHoras(codigoEmp, i);
+        
     }
 
     // Imprimir el array de recorridos en la consola
@@ -980,18 +988,18 @@ function calcularTotalHoras(codigoEmp, procesoNum) {
         totalField.value = '';
     }
 
-    // Calcular el total de horas para todos los procesos
+    // Calcular el total de horas para todos los procesos seleccionados
     let totalHoras = 0;
-    for (let i = 1; i <= 15; i++) {
-        const procesoSelect = document.querySelector(`[name="proceso${i}_header"]`);
-        if (procesoSelect && procesoSelect.value) {
-            const totalProcesoField = document.querySelector(`[name="total_proceso${i}_${codigoEmp}"]`);
+    document.querySelectorAll('select[name^="proceso"]').forEach(procesoSelect => {
+        const procesoNum = procesoSelect.name.match(/\d+/)[0];
+        if (procesoSelect.value) {
+            const totalProcesoField = document.querySelector(`[name="total_proceso${procesoNum}_${codigoEmp}"]`);
             if (totalProcesoField && totalProcesoField.value) {
                 totalHoras += parseFloat(totalProcesoField.value) || 0;
-                recorridos.push(`Calculando total para proceso ${i} del empleado ${codigoEmp}`);
+                recorridos.push(`Calculando total para proceso ${procesoNum} del empleado ${codigoEmp}`);
             }
         }
-    }
+    });
 
     // Agregar horas extras
     const horasExtrasField = document.querySelector(`[name="horas_extras_${codigoEmp}"]`);
@@ -1001,11 +1009,9 @@ function calcularTotalHoras(codigoEmp, procesoNum) {
     horasExtrasField.value = horasExtras.toFixed(2);
     document.querySelector(`[name="total_${codigoEmp}"]`).value = totalHoras.toFixed(2);
 
-    /* sumarHorasPorProceso(); */
-
     // Imprimir el array de recorridos en la consola
     console.log('Recorridos:calcularTotalHoras', recorridos);
-}//yaaa COMENTADA UNA FUNCION
+}//yaaa
 function sumarHorasPorProceso() {
     const totalHorasPorProceso = Array(15).fill(0);
     const deptoSeleccionado = document.getElementById('depto_select').value;
