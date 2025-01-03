@@ -51,10 +51,11 @@ def get_connection(conn_info):
             pwd=conn_info['pwd']
         )
 
-def sync_table(remote_conn, local_conn, table_name, primary_key):
+def sync_table(remote_conn, local_conn, table_name, primary_key, where_clause=""):
     with remote_conn.cursor() as remote_cur, local_conn.cursor() as local_cur:
-        # Obtener todos los datos de la tabla remota
-        remote_cur.execute(f"SELECT * FROM dbo.{table_name}")
+        # Obtener todos los datos de la tabla remota con la cláusula WHERE
+        query = f"SELECT * FROM dbo.{table_name} {where_clause}"
+        remote_cur.execute(query)
         remote_rows = remote_cur.fetchall()
         remote_columns = [desc[0] for desc in remote_cur.description]
         primary_key_index = remote_columns.index(primary_key)
@@ -110,8 +111,11 @@ def sync_databases():
         sync_table(remote_hrs_conn, local_hrs_conn, 'Procesos', 'ID_Pro')
         print("Tabla Procesos sincronizada con éxito en SPF_HRS_MO local.")
         
-        # Comentando la sincronización de la tabla Empleados
-        # sync_table(remote_hrs_conn, local_hrs_conn, 'Empleados', 'Codigo_Emp')
+        # Sincronizar tabla Empleados con condiciones específicas
+        print("Sincronizando tabla Empleados desde SPF_HRS_MO a SPF_HRS_MO local con condiciones específicas...")
+        where_clause = "WHERE Estado = 'A' AND ID_Departamento IN (12, 16, 17, 18, 19, 20, 21, 22, 23)"
+        sync_table(remote_hrs_conn, local_hrs_conn, 'Empleados', 'Codigo_Emp', where_clause)
+        print("Tabla Empleados sincronizada con éxito en SPF_HRS_MO local con condiciones específicas.")
 
         # Sincronizar tablas en SPF_Info
         print("Sincronizando tabla Departamentos desde SPF_Info a SPF_Info local...")

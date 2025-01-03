@@ -441,33 +441,39 @@ def actualizar_horas_procesos(request):
         for key, value in request.POST.items():
             if key.startswith('horaentrada_'):
                 id_hrspro = key.split('_')[1]
-                proceso = Horasprocesos.objects.get(id_hrspro=id_hrspro)
-                proceso.horaentrada = request.POST.get(f'horaentrada_{id_hrspro}')
-                proceso.horasalida = request.POST.get(f'horasalida_{id_hrspro}')
-                proceso.hrs = request.POST.get(f'hrs_{id_hrspro}')
-                proceso.totalhrs = request.POST.get(f'totalhrs_{id_hrspro}')
-                proceso.hrsextras = request.POST.get(f'hrsextras_{id_hrspro}')
-                proceso.ID_Asis = request.POST.get(f'tipo_inasistencia_{id_hrspro}')  # Actualizar el tipo de inasistencia
-                proceso.id_pro = request.POST.get(f'proceso_{id_hrspro}')  # Actualizar el proceso
-                proceso.id_producto = request.POST.get(f'producto_{id_hrspro}')  # Actualizar el producto
-                proceso.umod = request.user.username  # Guardar el usuario que modificó el registro
-                proceso.fmod = date.today()  # Guardar la fecha de modificación
-                if proceso.ID_Asis in ['F', 'D', 'P', 'V', 'INC', 'S', 'B', 'R']:
-                    proceso.horaentrada = '00:00:00.0000000'
-                    proceso.horasalida = '00:00:00.0000000'
-                    proceso.hrs = 0
-                    proceso.totalhrs = 0
-                    proceso.hrsextras = 0
-                    proceso.id_pro = 0
-                proceso.save()
-                print(f"Updated proceso {id_hrspro}: ID_Asis={proceso.ID_Asis}, horaentrada={proceso.horaentrada}, horasalida={proceso.horasalida}")
+                try:
+                    proceso = Horasprocesos.objects.get(id_hrspro=id_hrspro)
+                    proceso.horaentrada = request.POST.get(f'horaentrada_{id_hrspro}')
+                    proceso.horasalida = request.POST.get(f'horasalida_{id_hrspro}')
+                    proceso.hrs = request.POST.get(f'hrs_{id_hrspro}')
+                    proceso.totalhrs = request.POST.get(f'totalhrs_{id_hrspro}')
+                    proceso.hrsextras = request.POST.get(f'hrsextras_{id_hrspro}')
+                    proceso.ID_Asis = request.POST.get(f'tipo_inasistencia_{id_hrspro}')  # Actualizar el tipo de inasistencia
+                    proceso.id_pro = request.POST.get(f'proceso_{id_hrspro}')  # Actualizar el proceso
+                    proceso.id_producto = request.POST.get(f'producto_{id_hrspro}')  # Actualizar el producto
+                    proceso.umod = request.user.username  # Guardar el usuario que modificó el registro
+                    proceso.fmod = date.today()  # Guardar la fecha de modificación
+                    if proceso.ID_Asis in ['F', 'D', 'P', 'V', 'INC', 'S', 'B', 'R']:
+                        proceso.horaentrada = '00:00:00.0000000'
+                        proceso.horasalida = '00:00:00.0000000'
+                        proceso.hrs = 0
+                        proceso.totalhrs = 0
+                        proceso.hrsextras = 0
+                        proceso.id_pro = 0
+                    proceso.save()
+                    print(f"Updated proceso {id_hrspro}: ID_Asis={proceso.ID_Asis}, horaentrada={proceso.horaentrada}, horasalida={proceso.horasalida}")
+                except Horasprocesos.DoesNotExist:
+                    messages.error(request, f'El proceso con ID {id_hrspro} no existe.')
             elif key.startswith('eliminar_') and value == 'on':
                 eliminar_ids.append(key.split('_')[1])
         
         for id_hrspro in eliminar_ids:
-            proceso = Horasprocesos.objects.get(id_hrspro=id_hrspro)
-            proceso.delete()
-            print(f"Deleted proceso {id_hrspro}")
+            try:
+                proceso = Horasprocesos.objects.get(id_hrspro=id_hrspro)
+                proceso.delete()
+                print(f"Deleted proceso {id_hrspro}")
+            except Horasprocesos.DoesNotExist:
+                messages.error(request, f'El proceso con ID {id_hrspro} no existe.')
 
         messages.success(request, '¡El proceso se actualizó exitosamente!')
         return redirect(reverse('horas_procesos:actualizar_horas_procesos'))
