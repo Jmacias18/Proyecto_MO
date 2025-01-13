@@ -1,0 +1,45 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block content %}
+    <div class="container mt-4">
+        <h2 class="text-center">Registrar Proceso o Maquinaria</h2>
+        
+        <h3 class="text-center mt-4">Registrar Maquinaria</h3>
+        <form method="post" action="{% url 'production:registro_maquinaria' %}" class="mb-4">
+            {% csrf_token %}
+            <div class="mb-3">
+                {{ maquinaria_form.as_p }}
+            </div>
+            <button type="submit" class="btn btn-success">Guardar Maquinaria</button>
+        </form>
+
+        <div class="mt-4">
+            <h3>Lista de Maquinarias Registradas</h3>
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Maquinaria</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for maquinaria in maquinarias %}
+                            <tr>
+                                <td>{{ maquinaria.DescripcionMaq }}</td>
+                                <td class="text-center">
+                                    <a href="{% url 'production:modificar_maquinaria' maquinaria.ID_Maquinaria %}" class="btn btn-primary btn-sm">Modificar</a>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="2" class="text-center">No hay maquinarias registradas.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+{% endblock %}

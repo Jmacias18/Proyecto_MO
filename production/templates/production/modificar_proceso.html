@@ -1,0 +1,18 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block content %}
+    <div class="container d-flex flex-column justify-content-center align-items-center min-vh-100 text-center">
+        <h2 class="mb-4">Modificar Proceso</h2>
+        <div class="w-100" style="max-width: 600px;">
+            <form method="post" action="">
+                {% csrf_token %}
+                <div class="mb-3">
+                    {{ form.as_p }}
+                </div>
+                <button type="submit" class="btn btn-success">Guardar Cambios</button>
+            </form>
+            <a href="{% url 'production:registro' %}" class="btn btn-link mt-2">Volver a Registro</a>
+        </div>
+    </div>
+{% endblock %}

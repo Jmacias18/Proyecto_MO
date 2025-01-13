@@ -77,26 +77,33 @@
     
 {% endblock %}
 {% block content %}
-<header class="text-white" style="background-image: url('{% static 'core/assets/fondoHome.png' %}'); background-position: center; background-size: cover; height: 60vh; display: flex; align-items: center; justify-content: center;">
-  <div class="container px-4 text-center">
-      <h1 class="fw-bolder">SANA Realtime WebApp</h1>
-      <p class="lead">Aplicación web oficial para uso del personal de calidad.</p>
-  </div>
+<header class="text-white" style="background-image: url('{% static 'core/assets/fondoHome.png' %}'); background-repeat: repeat; background-position: center;">
+    <div class="container px-4 text-center">
+        <h1 class="fw-bolder">SANA Realtime WebApp</h1>
+        <p class="lead">Aplicación web oficial para uso del personal de calidad.</p>
+    </div>
 </header>
 
-<section id="about" class="py-5">
-  <div class="container px-4">
-      <div class="row gx-4 justify-content-center">
-          <div class="col-lg-8">
-              <h2 class="text-center mb-4">Acerca de la app</h2>
-              <p class="lead text-justify">
-                  Aplicación web diseñada para automatizar procesos de captura de información en procesos. Su funcionamiento se basa en la integración de tecnologías avanzadas que permiten recopilar, procesar y analizar datos en tiempo real.
-              </p>
-              <p class="lead text-justify">
-                  Los operarios pueden ingresar datos fácilmente a través de una interfaz intuitiva (tablet, laptop o pc), lo que reduce errores y optimiza el flujo de trabajo. La aplicación genera reportes automáticos, proporciona visibilidad instantánea del estado de los procesos y facilita la toma de decisiones informadas. Con Sana Realtime WebApp se puede mejorar su eficiencia operativa y reducir costos, transformando la manera en que gestionan la información.
-              </p>
-          </div>
-      </div>
-  </div>
+<section id="about">
+    <div class="container px-4">
+        <div class="row gx-4 justify-content-center">
+            <div class="col-lg-8">
+                <h2>Acerca de la app</h2>
+                <p class="lead">
+                    Aplicación web diseñada para automatizar procesos de captura de información en procesos. Su funcionamiento se basa en la integración de tecnologías avanzadas que permiten recopilar, procesar y analizar datos en tiempo real.
+                </p>
+                <p class="lead">
+                    Los operarios pueden ingresar datos fácilmente a través de una interfaz intuitiva (tablet, laptop o pc), lo que reduce errores y optimiza el flujo de trabajo. La aplicación genera reportes automáticos, proporciona visibilidad instantánea del estado de los procesos y facilita la toma de decisiones informadas. Con Sana Realtime WebApp se puede mejorar su eficiencia operativa y reducir costos, transformando la manera en que gestionan la información.
+                </p>
+            </div>
+        </div>
+    </div>
 </section>
+<footer class="bg-dark text-white py-1">
+    <div class="container text-center">
+        <div class="mt-4">
+            <p>&copy; {{ current_year }} Sana Premium Foods. Todos los derechos reservados.</p>
+        </div>
+    </div>
+</footer>
 {% endblock %}

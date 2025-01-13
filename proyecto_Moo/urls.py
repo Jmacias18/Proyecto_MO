@@ -28,7 +28,9 @@ urlpatterns = [
     path('accounts/', include('django.contrib.auth.urls')),
     path('accounts/', include('registration.urls')),
     path('', HomePageView.as_view(), name="home"),
-    
-    
+    path('temperature/', include('temperature.urls')),  # Incluir las rutas de temperature
+    path('production/', include('production.urls')),
+    path('esterilizadores/', include('esterilizadores.urls')),
+   
+    path('autoclave/', include("autoclave.urls")),
 ]
-

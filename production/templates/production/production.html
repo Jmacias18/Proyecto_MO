@@ -1,0 +1,403 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container my-5" style="margin-top: 80px;" id="main-container">
+    <div class="container">
+        <div class="row justify-content-end">
+            <div class="col-auto sync-container" style="font-size: 0.85rem; margin-top: 65px;">
+                <h3 class="h4 text-dark">Sincronización de Datos</h3>
+                <p class="text-dark">Registros por sincronizar: {{ registros_por_syncronizar }}</p>
+                <form method="post" action="{% url 'production:sync_data_view' %}" class="sync-form">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-warning text-white btn-sm">Sincronizar Datos</button>
+                </form>
+                {% if messages %}
+                    {% for message in messages %}
+                        {% if 'sync' in message.tags %}
+                            <div class="alert alert-{{ message.level_tag }}">{{ message }}</div>
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+    <h2 style="font-size: 24px; color: #333;">Registro de Paros</h2>
+
+    {% if user_is_maintenance %}
+        <p class="alert alert-warning">No tienes permisos para registrar nuevos paros. Este formulario está deshabilitado para los usuarios de mantenimiento.</p>
+    {% else %}
+        <div style="max-width: 100%;">    
+            <form method="post" action="{% url 'production:registrar_paro' %}">
+                {% csrf_token %}
+                <div style="overflow-x: auto; margin: 0 auto; max-width: 100%;">
+                    <table style="margin: 0 auto; width: 100%; border-collapse: collapse; table-layout: auto;">
+                        <thead>
+                            <tr style="background-color: #8B0000; color: white;">
+                                <th style="padding: 10px; width: 10%;">Cliente</th>
+                                <th style="padding: 10px; width: 10%;">Orden Fabricacion SAP</th>
+                                <th style="padding: 10px; width: 10%;">Producto</th>
+                                <th style="padding: 10px; width: 10%;">Hora Inicio Paro</th>
+                                <th style="padding: 10px; width: 10%;">Hora Finalizó Paro</th>
+                                <th style="padding: 10px; width: 10%;">Tiempo muerto (min)</th>
+                                <th style="padding: 10px; width: 10%;">Personas afectadas</th>
+                                <th style="padding: 10px; width: 10%;">M.O</th>
+                                <th style="padding: 10px; width: 10%;">Proceso</th>
+                                <th style="padding: 10px; width: 10%;">Maquinaria</th>
+                                <th style="padding: 10px; width: 10%;">Causa del Paro</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <!-- Cliente Selection -->
+                                <td>
+                                    <select name="ID_Cliente" id="clienteSelect" required style="width: 100%;">
+                                        <option value="">Seleccione Cliente</option>
+                                        {% for cliente in clientes %}
+                                            <option value="{{ cliente.ID_Cliente }}">{{ cliente.Cliente }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </td>
+                                <td>
+                                    <input type="text" name="OrdenFabricacionSAP" id="OrdenFabricacionSAP" value="0" required 
+                                           pattern="^\d{1,5}$" title="Solo se permiten números (máximo 5 dígitos)" 
+                                           maxlength="6" oninput="this.value = this.value.replace(/[^0-9]/g, '');" 
+                                           style="width: 100%; margin-top: 30px;">
+                                    <label for="OrdenFabricacionSAP" class="form-label">Opcional*</label>
+                                </td>
+                              
+                                <td>
+                                    <select name="ID_Producto" id="productoSelect" required style="width: 100%; margin-top: 50px;" onchange="updateProductoNombre()">
+                                        <option value="">Seleccione Producto</option>
+                                        {% for producto in productos %}
+                                            <option value="{{ producto.ID_Producto }}" data-nombre="{{ producto.DescripcionProd }}">{{ producto.ID_Producto }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <input type="text" id="nombreProducto" readonly style="width: 500%; margin-top: 20px;">
+                                </td>
+                                <td><input type="time" name="HoraInicio" id="horaInicio" required style="width: 100%;" onchange="validateHoraFin()"></td>
+                                <td><input type="time" name="HoraFin" id="horaFin" required style="width: 100%;" disabled></td>
+                                <td><input type="number" name="TiempoMuerto" id="tiempoMuerto" required min="0" style="width: 100%;" readonly></td>
+                                <td>
+                                    <input type="number" name="PersonasAfectadas" id="personasAfectadas" required min="0.01" max="9999" step="0.01"
+                                           oninput="if (this.value < 0.01) this.value = '';" 
+                                           style="width: 100%;">
+                                </td>
+                                <td>
+                                    <input type="number" name="MO" id="manoDeObra" required readonly style="width: 100%;" />
+                                </td>
+                              
+                                <td>
+                                    <select name="ID_Proceso" required style="width: 100%;">
+                                        <option value="">Seleccione Proceso</option>
+                                        {% for proceso in procesos %}
+                                            <option value="{{ proceso.ID_Proc }}">{{ proceso.Nombre_Proc }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </td>
+                                <td>
+                                    <select name="ID_Maquinaria" required style="width: 100%;">
+                                        <option value="">Seleccione Maquinaria</option>
+                                        {% for maquinaria in maquinarias %}
+                                            <option value="{{ maquinaria.ID_Maquinaria }}">{{ maquinaria.DescripcionMaq }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </td>
+                                <td><textarea name="Causa" required style="width: 100%; height: 100px;"></textarea></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div style="text-align: right; margin-top: 20px;">
+                    <button type="submit" style="background-color: #4CAF50; color: white; border: none; padding: 10px 20px; cursor: pointer;">Guardar</button>
+                </div>
+            </form>
+        </div>
+    {% endif %}
+
+        <hr class="my-4">
+
+        <h3 class="h4 text-dark mt-5">Lista de Paros en el Proceso</h3>
+        <form method="get" action="{% url 'production:production' %}" class="row g-3 justify-content-center">
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label for="FechaParo" class="form-label">Fecha Paro</label>
+                    <input type="date" name="FechaParo" class="form-control" id="FechaParo" placeholder="Fecha Paro">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label for="HoraInicio" class="form-label">Hora Inicio</label>
+                    <input type="time" name="HoraInicio" class="form-control" id="HoraInicio" placeholder="Hora Inicio">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label for="HoraFin" class="form-label">Hora Fin</label>
+                    <input type="time" name="HoraFin" class="form-control" id="HoraFin" placeholder="Hora Fin">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label for="ID_Proc" class="form-label">Proceso</label>
+                    <select name="ID_Proc" class="form-control" id="ID_Proc">
+                        <option value="">Seleccione Proceso</option>
+                        {% for proceso in procesos %}
+                            <option value="{{ proceso.ID_Proc }}">{{ proceso.Nombre_Proc }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label for="ID_Maquinaria" class="form-label">Maquinaria</label>
+                    <select name="ID_Maquinaria" class="form-control" id="ID_Maquinaria">
+                        <option value="">Seleccione Maquinaria</option>
+                        {% for maquinaria in maquinarias %}
+                            <option value="{{ maquinaria.ID_Maquinaria }}">{{ maquinaria.DescripcionMaq }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-12 d-flex justify-content-center">
+                <button type="submit" class="btn btn-success text-white mt-4">Filtrar</button>
+            </div>
+        </form>
+        
+        <div class="table-responsive w-100">
+            <table class="table table-bordered">
+                <thead class="bg-danger text-white">
+                    <tr style="background-color: #8B0000; color: white;">
+                        <th style="padding: 10px; width: 10%;">Fecha Paro</th>
+                        <th style="padding: 10px; width: 10%;">Cliente</th>                      
+                        <th style="padding: 10px; width: 10%;">Orden Fabricación SAP</th>
+                        <th style="padding: 10px; width: 10%;">Producto</th>
+                        <th style="padding: 10px; width: 10%;">Hora Inicio Paro</th>
+                        <th style="padding: 10px; width: 10%;">Hora Fin Paro</th>
+                        <th style="padding: 10px; width: 10%;">Tiempo Muerto (min)</th>
+                        <th style="padding: 10px; width: 10%;">Personas Afectadas</th>
+                        <th style="padding: 10px; width: 10%;">M.O</th>
+                        <th style="padding: 10px; width: 10%;">Proceso</th>
+                        <th style="padding: 10px; width: 10%;">Maquinaria</th>
+                        <th style="padding: 10px; width: 10%;">Causa del Paro</th>
+                        <th style="padding: 10px; width: 10%;">Diagnostico</th>
+                        <th style="padding: 10px; width: 10%;">CausaRaiz</th>
+                        <th style="padding: 10px; text-align: center; width: 10%;">Acciones</th>
+                        <th style="padding: 10px; text-align: center; width: 10%;">Acciones Mantenimiento</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if paros %}
+                        {% for paro in paros %}
+                            <tr>
+                                <td>{{ paro.FechaParo }}</td>
+                                <td>{{ paro.ID_Cliente.Cliente}}</td>
+                                <td>{{ paro.OrdenFabricacionSAP }}</td>
+                                <td>{{ paro.ID_Producto }}</td>
+                                <td>{{ paro.HoraInicio }}</td>
+                                <td>{{ paro.HoraFin }}</td>
+                                <td>{{ paro.TiempoMuerto }}</td>
+                                <td>{{ paro.PersonasAfectadas }}</td>
+                                <td>{{ paro.MO }}</td>
+                                <td>{{ paro.ID_Proceso.Nombre_Proc }}</td>
+                                <td>{{ paro.ID_Maquinaria.DescripcionMaq }}</td>
+                                <td>{{ paro.Causa }}</td>
+                                <td>{{ paro.Diagnostico }}</td>
+                                <td>{{ paro.CausaRaiz }}</td>
+                                <td>
+                                    <div style="display: flex; flex-direction: column; align-items: center;">
+                                        {% if not user_is_maintenance %}
+                                            <!-- Botón de Modificar azul visible solo para usuarios que NO son del grupo "Mantenimiento" -->
+                                            <a href="{% url 'production:modificar_paro' paro.ID_Paro %}" class="btn btn-primary" style="background-color: #007BFF; color: white; padding: 8px 12px; margin: 2px; border-radius: 4px; text-decoration: none;">Modificar</a>
+                                    
+                                            <!-- Botón de Eliminar visible solo para usuarios que NO son del grupo "Mantenimiento" -->
+                                            <form method="post" action="{% url 'production:eliminar_paro' paro.ID_Paro %}" style="display: inline;">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-danger" style="background-color: #DC3545; color: white; padding: 8px 12px; margin: 2px; border-radius: 4px; border: none; cursor: pointer;" onclick="return confirm('¿Estás seguro de eliminar este paro?');">Eliminar</button>
+                                            </form>
+                                        {% endif %}
+                                    </div> 
+                                </td>
+                                <td>
+                                    <div style="display: flex; flex-direction: column; align-items: center;">
+                                        {% if user_is_maintenance %}
+                                            <!-- Botón de Modificar verde solo visible para usuarios del grupo "Mantenimiento" -->
+                                            <a href="{% url 'production:modificar_paro_mant' paro.ID_Paro %}" class="btn btn-success" style="background-color: #28a745; color: white; padding: 8px 12px; margin: 2px; border-radius: 4px; text-decoration: none;">Modificar</a>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="12">No hay datos registrados.</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <style>
+        /* Ajustes responsivos */
+        @media (max-width: 768px) {
+            table {
+                font-size: 12px;
+            }
+            h2 {
+                font-size: 20px;
+            }
+            input, select, button {
+                width: 100%;
+                margin: 5px;
+            }
+            .btn {
+                width: 100%; /* Botones a 100% en móvil */
+            }
+        }
+
+        /* Margen superior extra cuando está en vertical */
+        @media (orientation: portrait) {
+            #main-container {
+                margin-top: 120px; /* Ajuste de margen superior cuando está en modo vertical */
+            }
+        }
+    </style>
+
+
+<script>
+    // Function to update the product name display
+    function updateProductoNombre() {
+        const select = document.getElementById('productoSelect');
+        const selectedOption = select.options[select.selectedIndex];
+        const nombreProducto = document.getElementById('nombreProducto');
+        nombreProducto.value = selectedOption.getAttribute('data-nombre') || '';
+    }
+
+    // Function to validate time inputs and calculate downtime
+    function validateHoraFin() {
+        const horaInicio = document.getElementById('horaInicio');
+        const horaFin = document.getElementById('horaFin');
+        const tiempoMuerto = document.getElementById('tiempoMuerto');
+        const mo = document.querySelector('input[name="MO"]'); // Assuming the MO field is correctly named in the form
+        const personasAfectadas = document.querySelector('input[name="PersonasAfectadas"]'); // Get Personas Afectadas input
+
+        // Enable the Hora Fin input when Hora Inicio is filled
+        if (horaInicio.value) {
+            horaFin.disabled = false;
+            horaFin.focus();
+        } else {
+            // Disable Hora Fin if Hora Inicio is not set
+            horaFin.disabled = true;
+        }
+
+        // Validate and calculate the downtime
+        function validateTimes() {
+            if (horaInicio.value && horaFin.value) {
+                const [inicioHours, inicioMinutes] = horaInicio.value.split(':').map(Number);
+                const [finHours, finMinutes] = horaFin.value.split(':').map(Number);
+
+                // Ensure Hora Inicio is always before Hora Fin
+                const startTime = new Date();
+                const endTime = new Date();
+                startTime.setHours(inicioHours, inicioMinutes, 0); // Set the start time
+                endTime.setHours(finHours, finMinutes, 0); // Set the end time
+
+                // Check if Hora Fin is after Hora Inicio
+                if (endTime <= startTime) {
+                    alert("La Hora de Finalización debe ser mayor que la Hora de Inicio.");
+                    horaFin.value = ''; // Clear Hora Fin
+                    tiempoMuerto.value = ''; // Clear the downtime
+                    mo.value = ''; // Clear M.O
+                    horaFin.disabled = false; // Allow re-entering Hora Fin
+                } else {
+                    // Calculate the downtime in minutes
+                    const downtimeMilliseconds = endTime - startTime;
+                    const downtimeMinutes = Math.floor(downtimeMilliseconds / (1000 * 60));
+
+                    // Display the downtime in minutes, ensuring it's not negative
+                    tiempoMuerto.value = downtimeMinutes > 0 ? downtimeMinutes : 0;
+
+                    // Recalculate M.O when downtime changes
+                    updateMO();
+                }
+            } else if (!horaFin.value) {
+                // If Hora Fin is cleared, reset downtime and M.O
+                tiempoMuerto.value = '';
+                mo.value = '';
+            }
+        }
+
+        // Function to update M.O calculation based on downtime and Personas Afectadas
+        function updateMO() {
+            const downtimeMinutes = parseFloat(tiempoMuerto.value) || 0;
+            const personas = parseFloat(personasAfectadas.value) || 0;
+            const moValue = (downtimeMinutes / 555) * personas;
+            mo.value = moValue.toFixed(2); // Update M.O value
+        }
+
+        // Add event listeners to update when either input changes
+        horaInicio.addEventListener('input', validateTimes);
+        horaFin.addEventListener('input', validateTimes);
+        personasAfectadas.addEventListener('input', updateMO); // Recalculate M.O when personas Afectadas changes
+    }
+
+    // Function to show alert based on connection status
+    function updateOnlineStatus() {
+        const isOnline = navigator.onLine;
+        const notificationShown = sessionStorage.getItem('notificationShown');
+
+        if (isOnline && notificationShown !== 'online') {
+            alert("Estás conectado a la red.");
+            sessionStorage.setItem('notificationShown', 'online');
+        } else if (!isOnline && notificationShown !== 'offline') {
+            alert("No estás conectado a la red. Algunas funcionalidades pueden no estar disponibles.");
+            sessionStorage.setItem('notificationShown', 'offline');
+        }
+    }
+
+    // Function to check connection status before form submission
+    function checkConnectionBeforeSync(event) {
+        if (!navigator.onLine) {
+            event.preventDefault();
+            alert("No se puede sincronizar. No estás conectado a la red.");
+        }
+    }
+
+    // Function to handle form submission success
+    function handleFormSubmission(event) {
+        event.preventDefault();
+        const form = event.target;
+
+        setTimeout(() => {
+            alert("Sincronización exitosa.");
+            form.submit();
+        }, 1000); // Simulate a delay
+    }
+
+    // Initial check on page load
+    document.addEventListener('DOMContentLoaded', (event) => {
+        updateOnlineStatus();
+
+        // Add event listener to the sync form
+        const syncForm = document.querySelector('.sync-form');
+        if (syncForm) {
+            syncForm.addEventListener('submit', (event) => {
+                checkConnectionBeforeSync(event);
+                if (navigator.onLine) {
+                    handleFormSubmission(event);
+                }
+            });
+        }
+
+        // Initialize time validation
+        validateHoraFin();
+    });
+
+    // Add event listeners for online and offline events
+    window.addEventListener('online', updateOnlineStatus);
+    window.addEventListener('offline', updateOnlineStatus);
+</script>
+
+{% endblock %}

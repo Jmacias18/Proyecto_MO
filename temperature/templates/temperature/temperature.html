@@ -1,0 +1,406 @@
+{% extends 'core/base.html' %}
+
+{% load custom_filters %}
+
+{% block title %}
+Control de Temperaturas
+{% endblock %}
+
+<!-- Incluir CSS de flatpickr -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+
+<!-- Incluir JS de flatpickr -->
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+{% block content %}
+<div class="d-flex flex-column align-items-end p-3" style="margin-top: 70px; margin-right: 50px;">
+    <h2>Sincronizacion de Datos</h2>
+    <p id="sync-status" class="mb-2" style="font-size: 1rem;">
+        Cantidad de registros no sincronizados: {{ registros_no_sincronizados }}
+    </p>
+
+    <!-- Contenedor de los botones, alineados horizontalmente -->
+    <div class="d-flex gap-2">
+        <!-- Botón de Sincronizar -->
+        <form id="syncForm" method="POST" action="{% url 'temperature:sync_data' %}" onsubmit="return handleSync(event);">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-warning btn-sm" style="font-size: 0.875rem; padding: 6px 12px;">
+                Sincronizar Datos
+            </button>
+        </form>
+
+        {% if request.user.is_superuser %}
+        <!-- Botón de Editar Refrigeradores -->
+        <a href="{% url 'admin:temperature_refrigeradores_changelist' %}" class="btn btn-secondary btn-sm" style="font-size: 0.875rem; padding: 6px 12px;">
+            Editar Refrigeradores
+        </a>
+        {% endif %}
+    </div>
+
+    <!-- Mensaje debajo de los botones -->
+    <div id="sync-message" class="mt-2" style="display: none;">
+        <!-- Aquí irá el mensaje de sincronización -->
+    </div>
+</div>
+
+
+<div class="container mt-1 pt-1 px-1">
+
+    <!-- Resto del contenido -->
+    <h1>Control De Temperatura</h1>
+    <form id="temperatureForm" method="POST" action="{% url 'temperature:register_temp' %}">
+        {% csrf_token %}
+        <div class="mb-4">
+            <h2>Registrar Temperaturas</h2>
+            <label for="typeSelection" class="form-label">Seleccionar tipo de refrigerador</label>
+            <select id="typeSelection" class="form-select" required onchange="filterRefrigeradores()">
+                <option value="" disabled selected>Seleccionar tipo</option>
+                {% for tipo in tipos_refrigeradores %}
+                    <option value="{{ tipo }}" {% if tipo == request.GET.tipo %}selected{% endif %}>{{ tipo }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="mb-4">
+            <label for="refrigerador" class="form-label">Refrigerador</label>
+            <select id="refrigerador" name="ID_Refrigerador" class="form-select" required>
+                <option value="">Seleccione un refrigerador</option>
+                {% if request.GET.tipo %}
+                    {% for refrigerador in refrigeradores %}
+                        {% if refrigerador.TipoRefrigerador == request.GET.tipo and refrigerador.estado == 1 %}
+                            <option value="{{ refrigerador.ID_Refrigerador }}" {% if refrigerador.ID_Refrigerador == request.POST.ID_Refrigerador %}selected{% endif %}>
+                                {{ refrigerador.DescripcionRef }}
+                            </option>
+                        {% endif %}
+                    {% endfor %}
+                {% else %}
+                    {% for refrigerador in refrigeradores %}
+                        {% if refrigerador.estado == 1 %}
+                            <option value="{{ refrigerador.ID_Refrigerador }}" {% if refrigerador.ID_Refrigerador == request.POST.ID_Refrigerador %}selected{% endif %}>
+                                {{ refrigerador.DescripcionRef }}
+                            </option>
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+            </select>
+        </div>
+
+        <div class="mb-4">
+            <label for="Temperatura" class="form-label">Temperatura actual (°C)</label>
+            <input type="number" id="Temperatura" name="Temperatura" class="form-control" required step="0.1" min="-50" max="50" lang="en" value="{{ request.POST.Temperatura }}">
+        </div>
+
+        <div class="mb-4">
+            <label for="hora" class="form-label">Hora</label>
+            <select id="hora" name="Hora" class="form-select" required>
+                <option value="">Seleccione una hora</option>
+                {% for hora_option in horas %}
+                    <option value="{{ hora_option }}" {% if request.POST.Hora == hora_option %}selected{% endif %}>{{ hora_option }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <form id="temperatureForm" method="POST" action="{% url 'temperature:register_temp' %}">
+            {% csrf_token %}
+            
+            <!-- Otros campos del formulario... -->
+        
+        <div class="mb-4">
+            <label for="comentarios" class="form-label">Comentarios</label>
+            <textarea id="comentarios" name="Comentarios" class="form-control" rows="4" placeholder="Escribe tus comentarios aquí...">{{ request.POST.Comentarios }}</textarea>
+        </div>
+
+        <div class="mb-4">
+            <label for="fecha" class="form-label">Fecha</label>
+            <input type="date" id="fecha" name="Fecha" class="form-control" value="{{ today|date:'Y-m-d' }}" required>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Guardar</button>
+    </form>
+
+    <!-- Filtro por fecha -->
+    <div class="mb-4 mt-4">
+        <h2>Filtrar registros</h2>
+        <label for="dateSelection" class="form-label">Seleccionar Fecha</label>
+        <input type="date" id="dateSelection" name="Fecha" class="form-control" onchange="filterByDate()" value="{{ selected_date|date:'Y-m-d' }}">
+    </div>
+
+
+<!-- Para las áreas -->
+<h3>Comentarios - Áreas</h3>
+{% for refrigerador in refrigeradores_area %}
+    {% if comentarios|get_item:refrigerador.ID_Refrigerador %}
+        <div class="alert alert-info">
+            <strong>{{ refrigerador.DescripcionRef }}</strong>: {{ comentarios|get_item:refrigerador.ID_Refrigerador }}
+        </div>
+    {% endif %}
+{% endfor %}
+
+<h2 class="mt-5">Registros de Temperatura - Áreas</h2>
+<div class="table-responsive">
+    <table class="table table-bordered mt-3">
+        <thead>
+            <tr>
+                <th>Hora</th>
+                {% for refrigerador in refrigeradores_area %}
+                    <th>{{ refrigerador.DescripcionRef }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for hora in horas %}
+                <tr>
+                    <td>{{ hora }}</td>
+                    {% for refrigerador in refrigeradores_area %}
+                        <td>
+                            {% with area_temperatura=temperaturaareas %}
+                                {% for area in area_temperatura %}
+                                    {% if area.Hora|date:"H:i" == hora and area.ID_Refrigerador.ID_Refrigerador == refrigerador.ID_Refrigerador %}
+                                        <div class="temperature-box 
+                                            {% if color_temperaturas|get_item:area.ID_TempAreas == 'green' %}temperature-green{% elif color_temperaturas|get_item:area.ID_TempAreas == 'yellow' %}temperature-yellow{% elif color_temperaturas|get_item:area.ID_TempAreas == 'red' %}temperature-red{% endif %}">
+                                        {{ area.Temperatura|default:0 }} °C
+                                        <a href="{% url 'temperature:edit_temp' area.ID_TempAreas %}" class="btn btn-link">
+                                            <i class="fas fa-cog"></i>
+                                        </a>
+                                        </div>
+                                    {% endif %}
+                                {% endfor %}
+                            {% endwith %}
+                        </td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Para los refrigeradores -->
+<h3>Comentarios - Refrigeradores</h3>
+{% for refrigerador in refrigeradores_refrigerador %}
+    {% if comentarios|get_item:refrigerador.ID_Refrigerador %}
+        <div class="alert alert-info">
+            <strong>{{ refrigerador.DescripcionRef }}</strong>: {{ comentarios|get_item:refrigerador.ID_Refrigerador }}
+        </div>
+    {% endif %}
+{% endfor %}
+
+<h2 class="mt-5">Registros de Temperatura - Refrigeradores</h2>
+<div class="table-responsive">
+    <table class="table table-bordered mt-3">
+        <thead>
+            <tr>
+                <th>Hora</th>
+                {% for refrigerador in refrigeradores_refrigerador %}
+                    <th>{{ refrigerador.DescripcionRef }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for hora in horas %}
+                <tr>
+                    <td>{{ hora }}</td>
+                    {% for refrigerador in refrigeradores_refrigerador %}
+                        <td>
+                            {% with area_temperatura=temperaturaareas %}
+                                {% for area in area_temperatura %}
+                                    {% if area.Hora|date:"H:i" == hora and area.ID_Refrigerador.ID_Refrigerador == refrigerador.ID_Refrigerador %}
+                                        <div class="temperature-box 
+                                            {% if color_temperaturas|get_item:area.ID_TempAreas == 'green' %}temperature-green{% elif color_temperaturas|get_item:area.ID_TempAreas == 'yellow' %}temperature-yellow{% elif color_temperaturas|get_item:area.ID_TempAreas == 'red' %}temperature-red{% endif %}">
+                                        {{ area.Temperatura|default:0 }} °C
+                                        <a href="{% url 'temperature:edit_temp' area.ID_TempAreas %}" class="btn btn-link">
+                                            <i class="fas fa-cog"></i>
+                                        </a>
+                                        </div>
+                                    {% endif %}
+                                {% endfor %}
+                            {% endwith %}
+                        </td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Para los congeladores -->
+<h3>Comentarios - Congeladores</h3>
+{% for refrigerador in refrigeradores_congelador %}
+    {% if comentarios|get_item:refrigerador.ID_Refrigerador %}
+        <div class="alert alert-info">
+            <strong>{{ refrigerador.DescripcionRef }}</strong>: {{ comentarios|get_item:refrigerador.ID_Refrigerador }}
+        </div>
+    {% endif %}
+{% endfor %}
+
+<h2 class="mt-5">Registros de Temperatura - Congeladores</h2>
+<div class="table-responsive">
+    <table class="table table-bordered mt-3">
+        <thead>
+            <tr>
+                <th>Hora</th>
+                {% for refrigerador in refrigeradores_congelador %}
+                    <th>{{ refrigerador.DescripcionRef }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for hora in horas %}
+                <tr>
+                    <td>{{ hora }}</td>
+                    {% for refrigerador in refrigeradores_congelador %}
+                        <td>
+                            {% with area_temperatura=temperaturaareas %}
+                                {% for area in area_temperatura %}
+                                    {% if area.Hora|date:"H:i" == hora and area.ID_Refrigerador.ID_Refrigerador == refrigerador.ID_Refrigerador %}
+                                        <div class="temperature-box 
+                                            {% if color_temperaturas|get_item:area.ID_TempAreas == 'green' %}temperature-green{% elif color_temperaturas|get_item:area.ID_TempAreas == 'yellow' %}temperature-yellow{% elif color_temperaturas|get_item:area.ID_TempAreas == 'red' %}temperature-red{% endif %}">
+                                        {{ area.Temperatura|default:0 }} °C
+                                        <a href="{% url 'temperature:edit_temp' area.ID_TempAreas %}" class="btn btn-link">
+                                            <i class="fas fa-cog"></i>
+                                        </a>
+                                        </div>
+                                    {% endif %}
+                                {% endfor %}
+                            {% endwith %}
+                        </td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+    function filterRefrigeradores() {
+        const select = document.getElementById('typeSelection');
+        const refrigeradorSelect = document.getElementById('refrigerador');
+        const tipo = select.value;
+
+        if (tipo !== "") {
+            refrigeradorSelect.disabled = false;
+        } else {
+            refrigeradorSelect.disabled = true;
+            resetForm();
+        }
+
+        const url = "{% url 'temperature:control' %}?tipo=" + tipo;
+        window.location.href = url;
+    }
+
+    function resetForm() {
+        document.getElementById('refrigerador').value = "";
+        document.getElementById('Temperatura').value = "";
+        document.getElementById('hora').value = "";
+        document.getElementById('Temperatura').disabled = true;
+        document.getElementById('hora').disabled = true;
+        document.querySelector('button[type="submit"]').disabled = true;
+    }
+
+    function filterByDate() {
+        const selectedDate = document.getElementById('dateSelection').value;
+        const url = new URL(window.location.href);
+        url.searchParams.set('fecha', selectedDate);
+        window.location.href = url.toString();
+    }
+
+    document.getElementById('refrigerador').addEventListener('change', function() {
+        if (this.value !== "") {
+            document.getElementById('Temperatura').disabled = false;
+        } else {
+            resetForm();
+        }
+        checkSubmitButton();
+    });
+
+    document.getElementById('Temperatura').addEventListener('input', function() {
+        if (this.value !== "") {
+            document.getElementById('hora').disabled = false;
+        } else {
+            document.getElementById('hora').disabled = true;
+            document.querySelector('button[type="submit"]').disabled = true;
+        }
+        checkSubmitButton();
+    });
+
+    document.getElementById('hora').addEventListener('change', function() {
+        checkSubmitButton();
+    });
+
+    function checkSubmitButton() {
+        const refrigerador = document.getElementById('refrigerador').value;
+        const temperatura = document.getElementById('Temperatura').value;
+        const hora = document.getElementById('hora').value;
+
+        // Solo habilitar el botón si todos los campos están completos
+        const isValid = refrigerador && temperatura && hora;
+        document.querySelector('button[type="submit"]').disabled = !isValid;
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        const refrigeradorSelect = document.getElementById('refrigerador');
+        const tipoSeleccionado = "{{ request.GET.tipo }}";
+
+        if (tipoSeleccionado !== "") {
+            refrigeradorSelect.disabled = false; // Habilitar si hay un tipo seleccionado
+        } else {
+            refrigeradorSelect.disabled = true; // Deshabilitar si no hay tipo seleccionado
+        }
+    });
+
+    function handleSync(event) {
+        event.preventDefault();  // Previene el envío tradicional del formulario
+     
+        const formData = new FormData(event.target);
+        const timeout = 1000; // 5 segundos en milisegundos
+     
+        const fetchPromise = fetch("{% url 'temperature:sync_data' %}", {
+            method: 'POST',
+            body: formData,
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Error en la respuesta del servidor');
+            }
+            return response.json();
+        });
+     
+        const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => {
+                reject(new Error('Timeout'));
+            }, timeout);
+        });
+     
+        Promise.race([fetchPromise, timeoutPromise])
+            .then(data => {
+                const syncMessage = document.getElementById('sync-message');
+                syncMessage.innerHTML = data.message;
+                syncMessage.style.display = 'block';  // Mostrar el mensaje
+     
+                if (data.message === 'Sincronización completa') {
+                    syncMessage.className = 'alert alert-success';  // Éxito
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 3000);
+                } else {
+                    syncMessage.className = 'alert alert-warning';  // Advertencia
+                }
+            })
+            .catch(error => {
+                const syncMessage = document.getElementById('sync-message');
+                if (error.message === 'Timeout') {
+                    syncMessage.innerHTML = 'Error de conexión. Intenta de nuevo más tarde.';
+                } else if (error.message === 'Error en la respuesta del servidor') {
+                    syncMessage.innerHTML = 'Error al sincronizar datos. El servidor no respondió correctamente.';
+                } else {
+                    syncMessage.innerHTML = 'Error de red o servidor no disponible. Intenta de nuevo más tarde.';
+                }
+                syncMessage.style.display = 'block';  // Mostrar el mensaje
+                syncMessage.className = 'alert alert-danger';  // Error
+            });
+    }
+    
+    
+</script>
+
+
+
+
+{% endblock %}

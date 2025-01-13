@@ -44,6 +44,10 @@ INSTALLED_APPS = [
     'ckeditor',
     'procesos',
     'horas_procesos',
+    'temperature',
+    'production',
+    'autoclave',
+    'esterilizadores',
 
 ]
 
@@ -95,10 +99,38 @@ DATABASES = {
         'PORT': '',
         'OPTIONS': {
             'driver': 'ODBC Driver 17 for SQL Server',
-            'extra_params': 'Trusted_Connection=yes;'
+            'trusted_connection': 'yes',  # Usa conexión de confianza
+        },
+    },
+    'spf_calidad': {
+        'ENGINE': 'mssql',
+        'NAME': 'SPF_Calidad',
+        'USER': '',  # Deja vacío para autenticación de Windows
+        'PASSWORD': '',  # Deja vacío para autenticación de Windows
+        'HOST': 'localhost\\SQLEXPRESS',
+        'OPTIONS': {
+            'driver': 'ODBC Driver 17 for SQL Server',
+            'trusted_connection': 'yes',  # Usa conexión de confianza
+        },
+    },
+    'spf_info': {
+        'ENGINE': 'mssql',
+        'NAME': 'SPF_Info',
+        'USER': '',  # Deja vacío para autenticación de Windows
+        'PASSWORD': '',  # Deja vacío para autenticación de Windows
+        'HOST': 'localhost\\SQLEXPRESS',
+        'OPTIONS': {
+            'driver': 'ODBC Driver 17 for SQL Server',
+            'trusted_connection': 'yes',  # Usa conexión de confianza
         },
     }
 }
+DATABASE_ROUTERS = [
+    'temperature.routers.DatabaseRouter',
+    'production.routers.DatabaseRouter',
+    'autoclave.routers.AutoclaveDatabaseRouter',
+    'esterilizadores.routers.DatabaseRouter'
+]
 
 
 # Password validation
@@ -125,7 +157,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'es-mx'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'America/Hermosillo'
 
 USE_I18N = True
 

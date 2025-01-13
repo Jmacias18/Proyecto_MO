@@ -1,0 +1,242 @@
+{% extends 'core/base.html' %}
+
+{% block title %}
+Listado de Temperaturas
+{% endblock %}
+
+{% block content %}
+    <!-- Formulario de sincronización alineado a la derecha -->
+    {% if request.user.is_supervisor or is_superuser or is_editor %}
+        <div class="d-flex flex-column align-items-end p-3" style="margin-top: 70px; margin-right: 50px;">
+            <h2>Sincronización de Datos</h2>
+            <div class="d-flex gap-2 mt-3">
+                <form id="syncForm" method="POST" action="{% url 'autoclave:sync_data' %}" onsubmit="return handleSync(event);">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-warning btn-sm" style="font-size: 0.875rem; padding: 6px 12px;">
+                        Sincronizar Datos
+                    </button>
+                </form>
+            </div>
+            <div id="sync-message" class="alert mt-3" style="display: none;"></div>
+        </div>
+    {% endif %}
+
+<div class="container mt-1 pt-1 px-1">
+    <h1 class="mb-4">Listado de Temperaturas del Autoclave</h1>
+
+    {% if request.user.is_supervisor or is_editor or is_superuser %}
+    <a href="{% url 'autoclave:temperature_add' %}" class="btn btn-primary mb-3">Agregar Nueva Temperatura</a>
+    {% endif %}
+
+    <!-- Formulario para filtrar por fecha y hora -->
+    <form method="GET" action="{% url 'autoclave:temperature_list' %}" class="mb-3">
+        <div class="form-row">
+            <div class="form-group col-md-4">
+                <label for="fecha">Seleccionar fecha:</label>
+                <input type="date" id="fecha" name="fecha" value="{{ request.GET.fecha|default:'' }}" class="form-control">
+            </div>
+            <div class="form-group col-md-4">
+                <button type="submit" class="btn btn-primary mt-4">Filtrar</button>
+            </div>
+        </div>
+    </form>
+
+    <!-- Tabla de Temperaturas -->
+    <table class="table table-bordered table-striped table-hover">
+        <thead class="thead-dark">
+            <tr>
+                <th>Fecha</th>
+                <th>Hora</th>
+                <th>ID Refrigerador</th>
+                <th>Temperatura (°C)</th>
+                <th>Temperatura (°F)</th>
+                <th>Temperatura Termómetro (°C)</th>
+                <th>Temperatura Termómetro (°F)</th>
+                <th>Observaciones</th>
+                <th>Inspeccionó</th>
+                {% if request.user.is_supervisor or is_superuser %}
+                    <th>Verificación</th>
+                {% endif %}
+                {% if request.user.is_supervisor or is_superuser or is_editor %}
+                    <th>Acciones</th>
+                {% endif %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for temperature in temperatures %}
+            <tr>
+                <td>{{ temperature.fecha }}</td>
+                <td>{{ temperature.hora }}</td>
+                <td>{{ temperature.id_refrigerador.descripcion_ref }}</td>
+                <td>{{ temperature.temp_c }}°C</td>
+                <td>{{ temperature.temp_f }}°F</td>
+                <td>{{ temperature.temp_termometro_c }}°C</td>
+                <td>{{ temperature.temp_termometro_f }}°F</td>
+                <td>{{ temperature.observaciones }}</td>
+                <td>{{ temperature.inspecciono }}</td>
+
+                {% if request.user.is_supervisor %}
+                <td>
+                    {% if temperature.verificacion %}
+                        <input type="checkbox" class="verification-checkbox" checked data-id="{{ temperature.id_temp_autoclave }}" data-supervisor="{{ temperature.verificacion }}">
+                        {{ temperature.verificacion }}  <!-- Mostrar el nombre del supervisor -->
+                    {% else %}
+                        <input type="checkbox" class="verification-checkbox" data-id="{{ temperature.id_temp_autoclave }}">
+                        No verificado
+                    {% endif %}
+                </td>
+                {% endif %}
+                {% if request.user.is_supervisor or is_editor or is_superuser %}
+                    <td>
+                        <a href="{% url 'autoclave:temperature_edit' temperature.id_temp_autoclave %}" class="btn btn-primary mb-3">Modificar</a>
+                        <form method="POST" action="{% url 'autoclave:temperature_delete' temperature.id_temp_autoclave %}" style="display:inline-block;" onsubmit="return confirm('¿Estás seguro de eliminar este registro?');">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger">Eliminar</button>
+                        </form>
+                    </td>
+                {% endif %}
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="11">No se encontraron registros de temperatura.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Botones de paginación -->
+    <div class="d-flex justify-content-between">
+        {% if temperatures.has_previous %}
+            <a href="?page={{ temperatures.previous_page_number }}" class="btn btn-secondary">Anterior</a>
+        {% endif %}
+
+        {% if temperatures.has_next %}
+            <a href="?page={{ temperatures.next_page_number }}" class="btn btn-secondary">Siguiente</a>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    // Evento para manejar la verificación de temperaturas
+    document.addEventListener('DOMContentLoaded', function() {
+        // Manejar los cambios en el checkbox de verificación
+        document.querySelectorAll('.verification-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const temperatureId = this.dataset.id;  // Obtener el ID de la temperatura
+                const verificationStatus = this.checked ? 'True' : 'False';  // Verificar si está marcado o no
+
+                // Enviar la solicitud AJAX al servidor para actualizar la verificación
+                fetch("{% url 'autoclave:update_verification' %}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,  // CSRF Token
+                    },
+                    body: JSON.stringify({
+                        temperature_id: temperatureId,  // Pasar el ID de la temperatura
+                        verification_status: verificationStatus  // Estado de la verificación (True/False)
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        alert(data.message);  // Muestra un mensaje de éxito
+                    } else {
+                        alert(data.message);  // Muestra un mensaje de error
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Ocurrió un error al actualizar la verificación.');
+                });
+            });
+        });
+
+        // Rellenar automáticamente los campos de fecha y hora con los valores actuales
+        var fechaInput = document.getElementById('fecha');
+        var horaInput = document.getElementById('hora');
+
+        // Si el campo de fecha está vacío, poner la fecha actual
+        if (!fechaInput.value) {
+            var today = new Date().toISOString().split('T')[0];
+            fechaInput.value = today;
+        }
+
+        // Si el campo de hora está vacío, poner la hora actual
+        if (!horaInput.value) {
+            var currentHour = new Date().toISOString().split('T')[1].slice(0, 5);
+            horaInput.value = currentHour;
+        }
+
+    });
+
+    // Función para manejar la sincronización
+    function handleSync(event) {
+        event.preventDefault();  // Evitar la acción por defecto
+
+        // Crear un controlador de abortos para manejar el timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);  // Tiempo de espera de 5 segundos
+
+        // Enviar solicitud AJAX para sincronización
+        fetch("{% url 'autoclave:sync_data' %}", {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,  // CSRF Token
+            },
+            signal: controller.signal,  // Conectar al controller para abortar la solicitud
+        })
+        .then(response => response.json())
+        .then(data => {
+            clearTimeout(timeoutId);  // Limpiar el timeout cuando recibimos respuesta
+
+            const messageContainer = document.getElementById('sync-message');
+            messageContainer.style.display = 'block';
+            
+            if (data.status === 'success') {
+                messageContainer.classList.add('alert-success');
+                messageContainer.classList.remove('alert-warning', 'alert-danger');
+                messageContainer.innerHTML = '<strong>¡Éxito!</strong> ' + data.message;
+            } else if (data.status === 'warning') {
+                messageContainer.classList.add('alert-warning');
+                messageContainer.classList.remove('alert-success', 'alert-danger');
+                messageContainer.innerHTML = '<strong>Advertencia</strong> ' + data.message;
+            } else {
+                messageContainer.classList.add('alert-danger');
+                messageContainer.classList.remove('alert-warning', 'alert-success');
+                messageContainer.innerHTML = '<strong>Error</strong> ' + data.message;
+            }
+
+            // Ocultar el mensaje después de 4 segundos
+            setTimeout(() => {
+                messageContainer.style.display = 'none';
+            }, 4000);  // 4000ms = 4 segundos
+        })
+        .catch(error => {
+            // Si la solicitud es abortada o cualquier otro error, mostrar el mensaje
+            const messageContainer = document.getElementById('sync-message');
+            messageContainer.style.display = 'block';
+
+            messageContainer.classList.add('alert-danger');
+            messageContainer.classList.remove('alert-warning', 'alert-success');
+
+            if (error.name === 'AbortError') {
+                // El error es debido al timeout
+                messageContainer.innerHTML = '<strong>Error</strong> Error de conexión: la solicitud ha tardado demasiado.';
+            } else {
+                // Otro tipo de error
+                messageContainer.innerHTML = '<strong>Error</strong> Error al sincronizar los datos: ' + error.message;
+            }
+
+            // Ocultar el mensaje después de 4 segundos
+            setTimeout(() => {
+                messageContainer.style.display = 'none';
+            }, 4000);  // 4000ms = 4 segundos
+        });
+    }
+</script>
+
+
+
+
+{% endblock %}

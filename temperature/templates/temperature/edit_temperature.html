@@ -1,0 +1,32 @@
+{% extends 'core/base.html' %}
+
+{% block title %}
+Editar Temperatura
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5 pt-5"> <!-- Ajusta la clase mt-5 aquí -->
+    <h2 class="mb-4">Editar Temperatura - {{ temperaturaarea.ID_Refrigerador.DescripcionRef }}</h2> <!-- Margen inferior agregado -->
+
+    <!-- Mostrar la temperatura actual -->
+    <div class="alert alert-info" role="alert">
+        Temperatura actual: {{ temperaturaarea.Temperatura }} °C
+    </div>
+
+    <form method="POST" action="{% url 'temperature:edit_temp' temperaturaarea.ID_TempAreas %}">
+        {% csrf_token %}
+        <div class="mb-4">
+            <label for="Temperatura" class="form-label">Temperatura actual (°C)</label>
+            <input type="number" id="Temperatura" name="Temperatura" class="form-control" value="{{ temperaturaarea.Temperatura }}" required step="0.1" min="-50" max="50">
+        </div>
+
+        <button type="submit" class="btn btn-primary">Actualizar</button>
+        <button type="button" class="btn btn-secondary" onclick="window.history.back()">Cancelar</button> <!-- Botón de cancelar -->
+    </form>
+
+    <form method="POST" action="{% url 'temperature:delete_temp' temperaturaarea.ID_TempAreas %}" class="mt-3">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger" onclick="return confirm('¿Estás seguro de que deseas eliminar esta temperatura? Esta acción no se puede deshacer.');">Eliminar</button>
+    </form>
+</div>
+{% endblock %}

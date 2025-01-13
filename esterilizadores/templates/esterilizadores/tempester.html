@@ -1,0 +1,71 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block content %}
+    <div class="container mt-5 pt-1">
+        <div class="container">
+            <div class="row justify-content-end">
+                <div class="col-auto sync-container" style="font-size: 0.85rem; margin-top: 65px;">
+                    <h3 class="h4 text-dark">Sincronización de Datos</h3>
+                    <p class="text-dark">Registros por sincronizar: {{ registros_por_syncronizar }}</p>
+                    <form method="post" action="{% url 'esterilizadores:sync_data' %}" class="sync-form">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-warning text-white btn-sm">Sincronizar Datos</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <h1 class="text-center my-4">Informe de Refrigeradores</h1>
+
+        <div class="mb-4">
+            <!-- Botón para agregar una nueva temperatura -->
+        <h3>Registrar Nueva Temperatura</h3>
+        <a href="{% url 'esterilizadores:registrotemp' %}" class="btn btn-primary mb-3">Agregar Nueva Temperatura</a>
+        </div>
+
+        <div class="container mt-5">  <!-- Añadir un margen superior -->
+            <table class="table table-striped table-bordered">
+                <thead class="thead-dark">
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Hora</th>
+                        <th>Esterilizador #</th>
+                        <th>Temperatura (°C)</th>
+                        <th>Temperatura (°F)</th>
+                        <th>Acción Correctiva</th>
+                        <th>Acción Preventiva</th>
+                        <th>Observaciones</th>
+                        <th>Inspeccionó</th>
+                        <th>Verificó</th>
+                        <th>Acciónes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for registro in registros %}
+                        <tr>
+                            <td>{{ registro.Fecha }}</td>
+                            <td>{{ registro.Hora }}</td>
+                            <td>{{ registro.ID_Refrigerador }}</td>
+                            <td>{{ registro.TempC }}</td>
+                            <td>{{ registro.TempF }}</td>
+                            <td>{{ registro.ACorrectiva }}</td>
+                            <td>{{ registro.APreventiva }}</td>
+                            <td>{{ registro.Observaciones }}</td>
+                            <td>{{ registro.Inspecciono }}</td>
+                            <td>{{ registro.Verifico }}</td>
+{% comment %}                             <td>
+                                <div style="display: flex; flex-direction: column; align-items: center;">
+                                        <a href="{% url 'esterilizadores:modificartemp' registro.ID_TempEsterilizador %}" class="btn btn-primary" style="background-color: #007BFF; color: white; padding: 8px 12px; margin: 2px; border-radius: 4px; text-decoration: none;">Modificar</a>
+                                        <form method="post" action="{% url 'esterilizadores:eliminartemp' registro.ID_TempEsterilizador %}" style="display: inline;">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-danger" style="background-color: #DC3545; color: white; padding: 8px 12px; margin: 2px; border-radius: 4px; border: none; cursor: pointer;" onclick="return confirm('¿Estás seguro de eliminar este paro?');">Eliminar</button>
+                                        </form>
+                                </div> 
+                            </td> {% endcomment %}
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}

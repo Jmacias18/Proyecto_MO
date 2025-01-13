@@ -1,0 +1,28 @@
+{% extends 'core/base.html' %}
+
+{% block title %}
+Confirmar Reemplazo de Temperatura
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5 pt-5">
+    <h2>Confirmación de Reemplazo de Temperatura</h2>
+    <p>Este registro de temperatura ya ha sido registrado para {{ temperatura_existente.ID_Refrigerador.DescripcionRef }} a las {{ temperatura_existente.Hora }} el {{ temperatura_existente.Fecha }}.</p>
+    <p>¿Desea reemplazarlo?</p>
+
+    <form method="POST" action="{% url 'temperature:register_temp' %}">
+        {% csrf_token %}
+        <input type="hidden" name="ID_Refrigerador" value="{{ temperatura_existente.ID_Refrigerador.ID_Refrigerador }}">
+        <input type="hidden" name="Hora" value="{{ temperatura_existente.Hora|time:"H:i" }}">
+        <input type="hidden" name="Fecha" value="{{ temperatura_existente.Fecha|date:'Y-m-d' }}">
+        <input type="hidden" name="replace" value="true"> <!-- Campo oculto para indicar que es un reemplazo -->
+        
+        <!-- Incluir el nuevo valor de temperatura que se desea registrar -->
+        <input type="hidden" name="Temperatura" value="{{ request.POST.Temperatura }}">
+    
+        <button type="submit" class="btn btn-danger">Sí, reemplazar</button>
+        <a href="{% url 'temperature:temperature' %}" class="btn btn-secondary">Cancelar</a>
+    </form>
+    
+</div>
+{% endblock %}  

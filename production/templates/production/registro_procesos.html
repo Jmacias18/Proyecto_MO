@@ -1,0 +1,47 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block content %}
+    <div class="container mt-4 mb-5">
+        <h2 class="text-center">Registrar Proceso o Maquinaria</h2>
+        
+        <div class="mb-4" style="max-width: 600px; margin: auto;">
+            <h3>Registrar Proceso</h3>
+            <form method="post" action="{% url 'production:registro_proceso' %}">
+                {% csrf_token %}
+                <div class="mb-3">
+                    {{ proceso_form.as_p }}
+                </div>
+                <button type="submit" class="btn btn-success">Guardar Proceso</button>
+            </form>
+        </div>
+
+        <div class="mt-4">
+            <h3>Lista de Procesos Registrados</h3>
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Proceso</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for proceso in procesos %}
+                            <tr>
+                                <td>{{ proceso.Nombre_Proc }}</td>
+                                <td class="text-center">
+                                    <a href="{% url 'production:modificar_proceso' proceso.ID_Proc %}" class="btn btn-primary btn-sm">Modificar</a>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="2" class="text-center">No hay procesos registrados.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+{% endblock %}

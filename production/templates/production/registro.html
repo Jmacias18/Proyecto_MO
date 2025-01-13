@@ -1,0 +1,199 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container my-5">
+    <h2 class="text-center text-white">.</h2>
+
+    <!-- Botón para Registrar Proceso -->
+    <div class="mb-4">
+        <h3>Registrar Proceso</h3>
+        <a href="{% url 'production:registro_proceso' %}" class="btn btn-success w-100">Registrar Proceso</a>
+    </div>
+
+    <!-- Botón para Registrar Maquinaria -->
+    <div class="mb-4">
+        <h3>Registrar Maquinaria</h3>
+        <a href="{% url 'production:registro_maquinaria' %}" class="btn btn-success w-100">Registrar Maquinaria</a>
+    </div>
+
+    <hr class="my-4">
+
+    <!-- Sincronización de Procesos -->
+    <div class="mb-4">
+        <h4 class="text-dark">Sincronización de Procesos en la base de datos</h4>
+        <p class="text-dark">Registros por sincronizar: {{ registros_proc_por_syncronizar }}</p>
+        <form method="post" action="{% url 'production:sync_procesos' %}" data-sync-type="procesos" class="sync-form">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-warning w-100">Sincronizar Procesos</button>
+        </form>
+    </div>
+
+    <!-- Sincronización de Maquinaria -->
+    <div class="mb-4">
+        <h5 class="text-dark">Sincronización de Maquinaria en la base de datos</h5>
+        <p class="text-dark">Registros por sincronizar: {{ registros_maq_por_syncronizar }}</p>
+        <form method="post" action="{% url 'production:sync_maquinaria' %}" data-sync-type="maquinaria" class="sync-form">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-warning w-100">Sincronizar Maquinarias</button>
+        </form>
+    </div>
+
+    <div class="mb-4">
+        <h3>Lista de Procesos y Maquinarias Registrados</h3>
+
+        <!-- Selector para Filtrar por Tipo -->
+        <label for="tipoFiltro">Filtrar por Tipo:</label>
+        <select id="tipoFiltro" class="form-select mb-3">
+            <option value="">Todos</option>
+            <option value="proceso">Proceso</option>
+            <option value="maquinaria">Maquinaria</option>
+        </select>
+
+        <!-- Selector para Filtrar por Estado -->
+        <label for="estadoFiltro">Filtrar por Estado:</label>
+        <select id="estadoFiltro" class="form-select mb-3">
+            <option value="">Todos</option>
+            <option value="activo">Activo</option>
+            <option value="inactivo">Inactivo</option>
+        </select>
+
+        <table class="table table-bordered">
+            <thead class="table-light">
+                <tr>
+                    <th>Tipo</th>
+                    <th>Descripción</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for proceso in procesos %}
+                    <tr class="registro-row" data-tipo="proceso" data-estado="{{ proceso.Estado|yesno:'activo,inactivo' }}">
+                        <td>Proceso</td>
+                        <td>{{ proceso.Nombre_Proc }}</td>
+                        <td class="text-center" style="background-color: {{ proceso.Estado|yesno:'#4CAF50,#FF5733' }};">
+                            {{ proceso.Estado|yesno:"Activo,Inactivo" }}
+                        </td>
+                        <td class="text-center">
+                            <form method="post" action="{% url 'production:cambiar_estado_proceso' proceso.ID_Proc %}" style="display:inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-warning btn-sm">Cambiar Estado</button>
+                            </form>
+                            <a href="{% url 'production:modificar_proceso' proceso.ID_Proc %}" class="btn btn-primary btn-sm">Modificar</a>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center">No hay procesos registrados.</td>
+                    </tr>
+                {% endfor %}
+                <tr>
+                    <td colspan="3"><strong>Maquinarias</strong></td>
+                </tr>
+                {% for maquinaria in maquinarias %}
+                    <tr class="registro-row" data-tipo="maquinaria" data-estado="{{ maquinaria.Estado|yesno:'activo,inactivo' }}">
+                        <td>Maquinaria</td>
+                        <td>{{ maquinaria.DescripcionMaq }}</td>
+                        <td class="text-center" style="background-color: {{ maquinaria.Estado|yesno:'#4CAF50,#FF5733' }};">
+                            {{ maquinaria.Estado|yesno:"Activo,Inactivo" }}
+                        </td>
+                        <td class="text-center">
+                            <form method="post" action="{% url 'production:cambiar_estado_maquinaria' maquinaria.ID_Maquinaria %}" style="display:inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-warning btn-sm">Cambiar Estado</button>
+                            </form>
+                            <a href="{% url 'production:modificar_maquinaria' maquinaria.ID_Maquinaria %}" class="btn btn-primary btn-sm">Modificar</a>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center">No hay maquinarias registradas.</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    function updateOnlineStatus() {
+        const isOnline = navigator.onLine;
+        const notificationShown = sessionStorage.getItem('notificationShown');
+
+        if (isOnline && notificationShown !== 'online') {
+            alert("Estás conectado a la red.");
+            sessionStorage.setItem('notificationShown', 'online');
+        } else if (!isOnline && notificationShown !== 'offline') {
+            alert("No estás conectado a la red. Algunas funcionalidades pueden no estar disponibles.");
+            sessionStorage.setItem('notificationShown', 'offline');
+        }
+    }
+
+    function checkConnectionBeforeSync(event) {
+        if (!navigator.onLine) {
+            event.preventDefault();
+            alert("No se puede sincronizar. No estás conectado a la red.");
+        }
+    }
+
+    function handleFormSubmission(event) {
+        event.preventDefault();
+        const form = event.target;
+
+        setTimeout(() => {
+            alert("Sincronización exitosa.");
+            form.submit();
+        }, 1000);
+    }
+
+    document.addEventListener('DOMContentLoaded', (event) => {
+        updateOnlineStatus();
+
+        const syncForms = document.querySelectorAll('.sync-form');
+        syncForms.forEach(form => {
+            form.addEventListener('submit', (event) => {
+                checkConnectionBeforeSync(event);
+                if (navigator.onLine) {
+                    handleFormSubmission(event);
+                }
+            });
+        });
+
+        // Filtrado de la tabla por tipo
+        document.getElementById('tipoFiltro').addEventListener('change', function() {
+            const tipo = this.value;
+            const estado = document.getElementById('estadoFiltro').value;
+            filterTable(tipo, estado);
+        });
+
+        // Filtrado de la tabla por estado
+        document.getElementById('estadoFiltro').addEventListener('change', function() {
+            const estado = this.value;
+            const tipo = document.getElementById('tipoFiltro').value;
+            filterTable(tipo, estado);
+        });
+    });
+
+    // Function to filter the table based on selected type and state
+    function filterTable(tipo, estado) {
+        const rows = document.querySelectorAll('.registro-row');
+
+        rows.forEach(row => {
+            const rowTipo = row.getAttribute('data-tipo');
+            const rowEstado = row.getAttribute('data-estado');
+
+            const showRow = 
+                (tipo === "" || rowTipo === tipo) && 
+                (estado === "" || rowEstado === estado);
+
+            row.style.display = showRow ? "" : "none"; // Mostrar u ocultar fila
+        });
+    }
+
+    // Add event listeners for online and offline events
+    window.addEventListener('online', updateOnlineStatus);
+    window.addEventListener('offline', updateOnlineStatus);
+</script>
+
+{% endblock %}

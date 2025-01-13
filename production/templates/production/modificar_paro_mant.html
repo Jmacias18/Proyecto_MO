@@ -1,0 +1,162 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-center align-items-center flex-column vh-100 text-center p-4">
+    <h2 class="h4 text-dark">Modificar Paro</h2>
+    <form method="post" action="{% url 'production:modificar_paro_mant' paro.ID_Paro %}" class="w-100 sync-form">
+        {% csrf_token %}
+        <div class="table-responsive w-100">
+            <table class="table table-bordered">
+                <thead class="bg-danger text-white">
+                    <tr>
+                        <th>Fecha Paro</th>
+                        <th>Diagnóstico</th>
+                        <th>Causa Raíz</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>{{ paro.FechaParo }}</td>
+                        <!-- Campos editables solo para usuarios de mantenimiento -->
+                        <td>
+                            <input type="text" id="diagnostico" name="Diagnostico" value="{{ paro.Diagnostico }}" {% if not user_is_maintenance %}readonly{% endif %} />
+                        </td>
+                        <td>
+                            <input type="text" id="causaRaiz" name="CausaRaiz" value="{{ paro.CausaRaiz }}" {% if not user_is_maintenance %}readonly{% endif %} />
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="mt-3 text-end">
+            <!-- Mostrar el botón solo si el usuario es de mantenimiento -->
+            {% if user_is_maintenance %}
+                <button type="submit" class="btn btn-success">Guardar Cambios</button>
+            {% endif %}
+            <a href="{% url 'production:production' %}" class="btn btn-danger ms-2">Cancelar</a>
+        </div>
+    </form>
+</div>
+
+<!-- Estilos y scripts -->
+<style>
+    input, select, textarea {
+        box-sizing: border-box;
+        height: 45px;
+        font-size: 16px;
+    }
+
+    @media (max-width: 768px) {
+        table {
+            font-size: 12px;
+        }
+        h2 {
+            font-size: 20px;
+        }
+        button, a {
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+    }
+
+    @media (max-width: 991px) {
+        .mt-3 {
+            margin-top: 15px;
+        }
+    }
+</style>
+
+<script>
+    // Lógica de validación para la hora de inicio y fin
+    function validateHoraFin() {
+        const horaInicio = document.getElementById('id_HoraInicio');
+        const horaFin = document.getElementById('id_HoraFin');
+        const tiempoMuerto = document.getElementById('tiempoMuerto');
+        const personasAfectadas = document.getElementById('personasAfectadas');
+        const mo = document.getElementById('mo');
+
+        // Habilitar el campo Hora Fin cuando Hora Inicio esté lleno
+        if (horaInicio.value) {
+            horaFin.disabled = false;
+            horaFin.focus();
+        } else {
+            horaFin.disabled = true;
+        }
+
+        // Validar y calcular el tiempo muerto
+        function validateTimes() {
+            if (horaInicio.value && horaFin.value) {
+                const [inicioHours, inicioMinutes] = horaInicio.value.split(':').map(Number);
+                const [finHours, finMinutes] = horaFin.value.split(':').map(Number);
+
+                if (finHours < inicioHours || (finHours === inicioHours && finMinutes <= inicioMinutes)) {
+                    alert("La Hora de Finalización debe ser mayor que la Hora de Inicio.");
+                    location.reload();
+                } else {
+                    const startTime = new Date();
+                    const endTime = new Date();
+                    startTime.setHours(inicioHours, inicioMinutes, 0);
+                    endTime.setHours(finHours, finMinutes, 0);
+
+                    const downtimeMilliseconds = endTime - startTime;
+                    const downtimeMinutes = Math.floor(downtimeMilliseconds / (1000 * 60));
+
+                    tiempoMuerto.value = downtimeMinutes > 0 ? downtimeMinutes : 0;
+
+                    const personas = parseInt(personasAfectadas.value) || 0;
+                    const moValue = (downtimeMinutes / 555) * personas;
+                    mo.value = moValue.toFixed(2);
+                }
+            } else if (!horaFin.value) {
+                tiempoMuerto.value = '';
+                mo.value = '';
+            }
+        }
+
+        horaInicio.addEventListener('input', validateTimes);
+        horaFin.addEventListener('input', validateTimes);
+        personasAfectadas.addEventListener('input', validateTimes);
+    }
+
+    // Validar conexión y mostrar alertas según el estado
+    function updateOnlineStatus() {
+        const isOnline = navigator.onLine;
+        const notificationShown = sessionStorage.getItem('notificationShown');
+
+        if (isOnline && notificationShown !== 'online') {
+            alert("Estás conectado a la red.");
+            sessionStorage.setItem('notificationShown', 'online');
+        } else if (!isOnline && notificationShown !== 'offline') {
+            alert("No estás conectado a la red. Algunas funcionalidades pueden no estar disponibles.");
+            sessionStorage.setItem('notificationShown', 'offline');
+        }
+    }
+
+    // Verificar estado de la conexión antes de enviar el formulario
+    function checkConnectionBeforeSync(event) {
+        if (!navigator.onLine) {
+            event.preventDefault();
+            alert("No se puede sincronizar. No estás conectado a la red.");
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', (event) => {
+        updateOnlineStatus();
+        const syncForm = document.querySelector('.sync-form');
+        if (syncForm) {
+            syncForm.addEventListener('submit', (event) => {
+                checkConnectionBeforeSync(event);
+                if (navigator.onLine) {
+                    handleFormSubmission(event);
+                }
+            });
+        }
+
+        validateHoraFin();
+    });
+
+    window.addEventListener('online', updateOnlineStatus);
+    window.addEventListener('offline', updateOnlineStatus);
+</script>
+
+{% endblock %}
