@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 # Configuración de la conexión a la base de datos remota TempusAccesos
 remote_conn_info = {
     'driver': '{ODBC Driver 17 for SQL Server}',
-    'server': r'APPSSERVER\SQLEXPRESS',
+    'server': r'APPSSERVER\SPFSQLSERVER',
     'database': 'TempusAccesos',
     'uid': 'IT',
     'pwd': 'sqlSPF#2024'
@@ -63,11 +63,17 @@ def sync_checkinout_table(remote_conn, local_conn):
         """
         local_cur.execute(delete_query)
 
+        # Habilitar IDENTITY_INSERT para la tabla CHECKINOUT
+        local_cur.execute("SET IDENTITY_INSERT [dbo].[CHECKINOUT] ON")
+
         # Insertar datos remotos en la tabla local
         placeholders = ', '.join(['?'] * len(remote_columns))
         insert_query = f"INSERT INTO [dbo].[CHECKINOUT] ({', '.join(remote_columns)}) VALUES ({placeholders})"
         for row in remote_rows:
             local_cur.execute(insert_query, row)
+
+        # Deshabilitar IDENTITY_INSERT después de la inserción
+        local_cur.execute("SET IDENTITY_INSERT [dbo].[CHECKINOUT] OFF")
 
         # Confirmar los cambios en la base de datos local
         local_conn.commit()
@@ -103,11 +109,17 @@ def sync_userinfo_table(remote_conn, local_conn):
         """
         local_cur.execute(delete_query)
 
+        # Habilitar IDENTITY_INSERT para la tabla USERINFO
+        local_cur.execute("SET IDENTITY_INSERT [dbo].[USERINFO] ON")
+
         # Insertar datos remotos en la tabla local
         placeholders = ', '.join(['?'] * len(remote_columns))
         insert_query = f"INSERT INTO [dbo].[USERINFO] ({', '.join(remote_columns)}) VALUES ({placeholders})"
         for row in remote_rows:
             local_cur.execute(insert_query, row)
+
+        # Deshabilitar IDENTITY_INSERT después de la inserción
+        local_cur.execute("SET IDENTITY_INSERT [dbo].[USERINFO] OFF")
 
         # Confirmar los cambios en la base de datos local
         local_conn.commit()

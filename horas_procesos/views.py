@@ -64,7 +64,7 @@ def obtener_datos_tempus_accesos():
 
     # Crear un diccionario para mapear USERID a Badgenumber
     userid_to_badgenumber = {row.USERID: str(row.Badgenumber).strip() for row in userinfo}
-    print("USERID to Badgenumber mapping:", userid_to_badgenumber)
+    
 
     # Obtener los datos de la tabla CHECKINOUT
     cursor.execute("SELECT USERID, CHECKTIME FROM CHECKINOUT WHERE CAST(CHECKTIME AS DATE) = CAST(GETDATE() AS DATE)")
@@ -82,14 +82,14 @@ def obtener_datos_tempus_accesos():
             badgenumber = badgenumber[-4:]
             registros_entrada[badgenumber] = row.CHECKTIME
 
-    print("Registros de entrada:", registros_entrada)
+    
 
     conn.close()
     return registros_entrada
 
 def gestion_horas_procesos(request):
     dia_actual = datetime.now().strftime('%A').capitalize()  # Definir dia_actual en ambos métodos
-    print(f"Día actual en español: {dia_actual}")
+    
 
     if request.method == 'POST':
         tipos_inasistencia = cache.get('tipos_inasistencia')
@@ -115,7 +115,7 @@ def gestion_horas_procesos(request):
 
         # Crear un diccionario para mapear el ID del turno a los días de descanso
         descanso_por_turno = {turno[0]: [dia.strip().capitalize() for dia in turno[1].split('/')] if turno[1] else [] for turno in turnos}
-        print("Descanso por turno:", descanso_por_turno)
+        
 
         # Obtener los ID_Asis para los diferentes tipos de inasistencia
         id_asistencia = descripcion_a_id.get('ASISTENCIA')
@@ -146,7 +146,7 @@ def gestion_horas_procesos(request):
 
         # Obtener los datos de TempusAccesos
         registros_entrada = obtener_datos_tempus_accesos()
-        print("Registros de entrada:", registros_entrada)
+        
 
         # Filtrar empleados por departamento seleccionado
         departamento_seleccionado = request.POST.get('departamento')
@@ -154,14 +154,14 @@ def gestion_horas_procesos(request):
 
         for empleado in empleados:
             codigo_emp = str(empleado.codigo_emp).strip()[-4:]  # Convertir a string y mantener solo los últimos 4 dígitos
-            print(f"Empleado {codigo_emp}: Badgenumber={codigo_emp}")
+            
 
             es_descanso = dia_actual in descanso_por_turno.get(str(empleado.id_turno), [])
-            print(f"Empleado {codigo_emp} - Turno {empleado.id_turno} - Día actual: {dia_actual} - Es descanso: {es_descanso}")
+            
 
             # Verificar si el empleado tiene una checada registrada
             tiene_checada = codigo_emp in registros_entrada
-            print(f"Empleado {codigo_emp} - Tiene checada: {tiene_checada}")
+            
 
             # Obtener el tipo de inasistencia seleccionado en el formulario
             tipo_inasistencia_seleccionado = request.POST.get(f'tipo_inasistencia_{codigo_emp}', 'F')
@@ -177,7 +177,7 @@ def gestion_horas_procesos(request):
             # Asignar el ID_Asis y el mensaje correspondiente
             ID_Asis, mensaje = inasistencia_map.get(tipo_inasistencia, (id_falta, 'FALTA'))
             inasistencia = tipo_inasistencia in ['F', 'D', 'P', 'V', 'INC', 'S', 'B', 'R']
-            print(f"Empleado {codigo_emp} marcado como {mensaje}")
+            
 
             try:
                 if inasistencia:
@@ -199,7 +199,7 @@ def gestion_horas_procesos(request):
                         umod=None,  # Guardar el usuario que modificó el registro
                         fmod=None
                     )
-                    print(f"Registro de inasistencia creado para empleado {codigo_emp}")
+                    
                 else:
                     # Insertar registros de horas de procesos solo si no es inasistencia
                     for i in range(1, 16):
@@ -237,7 +237,7 @@ def gestion_horas_procesos(request):
                                 umod=None,  # Guardar el usuario que modificó el registro
                                 fmod=None
                             )
-                            print(f"Registro de horas de proceso creado para empleado {codigo_emp}, proceso {id_proceso}")
+                            
             except Exception as e:
                 print(f"Error al crear registro para empleado {codigo_emp}: {e}")
 
@@ -290,7 +290,7 @@ def gestion_horas_procesos(request):
 
     # Crear un diccionario para mapear el ID del turno a los días de descanso
     descanso_por_turno = {turno[0]: [dia.strip().capitalize() for dia in turno[1].split('/')] if turno[1] else [] for turno in turnos}
-    print("Descanso por turno:", descanso_por_turno)
+    
 
     # Obtener la descripción de los departamentos
     spf_info_conn = get_spf_info_connection()
@@ -338,7 +338,7 @@ def gestion_horas_procesos(request):
     departamentos_a_mostrar = [12, 16, 17, 18, 19, 20, 21, 22, 23]
 
     # Agregar print para ver cómo se pasan los ID_Asis al HTML
-    print("Tipos de inasistencia:", tipos_inasistencia)
+    
 
     return render(request, 'horas_procesos/gestion_horas_procesos.html', {
         'form': form,
@@ -461,7 +461,7 @@ def actualizar_horas_procesos(request):
                         proceso.hrsextras = 0
                         proceso.id_pro = 0
                     proceso.save()
-                    print(f"Updated proceso {id_hrspro}: ID_Asis={proceso.ID_Asis}, horaentrada={proceso.horaentrada}, horasalida={proceso.horasalida}")
+                   
                 except Horasprocesos.DoesNotExist:
                     messages.error(request, f'El proceso con ID {id_hrspro} no existe.')
             elif key.startswith('eliminar_') and value == 'on':
@@ -471,7 +471,7 @@ def actualizar_horas_procesos(request):
             try:
                 proceso = Horasprocesos.objects.get(id_hrspro=id_hrspro)
                 proceso.delete()
-                print(f"Deleted proceso {id_hrspro}")
+                
             except Horasprocesos.DoesNotExist:
                 messages.error(request, f'El proceso con ID {id_hrspro} no existe.')
 
