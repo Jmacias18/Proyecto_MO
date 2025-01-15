@@ -1,21 +1,20 @@
 from django.db import models
 
 class Procesos(models.Model):
-    ID_Proc = models.AutoField(primary_key=True)
-    Nombre_Proc = models.CharField(max_length=100)
-    Estado = models.BooleanField(default=True)
+    ID_Pro = models.AutoField(primary_key=True)
+    Nombre_Pro = models.CharField(max_length=255)
+    Estado_Pro = models.BooleanField(default=True)
     SYNC = models.BooleanField(default=False)
 
     class Meta:
         db_table = 'Procesos'
-        managed = True
+        managed = False  # No permitir que Django gestione la tabla
         app_label = 'production'
         verbose_name = 'Proceso'
         verbose_name_plural = 'Procesos'
 
     def __str__(self):
-        return self.Nombre_Proc
-
+        return self.Nombre_Pro
 
 class Maquinaria(models.Model):
     ID_Maquinaria = models.AutoField(primary_key=True)

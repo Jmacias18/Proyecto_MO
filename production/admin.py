@@ -6,14 +6,14 @@ from .models import Procesos, Maquinaria, TipoProducto, Productos, ParosProducci
 # Personalización para el modelo Procesos
 @admin.register(Procesos)
 class ProcesosAdmin(admin.ModelAdmin):
-    list_display = ('ID_Proc', 'Nombre_Proc', 'Estado', 'SYNC', 'action_links')
+    list_display = ('ID_Pro', 'Nombre_Pro', 'Estado_Pro', 'SYNC', 'action_links')
     actions = None  # Desactiva todas las acciones (como eliminar)
     
     # Establecer el campo 'SYNC' como solo lectura
     readonly_fields = ('SYNC',)
 
     def action_links(self, obj):
-        edit_url = reverse('admin:production_procesos_change', args=[obj.ID_Proc])
+        edit_url = reverse('admin:production_procesos_change', args=[obj.ID_Pro])
         return format_html(
             '<a href="{}">Editar</a>', 
             edit_url

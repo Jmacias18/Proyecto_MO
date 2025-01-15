@@ -29,9 +29,9 @@
                     <tbody>
                         {% for proceso in procesos %}
                             <tr>
-                                <td>{{ proceso.Nombre_Proc }}</td>
+                                <td>{{ proceso.Nombre_Pro }}</td>
                                 <td class="text-center">
-                                    <a href="{% url 'production:modificar_proceso' proceso.ID_Proc %}" class="btn btn-primary btn-sm">Modificar</a>
+                                    <a href="{% url 'production:modificar_proceso' proceso.ID_Pro %}" class="btn btn-primary btn-sm">Modificar</a>
                                 </td>
                             </tr>
                         {% empty %}

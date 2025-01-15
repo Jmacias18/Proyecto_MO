@@ -15,7 +15,7 @@ def production(request):
     # Obtener los parámetros de los filtros
     hora_inicio = request.GET.get('HoraInicio')
     hora_fin = request.GET.get('HoraFin')
-    proceso_id = request.GET.get('ID_Proc')
+    proceso_id = request.GET.get('ID_Pro')
     maquinaria_id = request.GET.get('ID_Maquinaria')
     fecha_paro = request.GET.get('FechaParo')  # Agregar el filtro por fecha
 
@@ -53,9 +53,9 @@ def production(request):
         registros_por_syncronizar = 0
         messages.error(request, 'Error al acceder a la tabla de ParosProduccion.')
 
-    # Lee los procesos, maquinarias y productos desde la base de datos 'spf_info'
-    procesos = Procesos.objects.using('spf_info').filter(Estado=1)
-    maquinarias = Maquinaria.objects.using('spf_info').filter(Estado=1)
+    # Lee los procesos desde la base de datos 'SPF_HRS_MO'
+    procesos = Procesos.objects.using('default').filter(Estado_Pro=True)
+    maquinarias = Maquinaria.objects.using('spf_info').filter(Estado=True)
     productos = Productos.objects.using('spf_info').all()  # Filtrar productos activos
     clientes = Clientes.objects.all()
 
@@ -74,7 +74,6 @@ def production(request):
     return render(request, 'production/production.html', context)
 
 
-
 @login_required
 def registrar_paro(request):
     if request.method == 'POST':
@@ -91,7 +90,7 @@ def registrar_paro(request):
     # Cargar paros desde la base de datos SPF_Calidad
     paros = ParosProduccion.objects.using('spf_calidad').all()  # Cambiado a 'spf_calidad'
     
-    procesos = Procesos.objects.using('spf_info').filter(Estado=1)
+    procesos = Procesos.objects.using('default').filter(Estado_Pro=1)
     maquinarias = Maquinaria.objects.using('spf_info').filter(Estado=1)
     productos = Productos.objects.using('spf_info').all()  # Filtrar productos activos
     clientes = Clientes.objects.all()  # Cargar todos los clientes (puedes aplicar un filtro si lo deseas)
@@ -207,13 +206,13 @@ def registro(request):
 
     try:
         # Contar registros no sincronizados (SYNC=False)
-        registros_proc_por_syncronizar = Procesos.objects.using('spf_info').filter(SYNC=False).count()
+        registros_proc_por_syncronizar = Procesos.objects.using('default').filter(SYNC=False).count()
         registros_maq_por_syncronizar = Maquinaria.objects.using('spf_info').filter(SYNC=False).count()
     except ProgrammingError:
         messages.error(request, 'Error al acceder a las Tablas.')
 
     # Obtiene todos los procesos y maquinarias existentes
-    procesos = Procesos.objects.using('spf_info').all()
+    procesos = Procesos.objects.using('default').all()
     maquinarias = Maquinaria.objects.using('spf_info').all()
 
     return render(request, 'production/registro.html', {
@@ -237,7 +236,7 @@ def registro_proceso(request):
         proceso_form = ProcesosForm()
 
     # Obtiene todos los procesos existentes
-    procesos = Procesos.objects.using('spf_info').all()
+    procesos = Procesos.objects.using('default').all()
 
     return render(request, 'production/registro_procesos.html', {
         'proceso_form': proceso_form,
@@ -271,7 +270,7 @@ def registro_maquinaria(request):
 # Modificar un proceso existente
 @login_required
 def modificar_proceso(request, proceso_id):
-    proceso = get_object_or_404(Procesos, ID_Proc=proceso_id)
+    proceso = get_object_or_404(Procesos, ID_Pro=proceso_id)
 
     if request.method == 'POST':
         form = ProcesosForm(request.POST, instance=proceso)  # Aquí se especifica la instancia
@@ -310,8 +309,8 @@ def modificar_maquinaria(request, maquinaria_id):
 
 
 def cambiar_estado_proceso(request, id_proceso):
-    proceso = get_object_or_404(Procesos, ID_Proc=id_proceso)
-    proceso.Estado = not proceso.Estado  # Cambia el estado
+    proceso = get_object_or_404(Procesos, ID_Pro=id_proceso)
+    proceso.Estado_Pro = not proceso.Estado_Pro  # Cambia el estado
     proceso.SYNC = False  # Indica que se necesita sincronizar
     proceso.save()
 
@@ -450,7 +449,7 @@ def sync_procesos_view(request):
                                 SYNC = 1
                             WHERE ID_Proc = ?
                             """,
-                            (registro_proc.Nombre_Proc, registro_proc.Estado, registro_proc.ID_Proc)
+                            (registro_proc.Nombre_Pro, registro_proc.Estado_Pro, registro_proc.ID_Pro)
                         )
                     else:
                         # Insertar un nuevo registro
@@ -459,7 +458,7 @@ def sync_procesos_view(request):
                             INSERT INTO Procesos (ID_Proc, Nombre_Proc, Estado, SYNC)
                             VALUES (?, ?, ?, 1)
                             """,
-                            (registro_proc.ID_Proc, registro_proc.Nombre_Proc, registro_proc.Estado)
+                            (registro_proc.ID_Pro, registro_proc.Nombre_Pro, registro_proc.Estado_Pro)
                         )
 
                 # Marcar como sincronizado en la base de datos local

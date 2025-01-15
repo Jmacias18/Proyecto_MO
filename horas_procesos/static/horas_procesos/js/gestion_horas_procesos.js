@@ -62,6 +62,52 @@ document.addEventListener('DOMContentLoaded', () => {
         filtrarEmpleados();
     });
 
+    // Manejar envío del formulario
+    /* form.addEventListener('submit', (event) => {
+        if (!validarHorasRegistradas() || !validarHorasInicioFinIguales()) {
+            event.preventDefault(); // Evitar el envío del formulario si la validación falla
+        } else {
+            event.preventDefault(); // Evitar el envío del formulario por defecto
+            const formData = new FormData(form);
+
+            const inasistencias = Array.from(document.querySelectorAll('select[name^="tipo_inasistencia_"]'))
+                .map(select => ({
+                    codigoEmp: select.name.split('_')[1],
+                    inasistencia: ['F', 'D', 'P', 'V', 'INC', 'S', 'B', 'R'].includes(select.value)
+                }))
+                .filter(emp => emp.inasistencia);
+
+            inasistencias.forEach(emp => {
+                for (let i = 1; i <= 15; i++) {
+                    const inicioField = document.querySelector(`[name="inicio_proceso${i}_${emp.codigoEmp}"]`);
+                    const finField = document.querySelector(`[name="fin_proceso${i}_${emp.codigoEmp}"]`);
+                    if (inicioField && finField) {
+                        inicioField.value = '00:00:00';
+                        finField.value = '00:00:00';
+                    }
+                }
+            });
+
+            fetch(form.action, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                const responseModal = new bootstrap.Modal(document.getElementById('responseModal'));
+                const responseModalBody = document.getElementById('responseModalBody');
+                responseModalBody.textContent = data.success ? 'Datos enviados correctamente.' : 'Error al enviar los datos: ' + data.message;
+                responseModal.show();
+            })
+            .catch(error => {
+                const responseModal = new bootstrap.Modal(document.getElementById('responseModal'));
+                const responseModalBody = document.getElementById('responseModalBody');
+                responseModalBody.textContent = 'Ocurrió un error al enviar los datos: ' + error.message;
+                responseModal.show();
+            });
+        }
+    }); */
+
     // Agregar evento change a todos los selectores de inasistencia
     document.querySelectorAll('select[name^="tipo_inasistencia_"]').forEach(select => {
         select.addEventListener('change', (event) => {
@@ -549,7 +595,7 @@ function validarHorasRegistradas() {
     console.log('Recorridos:validarHorasRegistradas', recorridos);
 
     return valid;
-}//yaaa
+}
 
 
 

@@ -92,7 +92,7 @@
                                     <select name="ID_Proceso" required style="width: 100%;">
                                         <option value="">Seleccione Proceso</option>
                                         {% for proceso in procesos %}
-                                            <option value="{{ proceso.ID_Proc }}">{{ proceso.Nombre_Proc }}</option>
+                                            <option value="{{ proceso.ID_Pro }}">{{ proceso.Nombre_Pro }}</option>
                                         {% endfor %}
                                     </select>
                                 </td>
@@ -140,11 +140,11 @@
             </div>
             <div class="col-md-3">
                 <div class="form-group">
-                    <label for="ID_Proc" class="form-label">Proceso</label>
-                    <select name="ID_Proc" class="form-control" id="ID_Proc">
+                    <label for="ID_Pro" class="form-label">Proceso</label>
+                    <select name="ID_Pro" class="form-control" id="ID_Pro">
                         <option value="">Seleccione Proceso</option>
                         {% for proceso in procesos %}
-                            <option value="{{ proceso.ID_Proc }}">{{ proceso.Nombre_Proc }}</option>
+                            <option value="{{ proceso.ID_Pro }}">{{ proceso.Nombre_Pro }}</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -200,7 +200,7 @@
                                 <td>{{ paro.TiempoMuerto }}</td>
                                 <td>{{ paro.PersonasAfectadas }}</td>
                                 <td>{{ paro.MO }}</td>
-                                <td>{{ paro.ID_Proceso.Nombre_Proc }}</td>
+                                <td>{{ paro.ID_Proceso.Nombre_Pro }}</td>
                                 <td>{{ paro.ID_Maquinaria.DescripcionMaq }}</td>
                                 <td>{{ paro.Causa }}</td>
                                 <td>{{ paro.Diagnostico }}</td>

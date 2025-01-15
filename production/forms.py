@@ -33,7 +33,7 @@ class ParosProduccionForm(forms.ModelForm):
 class ProcesosForm(forms.ModelForm):
     class Meta:
         model = Procesos
-        fields = ['Nombre_Proc']
+        fields = ['Nombre_Pro']
 
 class MaquinariaForm(forms.ModelForm):
     class Meta:

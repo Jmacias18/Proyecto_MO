@@ -38,21 +38,25 @@
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
                             <li><a class="dropdown-item" href="{% url 'production:production' %}">Registros de Paros de Producción</a></li>
-                            <li><a class="dropdown-item" href="{% url 'production:registro' %}">Registros de Procesos y Maquinaria</a></li>
                             <li><a class="dropdown-item" href="{% url 'horas_procesos:gestion_horas_procesos' %}">Horas Procesos</a></li>
+                            {% if request.user.is_staff %}
+                            <li><a class="dropdown-item" href="{% url 'production:registro' %}">Catalogo De Procesos</a></li>
+                            {% endif %}
+
+                            
                         </ul>
                     </li>
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            Temperaturas
+                            Calidad
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
                             <li><a class="dropdown-item" href="{% url 'autoclave:temperature_list' %}">Temperaturas Autoclave</a></li>
-                            {% comment %} <li><a class="dropdown-item" href="{% url 'esterilizadores:tempester' %}">Temperaturas Esterilizador</a></li> {% endcomment %}
+                            <li><a class="dropdown-item" href="#{% comment %} {% url 'esterilizadores:tempester' %} {% endcomment %}">Temperaturas Esterilizador</a></li> 
                             <li><a class="dropdown-item" href="{% url 'temperature:temperature' %}">Temperaturas Generales</a></li>
                         </ul>
                     </li>
-                    <li class="nav-item"><a class="nav-link" href="#">Calidad</a></li>
+                    {% comment %} <li class="nav-item"><a class="nav-link" href="#">Calidad</a></li> {% endcomment %}
                     {% if request.user.is_staff %}
                     <li class="nav-item"><a class="nav-link" href="{% url 'usuarios:user_list' %}">Usuarios</a></li>
                     <li class="nav-item"><a class="nav-link" href="{% url 'procesos:procesos_list' %}">Procesos</a></li>

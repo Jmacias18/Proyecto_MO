@@ -69,18 +69,22 @@
             </thead>
             <tbody>
                 {% for proceso in procesos %}
-                    <tr class="registro-row" data-tipo="proceso" data-estado="{{ proceso.Estado|yesno:'activo,inactivo' }}">
+                    <tr class="registro-row" data-tipo="proceso" data-estado="{{ proceso.Estado_Pro|yesno:'activo,inactivo' }}">
                         <td>Proceso</td>
-                        <td>{{ proceso.Nombre_Proc }}</td>
-                        <td class="text-center" style="background-color: {{ proceso.Estado|yesno:'#4CAF50,#FF5733' }};">
-                            {{ proceso.Estado|yesno:"Activo,Inactivo" }}
+                        <td>{{ proceso.Nombre_Pro }}</td>
+                        <td class="text-center" style="background-color: {{ proceso.Estado_Pro|yesno:'#4CAF50,#FF5733' }};">
+                            {{ proceso.Estado_Pro|yesno:"Activo,Inactivo" }}
                         </td>
                         <td class="text-center">
-                            <form method="post" action="{% url 'production:cambiar_estado_proceso' proceso.ID_Proc %}" style="display:inline;">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-warning btn-sm">Cambiar Estado</button>
-                            </form>
-                            <a href="{% url 'production:modificar_proceso' proceso.ID_Proc %}" class="btn btn-primary btn-sm">Modificar</a>
+                            {% if proceso.ID_Pro %}
+                                <form method="post" action="{% url 'production:cambiar_estado_proceso' proceso.ID_Pro %}" style="display:inline;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-warning btn-sm">Cambiar Estado</button>
+                                </form>
+                                <a href="{% url 'production:modificar_proceso' proceso.ID_Pro %}" class="btn btn-primary btn-sm">Modificar</a>
+                            {% else %}
+                                <span class="text-danger">ID no disponible</span>
+                            {% endif %}
                         </td>
                     </tr>
                 {% empty %}
@@ -99,11 +103,15 @@
                             {{ maquinaria.Estado|yesno:"Activo,Inactivo" }}
                         </td>
                         <td class="text-center">
-                            <form method="post" action="{% url 'production:cambiar_estado_maquinaria' maquinaria.ID_Maquinaria %}" style="display:inline;">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-warning btn-sm">Cambiar Estado</button>
-                            </form>
-                            <a href="{% url 'production:modificar_maquinaria' maquinaria.ID_Maquinaria %}" class="btn btn-primary btn-sm">Modificar</a>
+                            {% if maquinaria.ID_Maquinaria %}
+                                <form method="post" action="{% url 'production:cambiar_estado_maquinaria' maquinaria.ID_Maquinaria %}" style="display:inline;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-warning btn-sm">Cambiar Estado</button>
+                                </form>
+                                <a href="{% url 'production:modificar_maquinaria' maquinaria.ID_Maquinaria %}" class="btn btn-primary btn-sm">Modificar</a>
+                            {% else %}
+                                <span class="text-danger">ID no disponible</span>
+                            {% endif %}
                         </td>
                     </tr>
                 {% empty %}
