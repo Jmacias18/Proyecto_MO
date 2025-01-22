@@ -3,7 +3,7 @@
 {% load custom_filters %}
 
 {% block title %}
-Control de Temperaturas
+Temperaturas Generales
 {% endblock %}
 
 <!-- Incluir CSS de flatpickr -->
@@ -13,7 +13,7 @@ Control de Temperaturas
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 {% block content %}
 <div class="d-flex flex-column align-items-end p-3" style="margin-top: 70px; margin-right: 50px;">
-    <h2>Sincronizacion de Datos</h2>
+    <h5>Sincronizacion de Datos</h5>
     <p id="sync-status" class="mb-2" style="font-size: 1rem;">
         Cantidad de registros no sincronizados: {{ registros_no_sincronizados }}
     </p>
@@ -28,12 +28,12 @@ Control de Temperaturas
             </button>
         </form>
 
-        {% if request.user.is_superuser %}
+        {% comment %} {% if request.user.is_superuser %}
         <!-- Botón de Editar Refrigeradores -->
         <a href="{% url 'admin:temperature_refrigeradores_changelist' %}" class="btn btn-secondary btn-sm" style="font-size: 0.875rem; padding: 6px 12px;">
             Editar Refrigeradores
         </a>
-        {% endif %}
+        {% endif %} {% endcomment %}
     </div>
 
     <!-- Mensaje debajo de los botones -->
@@ -46,11 +46,11 @@ Control de Temperaturas
 <div class="container mt-1 pt-1 px-1">
 
     <!-- Resto del contenido -->
-    <h1>Control De Temperatura</h1>
+    <h3 class="text-center">Control De Temperatura</h3>
     <form id="temperatureForm" method="POST" action="{% url 'temperature:register_temp' %}">
         {% csrf_token %}
         <div class="mb-4">
-            <h2>Registrar Temperaturas</h2>
+            <h5 class="text-center">Registrar Temperaturas</h5>
             <label for="typeSelection" class="form-label">Seleccionar tipo de refrigerador</label>
             <select id="typeSelection" class="form-select" required onchange="filterRefrigeradores()">
                 <option value="" disabled selected>Seleccionar tipo</option>
@@ -113,7 +113,7 @@ Control de Temperaturas
             <input type="date" id="fecha" name="Fecha" class="form-control" value="{{ today|date:'Y-m-d' }}" required>
         </div>
 
-        <button type="submit" class="btn btn-primary">Guardar</button>
+        <button type="submit" class="text-center btn btn-primary">Guardar</button>
     </form>
 
     <!-- Filtro por fecha -->

@@ -13,21 +13,24 @@ document.addEventListener('DOMContentLoaded', () => {
     function verificarSeleccionProcesos() {
         // Array para registrar los recorridos
         const recorridos = [];
-
-        // Usar Array.prototype.some para verificar si alguno de los selectores tiene un valor seleccionado
-        const algunoSeleccionado = Array.from(procesoSelects).some(select => {
-            const seleccionado = !!select.value;
-            recorridos.push(`Verificando selector ${select.name}: ${seleccionado ? 'Seleccionado' : 'No seleccionado'}`);
-            return seleccionado;
-        });
-
+    
+        // Verificar si el proceso 1 está habilitado
+        const proceso1 = document.querySelector('select[name="proceso1_header"]');
+        const proceso1Seleccionado = !!proceso1.value;
+        recorridos.push(`Verificando selector proceso1: ${proceso1Seleccionado ? 'Seleccionado' : 'No seleccionado'}`);
+    
         // Habilitar o deshabilitar el botón guardar basado en el resultado anterior
-        guardarBtn.disabled = !algunoSeleccionado;
+        guardarBtn.disabled = !proceso1Seleccionado;
         recorridos.push(`Botón guardar ${guardarBtn.disabled ? 'deshabilitado' : 'habilitado'}`);
-
+    
         // Imprimir el array de recorridos en la consola
         console.log('Recorridos:verificarSeleccionProcesos', recorridos);
     }
+    
+    // Agregar evento change a todos los selectores de procesos
+    procesoSelects.forEach(select => {
+        select.addEventListener('change', verificarSeleccionProcesos);
+    });
 
     // Agregar evento change a todos los selectores de procesos
     procesoSelects.forEach(select => {
@@ -148,6 +151,7 @@ function verificarSeleccionProcesos() {
     // Imprimir el array de recorridos en la consola
     console.log('Recorridos:verificarSeleccionProcesos', recorridos);
 }//yaaa
+
 function toggleInputs(codigoEmp) {
     const tipoInasistenciaElement = document.querySelector(`select[name="tipo_inasistencia_${codigoEmp}"]`);
     if (!tipoInasistenciaElement) {
@@ -218,6 +222,7 @@ function toggleInputs(codigoEmp) {
     // Imprimir el array de recorridos en la consola
     console.log('Recorridos:', recorridos);
 }//yaaa
+
 /* function filtrarDescanso() {
     // Seleccionar automáticamente "DESCANSO" si es día de descanso
     let empleados = document.querySelectorAll('tr[data-codigo_emp]');
@@ -347,10 +352,12 @@ function showAlert(message, type) {
     alerta.className = `alerta-centrada alert alert-${type}`;
     alerta.style.display = 'block';
 }
+
 function cerrarAlerta() {
     const alerta = document.getElementById('alerta');
     alerta.style.display = 'none';
 }
+
 function validarHorasInicioFinIguales() {
     const filasEmpleados = document.querySelectorAll('#empleados_tbody tr');
     let valid = true;
@@ -407,6 +414,7 @@ function validarHorasInicioFinIguales() {
 
     return valid;
 }//yaaaa
+
 function restablecerFormulario() {
     const filasEmpleados = document.querySelectorAll('#empleados_tbody tr');
 
@@ -457,6 +465,7 @@ function restablecerFormulario() {
     // Imprimir el array de recorridos en la consola
     console.log('Recorridos:restablecerFormulario', recorridos);
 }//yaaa sigue revisando
+
 function filtrarEmpleados() {
     const deptoSeleccionado = document.getElementById('depto_select').value;
     const filasEmpleados = document.querySelectorAll('#empleados_tbody tr');
@@ -491,6 +500,7 @@ function filtrarEmpleados() {
     // Imprimir el array de recorridos en la consola
     console.log('Recorridos:filtrarEmpleados', recorridos);
 }//yaaa
+
 /* function validarHorasInicioFinIguales() {
     const filasEmpleados = document.querySelectorAll('#empleados_tbody tr');
     let valid = true;
@@ -597,8 +607,6 @@ function validarHorasRegistradas() {
     return valid;
 }
 
-
-
 // Verifica si hay horas de inicio y fin idénticas en más de un proceso
 function verificarHorasDuplicadas(codigoEmp) {
     let mensaje = '';
@@ -629,6 +637,7 @@ function verificarHorasDuplicadas(codigoEmp) {
 
     return mensaje;
 }// yaa falta que imprima el mensaje
+
 function handleCheckboxChange(event) {
     const checkbox = event.target;
     const proceso = checkbox.dataset.proceso;
@@ -708,6 +717,7 @@ function getPreviousRowWithProceso(currentRow, proceso) {
     console.log('Recorridos:getPreviousRowWithProceso', recorridos);
     return null;
 }//yaaa puede mejorar
+
 function handleDeleteCheckboxChange(event) {
     const checkbox = event.target;
     const row = checkbox.closest('tr');
@@ -767,6 +777,7 @@ function handleDeleteCheckboxChange(event) {
     // Imprimir el array de recorridos en la consola
     console.log('Recorridos:handleDeleteCheckboxChange', recorridos);
 }//yaaa
+
 function toggleProcesoInputs(procesoNum) {
     const procesoSelect = document.querySelector(`[name="proceso${procesoNum}_header"]`);
     const selectedValue = procesoSelect.value;
@@ -869,6 +880,7 @@ function toggleProcesoInputs(procesoNum) {
     // Imprimir el array de recorridos en la consola
     console.log('Recorridos:toggleProcesoInputs', recorridos);
 }//yaaa puede mejorar
+
 function ajustarHoraFin(codigoEmp, procesoNum) {
     const inicioField = document.querySelector(`[name="inicio_proceso${procesoNum}_${codigoEmp}"]`);
     const finField = document.querySelector(`[name="fin_proceso${procesoNum}_${codigoEmp}"]`);
@@ -940,7 +952,6 @@ function ajustarHoraFin(codigoEmp, procesoNum) {
     console.log('Recorridos:', recorridos);
 }//yaaa
 
-
 function calcularTotalHoras(codigoEmp, procesoNum) {
     const inicio = document.querySelector(`[name="inicio_proceso${procesoNum}_${codigoEmp}"]`);
     const fin = document.querySelector(`[name="fin_proceso${procesoNum}_${codigoEmp}"]`);
@@ -1001,6 +1012,7 @@ function calcularTotalHoras(codigoEmp, procesoNum) {
     // Imprimir el array de recorridos en la consola
     console.log('Recorridos:calcularTotalHoras', recorridos);
 }//yaaa
+
 function sumarHorasPorProceso() {
     const totalHorasPorProceso = Array(15).fill(0);
     const deptoSeleccionado = document.getElementById('depto_select').value;

@@ -1,29 +1,11 @@
 from django.db import models
+from production.models import Maquinaria
 
-class Refrigerador(models.Model):
-    ID_Refrigerador = models.AutoField(primary_key=True)
-    DescripcionRef = models.CharField(max_length=150)
-    Min = models.FloatField(null=True)
-    Max = models.FloatField(null=True)
-    TipoRefrigerador = models.CharField(max_length=50, null=True)
-    SYNC = models.BooleanField(default=False)  # Campo para sincronización
-    estado = models.BooleanField(default=True)  # Campo para estado (True: activo, False: inactivo)
-
-    class Meta:
-        db_table = 'Refrigeradores'
-        managed = True  # Para no gestionar migraciones, ya existe en la base de datos
-        app_label = 'esterilizadores'
-        verbose_name = 'Refrigerador'
-        verbose_name_plural = 'Refrigeradores'
-
-    def __str__(self):
-        return self.DescripcionRef
-    
 class TempEsterilizadores(models.Model):
     ID_TempEsterilizador = models.AutoField(primary_key=True)
     Fecha = models.DateField() 
     Hora = models.TimeField()   
-    ID_Refrigerador = models.ForeignKey(Refrigerador, on_delete=models.CASCADE, db_column='ID_Refrigerador', null=True)
+    ID_Maquinaria = models.ForeignKey(Maquinaria, on_delete=models.CASCADE, db_column='ID_Maquinaria', null=True)
     TempC = models.FloatField()
     TempF = models.FloatField()
     ACorrectiva = models.CharField(max_length=300, blank=True, null=True)
@@ -41,4 +23,4 @@ class TempEsterilizadores(models.Model):
         verbose_name_plural = 'Temperatura Esterilizadores'  # Nombre plural
 
     def __str__(self):
-        return f"{self.ID_Refrigerador.DescripcionRef} - {self.Fecha} {self.Hora}"
+        return f"{self.ID_Maquinaria.DescripcionMaq} - {self.Fecha} {self.Hora}"

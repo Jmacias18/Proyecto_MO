@@ -1,34 +1,37 @@
 from django import forms
-from .models import Refrigerador
-from .models import AutoclaveTemperature
+from .models import AutoclaveTemperature, Maquinaria
 
 class AutoclaveTemperatureForm(forms.ModelForm):
-    id_refrigerador = forms.ChoiceField()  # Cargar dinámicamente los refrigeradores
+    id_maquinaria = forms.ChoiceField()  # Cargar dinámicamente las maquinarias
 
     class Meta:
         model = AutoclaveTemperature
-        fields = ['fecha', 'hora', 'temp_c', 'temp_termometro_c', 'observaciones']
+        fields = ['fecha', 'hora', 'temp_c', 'temp_f', 'temp_termometro_c', 'temp_termometro_f', 'observaciones']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         
-        # Asegúrate de que 'observaciones' esté vacío si es None
         if self.instance and self.instance.observaciones is None:
             self.instance.observaciones = ''
             self.fields['observaciones'].initial = ''
-        # Cargar los refrigeradores desde la base de datos 'spf_info' usando 'using'
+        
         try:
-            refrigeradores = Refrigerador.objects.using('spf_info').filter(estado=True, sync=True)
-            self.fields['id_refrigerador'].choices = [(r.id_refrigerador, r.descripcion_ref) for r in refrigeradores]
+            # Filtrar maquinarias que contienen "AutoClave #" en la descripción
+            maquinarias = Maquinaria.objects.using('spf_info').filter(descripcion__icontains='AutoClave #')
+            self.fields['id_maquinaria'].choices = [(m.id_maquinaria, m.descripcion) for m in maquinarias]
         except Exception as e:
-            print(f"Error al cargar refrigeradores desde spf_info: {e}")
-            self.fields['id_refrigerador'].choices = []
+            print(f"Error al cargar maquinarias desde spf_info: {e}")
+            self.fields['id_maquinaria'].choices = []
 
-    def clean_id_refrigerador(self):
-        id_refrigerador = self.cleaned_data.get('id_refrigerador')
-        if not id_refrigerador:
-            raise forms.ValidationError("Debe seleccionar un refrigerador.")
-        return id_refrigerador
+        # Establecer el valor inicial del campo id_maquinaria
+        if self.instance and self.instance.pk:
+            self.fields['id_maquinaria'].initial = self.instance.id_maquinaria.id_maquinaria
+
+    def clean_id_maquinaria(self):
+        id_maquinaria = self.cleaned_data.get('id_maquinaria')
+        if not id_maquinaria:
+            raise forms.ValidationError("Debe seleccionar una maquinaria.")
+        return id_maquinaria
 
     def clean_temp_c(self):
         temp_c = self.cleaned_data.get('temp_c')
@@ -39,5 +42,5 @@ class AutoclaveTemperatureForm(forms.ModelForm):
     def clean_temp_termometro_c(self):
         temp_termometro_c = self.cleaned_data.get('temp_termometro_c')
         if temp_termometro_c < 0 or temp_termometro_c > 150:
-            raise forms.ValidationError("La temperatura del termómetro debe estar entre 0 y 150.")
+            raise forms.ValidationError("La temperatura del termómetro en grados Celsius debe estar entre 0 y 150.")
         return temp_termometro_c

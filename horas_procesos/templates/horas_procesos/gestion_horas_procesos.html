@@ -36,55 +36,71 @@
             return diasDescanso.includes(diaActualEspanol);
         }
 
-        // Función para actualizar el resumen de asistencia
-        function actualizarResumenAsistencia() {
-            const resumen = {
-                F: 0,
-                D: 0,
-                P: 0,
-                RT: 0,
-                V: 0,
-                INC: 0,
-                S: 0,
-                B: 0,
-                R: 0,
-                NI: 0,
-                ASI: 0
-            };
-            const selectedDepto = deptoSelect.value;
-            let filasEmpleados = document.querySelectorAll('#empleados_tbody tr');
-            filasEmpleados = Array.from(filasEmpleados);
-            filasEmpleados = filasEmpleados.filter(empleado => empleado.getAttribute('data-depto') === selectedDepto);
-            console.log(filasEmpleados);  
+        // Contador para registrar cuántas veces se ejecuta la función
+    let contadorEjecucionesActualizarResumen = 0;
+    // Array para registrar los valores que procesa la función
+    let recorridosActualizarResumen = [];
 
-            filasEmpleados.forEach(fila => {
-                const diasDescansoAttr = fila.getAttribute('data-dias_descanso');
-                const diasDescanso = diasDescansoAttr ? diasDescansoAttr.split(',') : [];
-                const codigoEmp = fila.getAttribute('data-codigo_emp');
+    // Función para actualizar el resumen de asistencia
+    function actualizarResumenAsistencia() {
+        // Limpiar el array de recorridos antes de cada ejecución
+        recorridosActualizarResumen = [];
 
-                const selectInasistencia = fila.querySelector(`select[name="tipo_inasistencia_${codigoEmp}"]`);
-                const value = selectInasistencia.value;
-                if (resumen.hasOwnProperty(value)) {
-                    resumen[value]++;
-                }
-            });
+        const resumen = {
+            F: 0,
+            D: 0,
+            P: 0,
+            RT: 0,
+            V: 0,
+            INC: 0,
+            S: 0,
+            B: 0,
+            R: 0,
+            NI: 0,
+            ASI: 0
+        };
+        const selectedDepto = deptoSelect.value;
+        let filasEmpleados = document.querySelectorAll('#empleados_tbody tr');
+        filasEmpleados = Array.from(filasEmpleados);
+        filasEmpleados = filasEmpleados.filter(empleado => empleado.getAttribute('data-depto') === selectedDepto);
+        console.log(filasEmpleados);  
 
-            for (const key in resumen) {
-                const spanElement = document.getElementById(`resumen-${key}`);
-                if (spanElement) {
-                    spanElement.textContent = resumen[key];
-                }
+        filasEmpleados.forEach(fila => {
+            const diasDescansoAttr = fila.getAttribute('data-dias_descanso');
+            const diasDescanso = diasDescansoAttr ? diasDescansoAttr.split(',') : [];
+            const codigoEmp = fila.getAttribute('data-codigo_emp');
+
+            const selectInasistencia = fila.querySelector(`select[name="tipo_inasistencia_${codigoEmp}"]`);
+            const value = selectInasistencia.value;
+            if (resumen.hasOwnProperty(value)) {
+                resumen[value]++;
+                recorridosActualizarResumen.push(`Empleado ${codigoEmp} tiene inasistencia tipo ${value}`);
+            }
+        });
+
+        for (const key in resumen) {
+            const spanElement = document.getElementById(`resumen-${key}`);
+            if (spanElement) {
+                spanElement.textContent = resumen[key];
+                recorridosActualizarResumen.push(`Actualizando resumen para ${key} con valor ${resumen[key]}`);
             }
         }
 
-        // Función para mostrar el resumen de asistencia
-        function mostrarResumenAsistencia() {
-            if (deptoSelect.value) {
-                resumenAsistencia.style.display = 'block';
-            } else {
-                resumenAsistencia.style.display = 'none';
-            }   
+        // Incrementar el contador de ejecuciones
+        contadorEjecucionesActualizarResumen++;
+        console.log(`Función actualizarResumenAsistencia ejecutada ${contadorEjecucionesActualizarResumen} veces`);
+        console.log('Recorrido actualizarResumenAsistencia:', recorridosActualizarResumen);
+    }
+    function mostrarResumenAsistencia() {
+        if (deptoSelect.value) {
+            resumenAsistencia.style.display = 'block';
+            actualizarResumenAsistencia(); // Llamar a la función solo cuando se selecciona un departamento
+        } else {
+            resumenAsistencia.style.display = 'none';
         }
+    }
+     // Evento para actualizar el resumen de asistencia cuando se cambia el departamento seleccionado
+     deptoSelect.addEventListener('change', mostrarResumenAsistencia);
 
         deptoSelect.addEventListener('change', () => {
             actualizarResumenAsistencia();
@@ -155,6 +171,7 @@
 {% endblock %}
 {% block content %}
 <style>
+    
     .loading-spinner {
         position: fixed;
         top: 50%;
@@ -226,7 +243,7 @@
     }
 </style>
 <div class="container mt-4">
-    <h2 class="mb-4 text-center">Gestión de Procesos</h2>
+    <h1 class="text-center my-4">Gestión de Procesos</h1>
    
     <div id="alerta" class="alerta-centrada" style="display: none;">
         <button class="close-btn" onclick="cerrarAlerta()">×</button>
@@ -242,7 +259,7 @@
         </div>
         
         <div class="text-center mt-4">
-            <a href="{% url 'horas_procesos:actualizar_horas_procesos' %}" class="btn btn-secondary">Administracion de Registros</a>
+            <a href="{% url 'horas_procesos:actualizar_horas_procesos' %}" class="btn btn-primary">Administracion de Registros</a>
         </div>
         
         <div class="mb-4">
@@ -299,7 +316,7 @@
                                 <select class="form-select form-select-sm mt-2" name="producto{{ i }}_header">
                                     <option value="" disabled selected>Producto</option>
                                     {% for producto in productos %}
-                                    <option value="{{ producto.ID_Producto }}">{{ producto.DescripcionProd }}</option>
+                                    <option value="{{ producto.ID_Producto }}">{{ producto.ID_Producto }} - {{ producto.DescripcionProd }} - {{ producto.Cliente }}</option>
                                     {% endfor %}
                                 </select>
                             </th>
@@ -349,7 +366,7 @@
                         </td>
                         
                         <td>
-                            <input type="number" class="form-control form-control-sm" name="total_{{ empleado.codigo_emp }}" readonly>
+                            <input type="text" class="form-control form-control-sm mb-2" name="total_{{ empleado.codigo_emp }}" readonly>
                         </td>
                         <td>{{ empleado.codigo_emp }}</td>
                     </tr>
@@ -367,7 +384,7 @@
             </table>
         </div>
         <div class="text-center">
-            <button type="submit" class="btn btn-primary mt-3" id="guardar-btn">Guardar</button>
+            <button type="submit" class="btn btn-primary" id="guardar-btn">Guardar</button>
         </div>
     </form>
     <div id="loading-spinner" class="loading-spinner" style="display: none;">

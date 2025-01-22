@@ -1,14 +1,15 @@
-from django.contrib import messages
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.generic import ListView, CreateView
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
-from .forms import AutoclaveTemperatureForm
+from django.contrib import messages
 from django.http import JsonResponse
-from .models import AutoclaveTemperature, Refrigerador
-from django.contrib.auth.mixins import LoginRequiredMixin  # Importante para asegurar que el usuario esté logueado
-from usuarios.models import CustomUser
 from django.contrib.auth.decorators import login_required
-import pyodbc, json
+from .models import AutoclaveTemperature, Maquinaria
+from .forms import AutoclaveTemperatureForm
+from usuarios.models import CustomUser
+import pyodbc
+import json
 
 class AutoclaveTemperatureListView(ListView):
     model = AutoclaveTemperature
@@ -30,7 +31,6 @@ class AutoclaveTemperatureListView(ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        
         # Obtener el nombre del supervisor logueado
         supervisor_name = self.request.user.get_full_name()
         context['supervisor_name'] = supervisor_name
@@ -39,19 +39,13 @@ class AutoclaveTemperatureListView(ListView):
         is_editor = self.request.user.groups.filter(name='Editor').exists()
         context['is_editor'] = is_editor
 
-        # Iterar sobre todas las temperaturas para obtener los nombres de los supervisores
+        # Iterar sobre todas las temperaturas para asignar 0 a los campos 'inspecciono' y 'verificacion'
         for temperature in context['temperatures']:
-            if temperature.inspecciono:
-                user = get_object_or_404(CustomUser, id=temperature.inspecciono)
-                temperature.inspecciono = user.get_full_name()
-
-            if temperature.verificacion:
-                supervisor = get_object_or_404(CustomUser, id=temperature.verificacion)
-                temperature.verificacion = supervisor.get_full_name()
+            temperature.inspecciono = 0
+            temperature.verificacion = 0
 
         return context
 
-# Vista para crear una nueva temperatura
 class AutoclaveTemperatureCreateView(LoginRequiredMixin, CreateView):
     model = AutoclaveTemperature
     form_class = AutoclaveTemperatureForm
@@ -60,19 +54,34 @@ class AutoclaveTemperatureCreateView(LoginRequiredMixin, CreateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Agregamos los refrigeradores al contexto para que estén disponibles en la plantilla
-        context['refrigeradores'] = Refrigerador.objects.all()  # Obtén todos los refrigeradores
+        # Agregamos las maquinarias al contexto para que estén disponibles en la plantilla
+        context['maquinarias'] = Maquinaria.objects.using('spf_info').all()  # Obtén todas las maquinarias desde spf_info
         return context
 
     def form_valid(self, form):
-        # Obtener el ID del refrigerador desde el formulario
-        id_refrigerador = form.cleaned_data.get('id_refrigerador')
+        # Obtener el ID de la maquinaria desde el formulario
+        id_maquinaria = form.cleaned_data.get('id_maquinaria')
 
-        # Buscar la instancia del Refrigerador correspondiente
-        refrigerador_instance = Refrigerador.objects.get(id_refrigerador=id_refrigerador)
+        # Buscar la instancia de la Maquinaria correspondiente en la base de datos spf_info
+        try:
+            maquinaria_instance = Maquinaria.objects.using('spf_info').get(id_maquinaria=id_maquinaria)
+        except Maquinaria.DoesNotExist:
+            form.add_error('id_maquinaria', 'Maquinaria matching query does not exist.')
+            return self.form_invalid(form)
 
-        # Asignar la instancia del refrigerador al campo id_refrigerador
-        form.instance.id_refrigerador = refrigerador_instance
+        # Verificar si la instancia de Maquinaria existe en spf_calidad, si no, crearla
+        maquinaria_instance_calidad, created = Maquinaria.objects.using('spf_calidad').get_or_create(
+            id_maquinaria=maquinaria_instance.id_maquinaria,
+            defaults={
+                'descripcion': maquinaria_instance.descripcion,
+                'area': maquinaria_instance.area,
+                'sync': maquinaria_instance.sync,
+                'estado': maquinaria_instance.estado,
+            }
+        )
+
+        # Asignar la instancia de la maquinaria al campo id_maquinaria
+        form.instance.id_maquinaria = maquinaria_instance_calidad
 
         # Realizar la conversión de temperatura (si aplica)
         temp_c = form.cleaned_data.get('temp_c')
@@ -83,19 +92,27 @@ class AutoclaveTemperatureCreateView(LoginRequiredMixin, CreateView):
         if temp_termometro_c is not None:
             form.instance.temp_termometro_f = (temp_termometro_c * 9/5) + 32
 
-        # Obtener el ID del usuario logueado
-        user_id = self.request.user.id  # Obtenemos el ID del usuario logueado
-
-        # Asignar el usuario al campo 'Inspecciono'
-        form.instance.inspecciono = user_id
+        # Asignar 0 a los campos 'Inspecciono' y 'Verificacion'
+        form.instance.inspecciono = 0
+        form.instance.verificacion = 0
 
         # Llamar al método original form_valid para guardar el objeto
         response = super().form_valid(form)
         messages.success(self.request, "¡Temperatura registrada exitosamente!")
         return response
 
+# Vista para crear un nuevo autoclave
+class AutoclaveCreateView(LoginRequiredMixin, CreateView):
+    model = AutoclaveTemperature
+    form_class = AutoclaveTemperatureForm
+    template_name = 'autoclave/autoclave_form.html'
+    success_url = reverse_lazy('autoclave:autoclave_list')
 
-    
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        messages.success(self.request, "¡Autoclave registrado exitosamente!")
+        return response
+
 # Vista para sincronizar los datos con la base de datos remota
 @login_required
 def sync_data_view(request):
@@ -126,13 +143,13 @@ def sync_data_view(request):
             print("Conexión exitosa al servidor y base de datos.")
 
             for registro in registros_no_sync:
-                if registro.id_refrigerador is None:
-                    # Registro no tiene refrigerador asignado
-                    messages.warning(request, f'Registro con fecha {registro.fecha} y hora {registro.hora} no tiene refrigerador asignado.')
+                if registro.id_maquinaria is None:
+                    # Registro no tiene maquinaria asignada
+                    messages.warning(request, f'Registro con fecha {registro.fecha} y hora {registro.hora} no tiene maquinaria asignada.')
                     continue  # Saltamos este registro
 
-                cursor.execute("""SELECT COUNT(*) FROM TemperaturaAutoclaves WHERE Fecha = ? AND Hora = ? AND ID_Refrigerador = ?""", 
-                               (registro.fecha, registro.hora, registro.id_refrigerador.id_refrigerador))
+                cursor.execute("""SELECT COUNT(*) FROM TemperaturaAutoclaves WHERE Fecha = ? AND Hora = ? AND ID_Maquinaria = ?""", 
+                               (registro.fecha, registro.hora, registro.id_maquinaria.id_maquinaria))
 
                 existe = cursor.fetchone()[0] > 0
 
@@ -141,18 +158,18 @@ def sync_data_view(request):
                     cursor.execute("""UPDATE TemperaturaAutoclaves SET 
                                        TempC = ?, TempF = ?, TempTermometroC = ?, TempTermometroF = ?, Observaciones = ?, 
                                        SYNC = 1, Inspecciono = ?, Verificacion = ?  -- Agregar el campo Verificacion
-                                       WHERE Fecha = ? AND Hora = ? AND ID_Refrigerador = ?""",
+                                       WHERE Fecha = ? AND Hora = ? AND ID_Maquinaria = ?""",
                                    (registro.temp_c, registro.temp_f, registro.temp_termometro_c,
                                     registro.temp_termometro_f, registro.observaciones,
                                     registro.inspecciono if registro.inspecciono else 0,
                                     registro.verificacion if registro.verificacion is not None else 0,  # Asegúrate de pasar el valor de verificación
-                                    registro.fecha, registro.hora, registro.id_refrigerador.id_refrigerador))
+                                    registro.fecha, registro.hora, registro.id_maquinaria.id_maquinaria))
                 else:
                     # Si el registro no existe, lo insertamos con todos los campos incluyendo verificacion
-                    cursor.execute("""INSERT INTO TemperaturaAutoclaves (Fecha, Hora, ID_Refrigerador, TempC, TempF, 
+                    cursor.execute("""INSERT INTO TemperaturaAutoclaves (Fecha, Hora, ID_Maquinaria, TempC, TempF, 
                                        TempTermometroC, TempTermometroF, Observaciones, SYNC, Inspecciono, Verificacion)
                                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)""", 
-                                   (registro.fecha, registro.hora, registro.id_refrigerador.id_refrigerador,
+                                   (registro.fecha, registro.hora, registro.id_maquinaria.id_maquinaria,
                                     registro.temp_c, registro.temp_f, registro.temp_termometro_c,
                                     registro.temp_termometro_f, registro.observaciones,
                                     registro.inspecciono if registro.inspecciono else 0,
@@ -186,8 +203,6 @@ def sync_data_view(request):
             'status': 'error',
             'records_status': ''
         }, status=500)
-
-
 
 @login_required
 def temperature_edit(request, id_temp_autoclave):
@@ -223,7 +238,7 @@ def temperature_delete(request, id_temp_autoclave):
 
 def get_sync_status(request):
     # Lógica para contar los registros no sincronizados
-    registros_no_sincronizados = AutoclaveTemperature.objects.filter(sincronizado=False).count()
+    registros_no_sincronizados = AutoclaveTemperature.objects.filter(sync=False).count()
     return JsonResponse({
         'registros_no_sincronizados': registros_no_sincronizados,
     })

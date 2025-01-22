@@ -1,9 +1,32 @@
 {% extends 'core/base.html' %}
 {% load static %}
-
+{% block title %}Registro de Inspección de Refrigerador{% endblock %}
 {% block content %}
+<style>
+    .back-icon {
+        font-size: 20px;
+        cursor: pointer;
+        margin-bottom: 20px;
+        margin-top: 20px;
+        display: block;
+        color: #333;
+    }
+</style>
+<head>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+</head>
+
     <div class="container mt-5">
-        <h1 class="mt-5 pt-5">Registro de Inspección de Refrigerador</h1>
+        <br><br>
+        
+        <a href="{% url 'esterilizadores:tempester' %}" class="back-icon">
+            <i class="fas fa-arrow-left"></i> 
+        </a>
+        <div class="d-flex justify-content-between align-items-center">
+            <h4 class="text-center my-4">Registro de Inspección de Esterilizador</h4>
+            
+        </div>
         
         <form method="post" action="{% url 'esterilizadores:registrotemp' %}">
             {% csrf_token %}
@@ -19,11 +42,11 @@
             </div>
 
             <div class="mb-3">
-                <label for="ID_Refrigerador" class="form-label">Refrigerador:</label>
-                <select class="form-control" id="ID_Refrigerador" name="ID_Refrigerador" required>
-                    <option value="">Seleccione un Refrigerador</option>
-                    {% for refrigerador in refrigeradores %}
-                        <option value="{{ refrigerador.ID_Refrigerador }}">{{ refrigerador.DescripcionRef }}</option>
+                <label for="ID_Maquinaria" class="form-label">Esterilizador:</label>
+                <select class="form-control" id="ID_Maquinaria" name="ID_Maquinaria" required>
+                    <option value="">Seleccione un Esterilizador</option>
+                    {% for maquinaria in maquinarias %}
+                        <option value="{{ maquinaria.ID_Maquinaria }}">{{ maquinaria.DescripcionMaq }}</option>
                     {% endfor %}
                 </select>
             </div>

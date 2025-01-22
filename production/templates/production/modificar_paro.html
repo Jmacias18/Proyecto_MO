@@ -1,66 +1,98 @@
+<!-- filepath: /c:/proyecto_Moo/production/templates/production/modificar_paro.html -->
 {% extends 'core/base.html' %}
 
+{% block title %}
+Modificar Paro
+{% endblock %}
+
 {% block content %}
-<div class="d-flex justify-content-center align-items-center flex-column vh-100 text-center p-4">
-    <h2 class="h4 text-dark">Modificar Paro</h2>
-    <form method="post" action="{% url 'production:modificar_paro' paro.ID_Paro %}" class="w-100 sync-form">
-        {% csrf_token %}
-        <div class="table-responsive w-100">
-            <table class="table table-bordered">
-                <thead class="bg-danger text-white">
-                    <tr>
-                        <th>Fecha Paro</th>
-                        <th>Cliente</th>
-                        <th>Orden Fabricacion SAP</th>
-                        <th>ID Producto</th>
-                        <th>Hora Inicio Paro</th>
-                        <th>Hora Finalizó Paro</th>
-                        <th>Tiempo muerto (min)</th>
-                        <th>Personas Afectadas</th>
-                        <th>M.O</th>
-                        <th>Proceso</th>
-                        <th>Maquinaria</th>
-                        <th>Causa del Paro</th>
-
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>{{ paro.FechaParo }}</td>
-                        <td>{{ form.ID_Cliente.errors }}{{ form.ID_Cliente }}</td>
-                        <td>{{ form.OrdenFabricacionSAP.errors }}{{ form.OrdenFabricacionSAP }}</td>
-                        <td>{{ form.ID_Producto.errors }}{{ form.ID_Producto }}</td>
-                        <td>{{ form.HoraInicio.errors }}{{ form.HoraInicio }}</td>
-                        <td>{{ form.HoraFin.errors }}{{ form.HoraFin }}</td>
-                        <td>
-                            <input type="text" id="tiempoMuerto" name="TiempoMuerto" value="{{ form.TiempoMuerto.value }}" readonly />
-                        </td>
-                        <td>
-                            {{ form.PersonasAfectadas.errors }}
-                            <input type="number" id="personasAfectadas" name="PersonasAfectadas" 
-                                   value="{{ form.PersonasAfectadas.value }}" 
-                                   min="0.01" max="9999" step="0.01"
-                                   oninput="if (this.value < 0.01) this.value = '';" 
-                                   style="width: 100%;">
-                        </td>
-                        
-                        <td>
-                            <input type="text" id="mo" name="MO" value="{{ form.MO.value }}" readonly />
-                        </td>
-                        <td>{{ form.ID_Proceso.errors }}{{ form.ID_Proceso }}</td>
-                        <td>{{ form.ID_Maquinaria.errors }}{{ form.ID_Maquinaria }}</td>
-                        <td>{{ form.Causa.errors }}{{ form.Causa }}</td>
-                    </tr>
-                </tbody>
-            </table>
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <br><br>
+            <div class="card">
+                <div class="card-header bg-primary text-white text-center">
+                    <h2>Modificar Paro</h2>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'production:modificar_paro' paro.ID_Paro %}">
+                        {% csrf_token %}
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <tbody>
+                                    <tr>
+                                        <th>Fecha Paro</th>
+                                        <td>{{ paro.FechaParo }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Cliente</th>
+                                        <td>{{ form.ID_Cliente.errors }}{{ form.ID_Cliente }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Orden Fabricacion SAP</th>
+                                        <td>{{ form.OrdenFabricacionSAP.errors }}{{ form.OrdenFabricacionSAP }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>ID Producto</th>
+                                        <td>{{ form.ID_Producto.errors }}{{ form.ID_Producto }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Hora Inicio Paro</th>
+                                        <td>{{ form.HoraInicio.errors }}{{ form.HoraInicio }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Hora Finalizó Paro</th>
+                                        <td>{{ form.HoraFin.errors }}{{ form.HoraFin }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Tiempo muerto (min)</th>
+                                        <td>
+                                            <input type="text" id="tiempoMuerto" name="TiempoMuerto" value="{{ form.TiempoMuerto.value }}" readonly />
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th>Personas Afectadas</th>
+                                        <td>
+                                            {{ form.PersonasAfectadas.errors }}
+                                            <input type="number" id="personasAfectadas" name="PersonasAfectadas" 
+                                                   value="{{ form.PersonasAfectadas.value }}" 
+                                                   min="0.01" max="9999" step="0.01"
+                                                   oninput="if (this.value < 0.01) this.value = '';" 
+                                                   style="width: 100%;">
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th>M.O</th>
+                                        <td>
+                                            <input type="text" id="mo" name="MO" value="{{ form.MO.value }}" readonly />
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th>Proceso</th>
+                                        <td>{{ form.ID_Proceso.errors }}{{ form.ID_Proceso }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Maquinaria</th>
+                                        <td>{{ form.ID_Maquinaria.errors }}{{ form.ID_Maquinaria }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Causa del Paro</th>
+                                        <td>{{ form.Causa.errors }}{{ form.Causa }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="text-center">
+                            <button type="submit" class="btn btn-success">Guardar Cambios</button>
+                            <a href="{% url 'production:production' %}" class="btn btn-secondary">Cancelar</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
-        <div class="mt-3 text-end">
-            <button type="submit" class="btn btn-success">Guardar Cambios</button>
-            <a href="{% url 'production:production' %}" class="btn btn-danger ms-2">Cancelar</a>
-        </div>
-    </form>
+    </div>
 </div>
-
+{% endblock %}
 <style>
     input, select, textarea {
         box-sizing: border-box;
@@ -181,4 +213,3 @@
     window.addEventListener('offline', updateOnlineStatus);
 </script>
 
-{% endblock %}

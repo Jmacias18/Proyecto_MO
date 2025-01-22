@@ -1,119 +1,125 @@
 {% extends 'core/base.html' %}
 
 {% block title %}
-Listado de Temperaturas
+Temperaturas Autoclave
 {% endblock %}
 
 {% block content %}
-    <!-- Formulario de sincronización alineado a la derecha -->
-    {% if request.user.is_supervisor or is_superuser or is_editor %}
-        <div class="d-flex flex-column align-items-end p-3" style="margin-top: 70px; margin-right: 50px;">
-            <h2>Sincronización de Datos</h2>
-            <div class="d-flex gap-2 mt-3">
-                <form id="syncForm" method="POST" action="{% url 'autoclave:sync_data' %}" onsubmit="return handleSync(event);">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-warning btn-sm" style="font-size: 0.875rem; padding: 6px 12px;">
-                        Sincronizar Datos
-                    </button>
-                </form>
-            </div>
-            <div id="sync-message" class="alert mt-3" style="display: none;"></div>
-        </div>
-    {% endif %}
+    <!-- filepath: /c:/proyecto_Moo/autoclave/templates/autoclave/temperature_list.html -->
+<!-- Formulario de sincronización alineado a la derecha -->
+{% comment %} {% if request.user.is_supervisor or is_superuser or is_editor %} {% endcomment %}
+<div class="d-flex flex-column align-items-end p-3" style="margin-top: 70px; margin-right: 50px;">
+    <h5>Sincronización de Datos</h5>
+    <div class="d-flex gap-2 mt-3">
+        <form id="syncForm" method="POST" action="{% url 'autoclave:sync_data' %}" onsubmit="return handleSync(event);">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-warning btn-sm" style="font-size: 0.875rem; padding: 6px 12px;">
+                Sincronizar Datos
+            </button>
+        </form>
+    </div>
+    <div id="sync-message" class="alert mt-3" style="display: none;"></div>
+</div>
+{% comment %} {% endif %} {% endcomment %} 
 
 <div class="container mt-1 pt-1 px-1">
-    <h1 class="mb-4">Listado de Temperaturas del Autoclave</h1>
+<br><br>
+<br><br>
+<h4 class="text-center my-4">Listado de Temperaturas del Autoclave</h4>
 
-    {% if request.user.is_supervisor or is_editor or is_superuser %}
-    <a href="{% url 'autoclave:temperature_add' %}" class="btn btn-primary mb-3">Agregar Nueva Temperatura</a>
-    {% endif %}
+<div class="d-flex justify-content-center mb-3">
+    <a href="{% url 'autoclave:temperature_add' %}" class="btn btn-primary">Agregar Nueva Temperatura</a>
+</div>
 
-    <!-- Formulario para filtrar por fecha y hora -->
-    <form method="GET" action="{% url 'autoclave:temperature_list' %}" class="mb-3">
-        <div class="form-row">
-            <div class="form-group col-md-4">
+<!-- Formulario para filtrar por fecha y hora -->
+<div class="d-flex justify-content-center">
+    <form method="GET" action="{% url 'autoclave:temperature_list' %}" class="mb-3 w-50">
+        <div class="row">
+            <div class="col-md-6 mb-3">
                 <label for="fecha">Seleccionar fecha:</label>
                 <input type="date" id="fecha" name="fecha" value="{{ request.GET.fecha|default:'' }}" class="form-control">
             </div>
-            <div class="form-group col-md-4">
-                <button type="submit" class="btn btn-primary mt-4">Filtrar</button>
+            <div class="col-md-6 mb-3 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary">Filtrar</button>
             </div>
         </div>
     </form>
+</div>
 
-    <!-- Tabla de Temperaturas -->
-    <table class="table table-bordered table-striped table-hover">
-        <thead class="thead-dark">
-            <tr>
-                <th>Fecha</th>
-                <th>Hora</th>
-                <th>ID Refrigerador</th>
-                <th>Temperatura (°C)</th>
-                <th>Temperatura (°F)</th>
-                <th>Temperatura Termómetro (°C)</th>
-                <th>Temperatura Termómetro (°F)</th>
-                <th>Observaciones</th>
-                <th>Inspeccionó</th>
-                {% if request.user.is_supervisor or is_superuser %}
-                    <th>Verificación</th>
-                {% endif %}
-                {% if request.user.is_supervisor or is_superuser or is_editor %}
-                    <th>Acciones</th>
-                {% endif %}
-            </tr>
-        </thead>
-        <tbody>
-            {% for temperature in temperatures %}
-            <tr>
-                <td>{{ temperature.fecha }}</td>
-                <td>{{ temperature.hora }}</td>
-                <td>{{ temperature.id_refrigerador.descripcion_ref }}</td>
-                <td>{{ temperature.temp_c }}°C</td>
-                <td>{{ temperature.temp_f }}°F</td>
-                <td>{{ temperature.temp_termometro_c }}°C</td>
-                <td>{{ temperature.temp_termometro_f }}°F</td>
-                <td>{{ temperature.observaciones }}</td>
-                <td>{{ temperature.inspecciono }}</td>
+<!-- Tabla de Temperaturas -->
+<table class="table table-bordered table-striped table-hover">
+    <thead class="thead-dark">
+        <tr>
+            <th>Fecha</th>
+            <th>Hora</th>
+            <th>Autoclave</th>
+            <th>Temperatura (°C)</th>
+            <th>Temperatura (°F)</th>
+            <th>Temperatura Termómetro (°C)</th>
+            <th>Temperatura Termómetro (°F)</th>
+            <th>Observaciones</th>
+            <th>Inspeccionó</th>
+            {% comment %} {% if request.user.is_supervisor or is_superuser %} {% endcomment %}
+                <th>Verificación</th>
+            {% comment %} {% endif %} {% endcomment %}
+            {% comment %} {% if request.user.is_supervisor or is_superuser or is_editor %} {% endcomment %}
+                <th>Acciones</th>
+            {% comment %} {% endif %} {% endcomment %}
+        </tr>
+    </thead>
+    <tbody>
+        {% for temperature in temperatures %}
+        <tr>
+            <td>{{ temperature.fecha }}</td>
+            <td>{{ temperature.hora }}</td>
+            <td>{{ temperature.id_maquinaria }}</td>
+            <td>{{ temperature.temp_c }}°C</td>
+            <td>{{ temperature.temp_f }}°F</td>
+            <td>{{ temperature.temp_termometro_c }}°C</td>
+            <td>{{ temperature.temp_termometro_f }}°F</td>
+            <td>{{ temperature.observaciones }}</td>
+            <td>{{ temperature.inspecciono|yesno:"Sí,No" }}</td>
+            <td>{{ temperature.verificacion|yesno:"Sí,No" }}</td>
 
-                {% if request.user.is_supervisor %}
+            {% comment %} {% if request.user.is_supervisor %} {% endcomment %}
+            {% comment %} <td>
+                {% if temperature.verificacion %}
+                    <input type="checkbox" class="verification-checkbox" checked data-id="{{ temperature.id_temp_autoclave }}" data-supervisor="{{ temperature.verificacion }}">
+                    {{ temperature.verificacion }}  <!-- Mostrar el nombre del supervisor -->
+                {% else %}
+                    <input type="checkbox" class="verification-checkbox" data-id="{{ temperature.id_temp_autoclave }}">
+                    No verificado
+                {% endif %}
+            </td> {% endcomment %}
+            {% comment %} {% endif %} {% endcomment %}
+            {% comment %} {% if request.user.is_supervisor or is_editor or is_superuser %} {% endcomment %}
                 <td>
-                    {% if temperature.verificacion %}
-                        <input type="checkbox" class="verification-checkbox" checked data-id="{{ temperature.id_temp_autoclave }}" data-supervisor="{{ temperature.verificacion }}">
-                        {{ temperature.verificacion }}  <!-- Mostrar el nombre del supervisor -->
-                    {% else %}
-                        <input type="checkbox" class="verification-checkbox" data-id="{{ temperature.id_temp_autoclave }}">
-                        No verificado
-                    {% endif %}
+                    <a href="{% url 'autoclave:temperature_edit' temperature.id_temp_autoclave %}" class="btn btn-primary mb-3">Modificar</a>
+                    <form method="POST" action="{% url 'autoclave:temperature_delete' temperature.id_temp_autoclave %}" style="display:inline-block;" onsubmit="return confirm('¿Estás seguro de eliminar este registro?');">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger">Eliminar</button>
+                    </form>
                 </td>
-                {% endif %}
-                {% if request.user.is_supervisor or is_editor or is_superuser %}
-                    <td>
-                        <a href="{% url 'autoclave:temperature_edit' temperature.id_temp_autoclave %}" class="btn btn-primary mb-3">Modificar</a>
-                        <form method="POST" action="{% url 'autoclave:temperature_delete' temperature.id_temp_autoclave %}" style="display:inline-block;" onsubmit="return confirm('¿Estás seguro de eliminar este registro?');">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-danger">Eliminar</button>
-                        </form>
-                    </td>
-                {% endif %}
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="11">No se encontraron registros de temperatura.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+            {% comment %} {% endif %} {% endcomment %}
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="11">No se encontraron registros de temperatura.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
 
-    <!-- Botones de paginación -->
-    <div class="d-flex justify-content-between">
-        {% if temperatures.has_previous %}
-            <a href="?page={{ temperatures.previous_page_number }}" class="btn btn-secondary">Anterior</a>
-        {% endif %}
+<!-- Botones de paginación -->
+<div class="d-flex justify-content-between">
+    {% if temperatures.has_previous %}
+        <a href="?page={{ temperatures.previous_page_number }}" class="btn btn-secondary">Anterior</a>
+    {% endif %}
 
-        {% if temperatures.has_next %}
-            <a href="?page={{ temperatures.next_page_number }}" class="btn btn-secondary">Siguiente</a>
-        {% endif %}
-    </div>
+    {% if temperatures.has_next %}
+        <a href="?page={{ temperatures.next_page_number }}" class="btn btn-secondary">Siguiente</a>
+    {% endif %}
+</div>
 </div>
 
 <script>

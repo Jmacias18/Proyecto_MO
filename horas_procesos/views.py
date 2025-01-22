@@ -262,7 +262,12 @@ def gestion_horas_procesos(request):
     if not productos:
         spf_info_conn = get_spf_info_connection()
         cursor = spf_info_conn.cursor()
-        cursor.execute("SELECT ID_Producto, DescripcionProd FROM Productos")
+        cursor.execute("""
+            SELECT p.ID_Producto, p.DescripcionProd, COALESCE(c.Cliente, 'Sin Cliente') as Cliente
+            FROM Productos p
+            LEFT JOIN Clientes c ON p.ID_Cliente = c.ID_Cliente
+            WHERE p.ID_Producto LIKE 'PT%'
+        """)
         productos = cursor.fetchall()
         spf_info_conn.close()
         cache.set('productos', productos, 3600)  # Cachear por 1 hora
@@ -480,7 +485,12 @@ def actualizar_horas_procesos(request):
     
     spf_info_conn = get_spf_info_connection()
     cursor = spf_info_conn.cursor()
-    cursor.execute("SELECT ID_Producto, DescripcionProd FROM Productos")
+    cursor.execute("""
+        SELECT p.ID_Producto, p.DescripcionProd, COALESCE(c.Cliente, 'Sin Cliente') as Cliente
+        FROM Productos p
+        LEFT JOIN Clientes c ON p.ID_Cliente = c.ID_Cliente
+        WHERE p.ID_Producto LIKE 'PT%'
+    """)
     productos = cursor.fetchall()
     
     cursor.execute("SELECT ID_Asis, Descripcion FROM Tipo_Asist")
@@ -507,12 +517,10 @@ def eliminar_proceso(request):
         return JsonResponse({'status': 'success'})
     return JsonResponse({'status': 'error'}, status=400)
 
-from django.http import HttpResponse
-import csv
 import openpyxl
 from openpyxl.utils import get_column_letter
 from openpyxl.styles import Font, Alignment, Border, Side
-
+from django.http import HttpResponse
 
 def exportar_a_excel(registros_combinados):
     from openpyxl.styles import PatternFill

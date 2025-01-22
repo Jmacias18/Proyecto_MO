@@ -1,25 +1,45 @@
 {% extends 'core/base.html' %}
 {% load static %}
+{% block title %}Temperaturas Esterilizadores{% endblock %}
+
 
 {% block content %}
-    <div class="container mt-5 pt-1">
-        <div class="container">
-            <div class="row justify-content-end">
-                <div class="col-auto sync-container" style="font-size: 0.85rem; margin-top: 65px;">
-                    <h3 class="h4 text-dark">Sincronización de Datos</h3>
-                    <p class="text-dark">Registros por sincronizar: {{ registros_por_syncronizar }}</p>
-                    <form method="post" action="{% url 'esterilizadores:sync_data' %}" class="sync-form">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-warning text-white btn-sm">Sincronizar Datos</button>
-                    </form>
-                </div>
+
+
+<div class="container mt-5 pt-1">
+    <div class="container">
+        <div class="row justify-content-end">
+            <div class="col-auto sync-container" style="font-size: 0.85rem; margin-top: 65px;">
+                <h6 class="h4 text-dark">Sincronización de Datos</h6>
+                <p class="text-dark">Registros por sincronizar: {{ registros_por_syncronizar }}</p>
+                <form method="post" action="{% url 'esterilizadores:sync_data' %}" class="sync-form">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-warning text-white btn-sm">Sincronizar Datos</button>
+                </form>
             </div>
         </div>
-        <h1 class="text-center my-4">Informe de Refrigeradores</h1>
+    </div>
+    <h4 class="text-center my-4">Verificacion De Temperatura Del Esterilizador</h4>
+    <div class="container mt-3">
+        {% if messages %}
+            <div class="row justify-content-center">
+                <div class="col-md-8">
+                    {% for message in messages %}
+                        <div class="alert {% if message.tags %}alert-{{ message.tags }}{% else %}alert-info{% endif %} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+        
 
-        <div class="mb-4">
+        <div class="mb-4 text-center">
             <!-- Botón para agregar una nueva temperatura -->
-        <h3>Registrar Nueva Temperatura</h3>
+        <h5>Registrar Nueva Temperatura</h5>
         <a href="{% url 'esterilizadores:registrotemp' %}" class="btn btn-primary mb-3">Agregar Nueva Temperatura</a>
         </div>
 
@@ -45,14 +65,18 @@
                         <tr>
                             <td>{{ registro.Fecha }}</td>
                             <td>{{ registro.Hora }}</td>
-                            <td>{{ registro.ID_Refrigerador }}</td>
+                            <td>{{ registro.ID_Maquinaria }}</td>
                             <td>{{ registro.TempC }}</td>
                             <td>{{ registro.TempF }}</td>
-                            <td>{{ registro.ACorrectiva }}</td>
-                            <td>{{ registro.APreventiva }}</td>
-                            <td>{{ registro.Observaciones }}</td>
-                            <td>{{ registro.Inspecciono }}</td>
-                            <td>{{ registro.Verifico }}</td>
+                            <td>{{ registro.ACorrectiva|default_if_none:"" }}</td>
+                            <td>{{ registro.APreventiva|default_if_none:"" }}</td>
+                            <td>{{ registro.Observaciones|default_if_none:"" }}</td>
+                            <td>{{ registro.Inspecciono|yesno:"Sí,No" }}</td> <!-- Mostrar Sí o No -->
+                            <td>{{ registro.Verifico|yesno:"Sí,No" }}</td> <!-- Mostrar Sí o No -->
+                            <td>
+                                <a href="{% url 'esterilizadores:modificar' registro.ID_TempEsterilizador %}" class="btn btn-primary">Modificar</a>
+                                <a href="{% url 'esterilizadores:borrar' registro.ID_TempEsterilizador %}" class="btn btn-danger">Borrar</a>
+                            </td>
 {% comment %}                             <td>
                                 <div style="display: flex; flex-direction: column; align-items: center;">
                                         <a href="{% url 'esterilizadores:modificartemp' registro.ID_TempEsterilizador %}" class="btn btn-primary" style="background-color: #007BFF; color: white; padding: 8px 12px; margin: 2px; border-radius: 4px; text-decoration: none;">Modificar</a>

@@ -1,0 +1,80 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <br><br>
+            <div class="card">
+                <div class="card-header bg-primary text-white text-center">
+                    <h4>Modificar Registro de Temperatura</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'esterilizadores:modificar' registro.ID_TempEsterilizador %}">
+                        {% csrf_token %}
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <tbody>
+                                    {% for field in form %}
+                                    <tr>
+                                        <th>{{ field.label_tag }}</th>
+                                        <td>
+                                            {% if field.name == "TempC" %}
+                                                <input type="number" step="0.1" class="form-control" id="TempC" name="TempC" required 
+                                                       value="{{ field.value }}" 
+                                                       oninput="convertToFahrenheit()" 
+                                                       onkeypress="return isMinusOrNumberKey(event)">
+                                            {% elif field.name == "TempF" %}
+                                                <input type="number" step="0.1" class="form-control" id="TempF" name="TempF" required 
+                                                       value="{{ field.value }}" readonly>
+                                            {% elif field.name == "ID_Maquinaria" %}
+                                                <select class="form-control" id="ID_Maquinaria" name="ID_Maquinaria" required>
+                                                    <option value="">Seleccione un Esterilizador</option>
+                                                    {% for maquinaria in maquinarias %}
+                                                        <option value="{{ maquinaria.ID_Maquinaria }}" {% if form.instance.ID_Maquinaria == maquinaria %}selected{% endif %}>{{ maquinaria.DescripcionMaq }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            {% else %}
+                                                {{ field }}
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="text-center">
+                            <button type="submit" class="btn btn-success">Guardar Cambios</button>
+                            <a href="{% url 'esterilizadores:tempester' %}" class="btn btn-primary">Cancelar</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function isMinusOrNumberKey(evt) {
+    var charCode = (evt.which) ? evt.which : event.keyCode;
+    var inputValue = document.getElementById('TempC').value;
+    if (charCode == 45 && inputValue.length == 0) {
+        return true;
+    }
+    if (charCode == 46 || (charCode >= 48 && charCode <= 57)) {
+        return true;
+    }
+    return false; 
+}
+
+function convertToFahrenheit() {
+    var tempC = parseFloat(document.getElementById('TempC').value);
+    if (!isNaN(tempC)) {
+        var tempF = (tempC * 9/5) + 32;
+        document.getElementById('TempF').value = tempF.toFixed(1);
+    } else {
+        document.getElementById('TempF').value = ''; 
+    }
+}
+</script>
+{% endblock %}

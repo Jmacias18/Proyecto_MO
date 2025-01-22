@@ -152,6 +152,7 @@
     document.addEventListener('DOMContentLoaded', function() {
         const resumenAsistencia = document.getElementById('resumen-asistencia');
         const deptoSelect = document.getElementById('depto_select');
+        
     
         const actualizarResumenAsistencia = () => {
             const resumen = {
@@ -513,56 +514,80 @@
         const tabla = document.getElementById(idTabla);
         const filas = Array.from(tabla.querySelectorAll('tr'));
         const datos = [];
-
-        // Procesar cada fila de la tabla
-        filas.forEach(fila => {
+    
+        // Definir la estructura esperada de los datos
+        const plantillaDatos = filas.map((fila) => {
             const celdas = Array.from(fila.querySelectorAll('th, td'));
-            const filaDatos = [];
-
-            celdas.forEach(celda => {
+            return celdas.map((celda) => {
                 const input = celda.querySelector('input, select');
                 if (input) {
                     if (input.tagName.toLowerCase() === 'select') {
-                        filaDatos.push(input.options[input.selectedIndex]?.text || '');
+                        return input.options[input.selectedIndex]?.text || '';
                     } else if (input.type === 'checkbox') {
-                        filaDatos.push(input.checked ? 'on' : '');
+                        return input.checked ? 'on' : '';
                     } else {
-                        filaDatos.push(input.value || '');
+                        return input.value || '';
                     }
                 } else {
-                    filaDatos.push(celda.innerText.trim() || '');
+                    return celda.innerText.trim() || '';
                 }
             });
-
-            datos.push(filaDatos);
         });
-
-        // Reorganizar los datos para que las celdas se acomoden correctamente
-        const datosAcomodados = [];
-        let currentRow = null;
-
-        datos.forEach((fila, index) => {
-            if (index === 0) {
-                datosAcomodados.push(fila); // Encabezados
-            } else {
-                if (fila[0] !== '') {
-                    // Si es una nueva fila principal
-                    if (currentRow) {
-                        datosAcomodados.push(currentRow);
-                    }
-                    currentRow = [...fila]; // Copia la fila completa
-                } else {
-                    // Si es una subfila (fila dependiente)
-                    fila.slice(3).forEach((dato, i) => {
-                        currentRow[3 + i] = dato; // Acomoda los datos en la fila principal
-                    });
+    
+        console.log("Plantilla de Datos:", plantillaDatos);
+    
+         // Reorganizar los datos para que las celdas se acomoden correctamente
+         const datosAcomodados = [];
+         let currentRow = null;
+ 
+         plantillaDatos.forEach((fila, index) => {
+             if (index === 0) {
+                 datosAcomodados.push(fila); // Encabezados
+             } else {
+                 if (fila[0] !== '') {
+                     // Si es una nueva fila principal
+                     if (currentRow) {
+                         datosAcomodados.push(currentRow);
+                     }
+                     currentRow = [...fila]; // Copia la fila completa
+                 } else {
+                     // Si es una subfila (fila dependiente)
+                     fila.forEach((dato, i) => {
+                         if (i >= 3) { // Acomoda los datos en la fila principal a partir de la columna "Proceso"
+                             currentRow[i] = dato;
+                         }
+                     });
+                 }
+             }
+         });
+ 
+         if (currentRow) {
+             datosAcomodados.push(currentRow);
+         }
+ 
+         // Asegurar que todas las filas, excepto la primera y las últimas dos, tengan 15 celdas, agregando celdas vacías al principio
+        datosAcomodados.forEach((fila, index) => {
+            if (index > 0 && index < datosAcomodados.length - 2) {
+                while (fila.length < 15) {
+                    fila.unshift(''); // Agrega celdas vacías al principio
                 }
             }
         });
 
-        if (currentRow) {
-            datosAcomodados.push(currentRow);
+        // Modificar la penúltima fila para que solo tenga la primera celda
+        if (datosAcomodados.length > 2) {
+            const penultimaFila = datosAcomodados[datosAcomodados.length - 2];
+            datosAcomodados[datosAcomodados.length - 2] = [penultimaFila[0], ...Array(14).fill('')];
         }
+
+        // Modificar la última fila para que solo tenga la primera y la última celda
+        if (datosAcomodados.length > 1) {
+            const ultimaFila = datosAcomodados[datosAcomodados.length - 1];
+            const totalHoras = document.getElementById('total_proceso').textContent;
+            datosAcomodados[datosAcomodados.length - 1] = ['', ...Array(12).fill(''), `Total Horas: ${totalHoras}`];
+        }
+
+        console.log("Datos Acomodados:", datosAcomodados);
 
         // Crear el archivo Excel
         const wb = XLSX.utils.book_new();
@@ -593,9 +618,18 @@
 
         ws['!merges'] = mergeRanges;
 
+        // Agregar "Total Horas" en la celda 13 de la fila correspondiente
+        const totalHoras = document.getElementById('total_proceso').textContent;
+        if (datosAcomodados.length > 0) {
+            datosAcomodados[datosAcomodados.length - 1][13] = `Total Horas: ${totalHoras}`;
+        }
+
         XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
         XLSX.writeFile(wb, nombreArchivo);
     };
+    
+    
+    
     const toggleInasistencia = (id, codigoEmp) => {
         const select = document.querySelector(`select[name="tipo_inasistencia_${id}"]`);
         const inasistencia = ['F', 'D', 'P', 'V', 'INC', 'S', 'B', 'R'].includes(select.value);
@@ -774,7 +808,7 @@
                             <select name="producto_{{ proceso.id_hrspro }}" class="form-select form-select-sm mb-2">
                                 <option value="" {% if proceso.id_producto is none %}selected{% endif %}>Sin Producto</option>
                                 {% for producto in productos %}
-                                <option value="{{ producto.ID_Producto }}" {% if producto.ID_Producto == proceso.id_producto %}selected{% endif %}>{{ producto.DescripcionProd }}</option>
+                                <option value="{{ producto.ID_Producto }}" {% if producto.ID_Producto == proceso.id_producto %}selected{% endif %}>{{ producto.ID_Producto }} - {{ producto.DescripcionProd }} - {{ producto.Cliente }}</option>
                                 {% endfor %}
                             </select>
                         </td>

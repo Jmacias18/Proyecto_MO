@@ -1,0 +1,24 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <br><br>
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-danger text-white text-center">
+                    <h4>Confirmar Borrado</h4>
+                </div>
+                <div class="card-body text-center">
+                    <p>¿Estás seguro de que deseas eliminar este registro?</p>
+                    <form method="post" action="{% url 'esterilizadores:borrar' registro.ID_TempEsterilizador %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger">Eliminar</button>
+                        <a href="{% url 'esterilizadores:tempester' %}" class="btn btn-primary">Cancelar</a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

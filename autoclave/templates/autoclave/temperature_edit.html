@@ -1,3 +1,4 @@
+<!-- filepath: /c:/proyecto_Moo/autoclave/templates/autoclave/temperature_edit.html -->
 {% extends 'core/base.html' %}
 
 {% block title %}
@@ -5,79 +6,144 @@ Editar Temperatura
 {% endblock %}
 
 {% block content %}
-<div class="container mt-5 pt-5">
-    <h1 class="mb-4">Editar Temperatura del Autoclave</h1>
-
-    <!-- Formulario con Bootstrap -->
-    <form method="POST">
-        {% csrf_token %}
-        
-        <!-- Campo Refrigerador -->
-        <div class="mb-3">
-            <label for="id_refrigerador" class="form-label">Refrigerador</label>
-            <select name="id_refrigerador" id="id_refrigerador" class="form-select {% if form.id_refrigerador.errors %}is-invalid{% endif %}">
-                <option value="" disabled {% if not form.id_refrigerador.value %}selected{% endif %}>Seleccione un refrigerador</option>
-                {% for value, label in form.id_refrigerador.field.choices %}
-                    <option value="{{ value }}" {% if value == form.id_refrigerador.value %}selected{% endif %}>
-                        {{ label }}
-                    </option>
-                {% endfor %}
-            </select>
-            {% for error in form.id_refrigerador.errors %}
-                <div class="invalid-feedback">{{ error }}</div>
-            {% endfor %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <br><br>
+            <div class="card">
+                <div class="card-header bg-primary text-white text-center">
+                    <h4>Modificar Registro de Temperatura</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <tbody>
+                                    <tr>
+                                        <th><label for="id_maquinaria">Autoclave</label></th>
+                                        <td>
+                                            <select name="id_maquinaria" id="id_maquinaria" class="form-select {% if form.id_maquinaria.errors %}is-invalid{% endif %}">
+                                                <option value="" disabled {% if not form.id_maquinaria.value %}selected{% endif %}>Seleccione una Autoclave</option>
+                                                {% for value, label in form.id_maquinaria.field.choices %}
+                                                    <option value="{{ value }}" {% if value == form.id_maquinaria.value %}selected{% endif %}>
+                                                        {{ label }}
+                                                    </option>
+                                                {% endfor %}
+                                            </select>
+                                            {% for error in form.id_maquinaria.errors %}
+                                                <div class="invalid-feedback">{{ error }}</div>
+                                            {% endfor %}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th><label for="fecha">Fecha</label></th>
+                                        <td>
+                                            <input type="date" class="form-control {% if form.fecha.errors %}is-invalid{% endif %}" name="fecha" id="fecha" value="{{ form.fecha.value|date:'Y-m-d' }}">
+                                            {% for error in form.fecha.errors %}
+                                                <div class="invalid-feedback">{{ error }}</div>
+                                            {% endfor %}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th><label for="hora">Hora</label></th>
+                                        <td>
+                                            <input type="time" class="form-control {% if form.hora.errors %}is-invalid{% endif %}" name="hora" id="hora" value="{{ form.hora.value|time:'H:i' }}">
+                                            {% for error in form.hora.errors %}
+                                                <div class="invalid-feedback">{{ error }}</div>
+                                            {% endfor %}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th><label for="temp_c">Temperatura (°C)</label></th>
+                                        <td>
+                                            <input type="number" step="any" min="0" max="150" class="form-control {% if form.temp_c.errors %}is-invalid{% endif %}" name="temp_c" id="temp_c" value="{{ form.temp_c.value }}" onkeypress="return isMinusOrNumberKey(event)" oninput="convertToFahrenheit()">
+                                            {% for error in form.temp_c.errors %}
+                                                <div class="invalid-feedback">{{ error }}</div>
+                                            {% endfor %}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th><label for="temp_f">Temperatura (°F)</label></th>
+                                        <td>
+                                            <input type="number" step="any" min="0" max="150" class="form-control {% if form.temp_f.errors %}is-invalid{% endif %}" name="temp_f" id="temp_f" value="{{ form.temp_f.value }}" readonly>
+                                            {% for error in form.temp_f.errors %}
+                                                <div class="invalid-feedback">{{ error }}</div>
+                                            {% endfor %}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th><label for="temp_termometro_c">Temperatura Termómetro (°C)</label></th>
+                                        <td>
+                                            <input type="number" step="any" min="0" max="150" class="form-control {% if form.temp_termometro_c.errors %}is-invalid{% endif %}" name="temp_termometro_c" id="temp_termometro_c" value="{{ form.temp_termometro_c.value }}" onkeypress="return isMinusOrNumberKey(event)" oninput="convertTermometroToFahrenheit()">
+                                            {% for error in form.temp_termometro_c.errors %}
+                                                <div class="invalid-feedback">{{ error }}</div>
+                                            {% endfor %}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th><label for="temp_termometro_f">Temperatura Termómetro (°F)</label></th>
+                                        <td>
+                                            <input type="number" step="any" min="0" max="150" class="form-control {% if form.temp_termometro_f.errors %}is-invalid{% endif %}" name="temp_termometro_f" id="temp_termometro_f" value="{{ form.temp_termometro_f.value }}" readonly>
+                                            {% for error in form.temp_termometro_f.errors %}
+                                                <div class="invalid-feedback">{{ error }}</div>
+                                            {% endfor %}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th><label for="observaciones">Observaciones</label></th>
+                                        <td>
+                                            <textarea class="form-control {% if form.observaciones.errors %}is-invalid{% endif %}" name="observaciones" id="observaciones" rows="4">{{ form.observaciones.value }}</textarea>
+                                            {% for error in form.observaciones.errors %}
+                                                <div class="invalid-feedback">{{ error }}</div>
+                                            {% endfor %}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="text-center">
+                            <button type="submit" class="btn btn-success">Guardar Cambios</button>
+                            <a href="{% url 'autoclave:temperature_list' %}" class="btn btn-primary">Cancelar</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
-
-        <!-- Campo Fecha -->
-        <div class="mb-3">
-            <label for="fecha" class="form-label">Fecha</label>
-            <input type="date" class="form-control {% if form.fecha.errors %}is-invalid{% endif %}" name="fecha" id="fecha" value="{{ form.fecha.value|date:'Y-m-d' }}">
-            {% for error in form.fecha.errors %}
-                <div class="invalid-feedback">{{ error }}</div>
-            {% endfor %}
-        </div>
-
-        <!-- Campo Hora -->
-        <div class="mb-3">
-            <label for="hora" class="form-label">Hora</label>
-            <input type="time" class="form-control {% if form.hora.errors %}is-invalid{% endif %}" name="hora" id="hora" value="{{ form.hora.value|time:'H:i' }}">
-            {% for error in form.hora.errors %}
-                <div class="invalid-feedback">{{ error }}</div>
-            {% endfor %}
-        </div>
-
-        <!-- Campo Temperatura en °C -->
-        <div class="mb-3">
-            <label for="temp_c" class="form-label">Temperatura (°C)</label>
-            <input type="number" step="any" min="0" max="150" class="form-control {% if form.temp_c.errors %}is-invalid{% endif %}" name="temp_c" id="temp_c" value="{{ form.temp_c.value }}">
-            {% for error in form.temp_c.errors %}
-                <div class="invalid-feedback">{{ error }}</div>
-            {% endfor %}
-        </div>
-
-        <!-- Campo Temperatura del Termómetro en °C -->
-        <div class="mb-3">
-            <label for="temp_termometro_c" class="form-label">Temperatura Termómetro (°C)</label>
-            <input type="number" step="any" min="0" max="150" class="form-control {% if form.temp_termometro_c.errors %}is-invalid{% endif %}" name="temp_termometro_c" id="temp_termometro_c" value="{{ form.temp_termometro_c.value }}">
-            {% for error in form.temp_termometro_c.errors %}
-                <div class="invalid-feedback">{{ error }}</div>
-            {% endfor %}
-        </div>
-
-        <!-- Campo Observaciones -->
-        <div class="mb-3">
-            <label for="observaciones" class="form-label">Observaciones</label>
-            <textarea class="form-control {% if form.observaciones.errors %}is-invalid{% endif %}" name="observaciones" id="observaciones" rows="4">{{ form.observaciones.value }}</textarea>
-            {% for error in form.observaciones.errors %}
-                <div class="invalid-feedback">{{ error }}</div>
-            {% endfor %}
-        </div>
-
-        <!-- Botón de Guardar -->
-        <button type="submit" class="btn btn-primary">Guardar cambios</button>
-    </form>
-
-    <!-- Enlace para volver al listado -->
-    <a href="{% url 'autoclave:temperature_list' %}" class="btn btn-secondary mt-3">Volver al listado</a>
+    </div>
 </div>
+
+<script>
+    function isMinusOrNumberKey(evt) {
+        var charCode = (evt.which) ? evt.which : event.keyCode;
+        var inputValue = document.getElementById('temp_c').value;
+        if (charCode == 45 && inputValue.length == 0) {
+            return true;
+        }
+        if (charCode == 46 || (charCode >= 48 && charCode <= 57)) {
+            return true;
+        }
+        return false; 
+    }
+    
+    function convertToFahrenheit() {
+        var tempC = parseFloat(document.getElementById('temp_c').value);
+        if (!isNaN(tempC)) {
+            var tempF = (tempC * 9/5) + 32;
+            document.getElementById('temp_f').value = tempF.toFixed(1);
+        } else {
+            document.getElementById('temp_f').value = ''; 
+        }
+    }
+    
+    function convertTermometroToFahrenheit() {
+        var tempTermometroC = parseFloat(document.getElementById('temp_termometro_c').value);
+        if (!isNaN(tempTermometroC)) {
+            var tempTermometroF = (tempTermometroC * 9/5) + 32;
+            document.getElementById('temp_termometro_f').value = tempTermometroF.toFixed(1);
+        } else {
+            document.getElementById('temp_termometro_f').value = ''; 
+        }
+    }
+</script>
 {% endblock %}
