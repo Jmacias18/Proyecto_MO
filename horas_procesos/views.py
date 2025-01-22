@@ -15,6 +15,7 @@ from django.contrib import messages
 import pyodbc
 from collections import defaultdict
 from django.core.cache import cache
+from babel.dates import format_date
 
 # Conexión a la base de datos SPF_Info
 spf_info_conn_info = {
@@ -88,8 +89,28 @@ def obtener_datos_tempus_accesos():
     return registros_entrada
 
 def gestion_horas_procesos(request):
-    dia_actual = datetime.now().strftime('%A').capitalize()  # Definir dia_actual en ambos métodos
-    
+    # Diccionario de traducción de días de la semana de español con acentos a sin acentos
+    dias_semana_sin_acentos = {
+        'lunes': 'Lunes',
+        'martes': 'Martes',
+        'miércoles': 'Miercoles',
+        'jueves': 'Jueves',
+        'viernes': 'Viernes',
+        'sábado': 'Sabado',
+        'domingo': 'Domingo'
+    }
+
+    # Obtener la fecha actual
+    fecha_actual = datetime.now()
+
+    # Formatear y mostrar el día actual en español usando babel
+    dia_actual_con_acento = format_date(fecha_actual, 'EEEE', locale='es_ES').lower()
+
+    # Traducir el día de la semana a sin acentos
+    dia_actual_sin_acento = dias_semana_sin_acentos[dia_actual_con_acento]
+
+    print(f"El día actual es: {dia_actual_sin_acento}")
+        
 
     if request.method == 'POST':
         tipos_inasistencia = cache.get('tipos_inasistencia')
@@ -156,7 +177,7 @@ def gestion_horas_procesos(request):
             codigo_emp = str(empleado.codigo_emp).strip()[-4:]  # Convertir a string y mantener solo los últimos 4 dígitos
             
 
-            es_descanso = dia_actual in descanso_por_turno.get(str(empleado.id_turno), [])
+            es_descanso = dia_actual_sin_acento in descanso_por_turno.get(str(empleado.id_turno), [])
             
 
             # Verificar si el empleado tiene una checada registrada
@@ -318,7 +339,7 @@ def gestion_horas_procesos(request):
     empleados_con_descripcion = []
     for empleado in empleados:
         codigo_emp = str(empleado.codigo_emp).strip()[-4:]  # Convertir a string y mantener solo los últimos 4 dígitos
-        es_descanso = dia_actual in descanso_por_turno.get(str(empleado.id_turno), [])
+        es_descanso = dia_actual_sin_acento in descanso_por_turno.get(str(empleado.id_turno), [])
         tipo_inasistencia = 'F' if codigo_emp not in registros_entrada else 'ASI'
         
         # Priorizar la checada sobre el día de descanso
