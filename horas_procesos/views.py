@@ -191,7 +191,7 @@ def gestion_horas_procesos(request):
             if tiene_checada:
                 tipo_inasistencia = tipo_inasistencia_seleccionado if tipo_inasistencia_seleccionado != 'F' else 'ASI'
             elif es_descanso:
-                tipo_inasistencia = 'D'
+                tipo_inasistencia = tipo_inasistencia_seleccionado if tipo_inasistencia_seleccionado != 'F' else 'D'
             else:
                 tipo_inasistencia = tipo_inasistencia_seleccionado
 
@@ -347,6 +347,7 @@ def gestion_horas_procesos(request):
             tipo_inasistencia = 'ASI'
         elif es_descanso:
             tipo_inasistencia = 'D'
+        
             
         empleado_dict = {
             'codigo_emp': codigo_emp,
@@ -544,9 +545,12 @@ from openpyxl.styles import Font, Alignment, Border, Side
 from django.http import HttpResponse
 
 def exportar_a_excel(registros_combinados):
-    from openpyxl.styles import PatternFill
-    
-    wb = openpyxl.Workbook()
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
+    from openpyxl.utils import get_column_letter
+    from django.http import HttpResponse
+
+    wb = Workbook()
     ws = wb.active
     ws.title = "Horas Procesos"
 
@@ -556,15 +560,57 @@ def exportar_a_excel(registros_combinados):
     thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
     gray_fill = PatternFill(start_color="DDDDDD", end_color="DDDDDD", fill_type="solid")
 
+    # Generar resumen de asistencia dinámicamente
+    resumen = {
+        "FALTA": 0,
+        "DESCANSO": 0,
+        "PERMISO": 0,
+        "RETARDO": 0,
+        "VACACIONES": 0,
+        "INCAPACIDAD": 0,
+        "SUSPENSIÓN": 0,
+        "BAJA": 0,
+        "RENUNCIA": 0,
+        "NUEVO INGRESO": 0,
+        "ASISTENCIA": 0
+    }
+
+    for registro in registros_combinados:
+        for proceso in registro['procesos']:
+            if proceso.asistencia in resumen:
+                resumen[proceso.asistencia] += 1
+            else:
+                resumen["ASISTENCIA"] += 1
+
+    resumen_asistencia = (
+        f"RESUMEN DE ASISTENCIA: "
+        f"FALTA: {resumen['FALTA']} "
+        f"DESCANSO: {resumen['DESCANSO']} "
+        f"PERMISO: {resumen['PERMISO']} "
+        f"RETARDO: {resumen['RETARDO']} "
+        f"VACACIONES: {resumen['VACACIONES']} "
+        f"INCAPACIDAD: {resumen['INCAPACIDAD']} "
+        f"SUSPENSIÓN: {resumen['SUSPENSIÓN']} "
+        f"BAJA: {resumen['BAJA']} "
+        f"RENUNCIA: {resumen['RENUNCIA']} "
+        f"NUEVO INGRESO: {resumen['NUEVO INGRESO']} "
+        f"ASISTENCIA: {resumen['ASISTENCIA']}"
+    )
+
+    ws['A1'] = resumen_asistencia
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=15)
+    ws['A1'].alignment = Alignment(horizontal="center", vertical="center")
+    ws['A1'].font = header_font
+
     # Escribir encabezados
     headers = [
-        "Código Emp", "Empleado", "Departamento", "Proceso", "Fecha",
+        "Código Emp", "Empleado", "Departamento", "Proceso y Producto", "Fecha",
         "Hora Entrada", "Hora Salida", "Horas", "Total Horas", "Horas Extras",
         "Inasistencia", "Creado Por", "Modificado Por", "F/Modificación"
     ]
     for col_num, header in enumerate(headers, 1):
         col_letter = get_column_letter(col_num)
-        cell = ws[f'{col_letter}1']
+        cell = ws[f'{col_letter}2']
         cell.value = header
         cell.font = header_font
         cell.alignment = header_alignment
@@ -572,7 +618,7 @@ def exportar_a_excel(registros_combinados):
         cell.fill = gray_fill  # Fondo gris para los encabezados
 
     # Escribir datos
-    row_num = 2
+    row_num = 3
     for registro in registros_combinados:
         empleado_empezado = False  # Para manejar espacios visuales
         
@@ -584,8 +630,9 @@ def exportar_a_excel(registros_combinados):
                 ws[f'C{row_num}'] = registro['depto_emp']
                 empleado_empezado = True
             
-            # Escribir datos del proceso
-            ws[f'D{row_num}'] = proceso.id_pro
+            # Concatenar proceso y producto en una sola celda con salto de línea
+            proceso_producto = f"{proceso.id_pro} - {proceso.id_producto}"
+            ws[f'D{row_num}'] = proceso_producto
             ws[f'E{row_num}'] = proceso.fecha_hrspro
             ws[f'F{row_num}'] = proceso.horaentrada
             ws[f'G{row_num}'] = proceso.horasalida
@@ -596,6 +643,7 @@ def exportar_a_excel(registros_combinados):
             ws[f'L{row_num}'] = proceso.ucreado
             ws[f'M{row_num}'] = proceso.umod if proceso.umod else 'N/M'
             ws[f'N{row_num}'] = proceso.fmod if proceso.fmod else 'N/M'
+            print(f"Proceso {proceso_producto} guardado en la fila {row_num}")
 
             # Aplicar bordes a las celdas
             for col_num in range(1, len(headers) + 1):
@@ -604,16 +652,44 @@ def exportar_a_excel(registros_combinados):
                 cell.border = thin_border
             row_num += 1
 
-    # Resumen al final
-    ws[f'H{row_num}'] = "Total Horas:"
-    ws[f'I{row_num}'] = f'=SUM(I2:I{row_num - 1})'  # Fórmula para sumar total horas
-    ws[f'H{row_num}'].font = header_font
-    ws[f'H{row_num}'].alignment = header_alignment
+    # Ajustar ancho de columnas automáticamente
+    for col in ws.columns:
+        max_length = 0
+        column = col[0].column_letter  # Get the column name
+        for cell in col:
+            try:
+                if len(str(cell.value)) > max_length:
+                    max_length = len(cell.value)
+            except:
+                pass
+        adjusted_width = (max_length + 2)
+        ws.column_dimensions[column].width = adjusted_width
 
-    # Ajustar ancho de columnas
-    for col_num in range(1, len(headers) + 1):
-        col_letter = get_column_letter(col_num)
-        ws.column_dimensions[col_letter].width = 15
+    # Ajustar altura de filas automáticamente
+    for row in ws.iter_rows():
+        max_height = 0
+        for cell in row:
+            if cell.value:
+                cell_height = len(str(cell.value).split('\n'))
+                if cell_height > max_height:
+                    max_height = cell_height
+        ws.row_dimensions[row[0].row].height = max_height * 15
+
+    # Agregar la fila de resumen de horas
+    resumen_horas = "Apoyo Calidad : 1.00 horas\tFreidora : 3.00 horas"
+    ws.append([resumen_horas] + [''] * 14)
+    row_num += 1
+    ws.merge_cells(start_row=row_num, start_column=1, end_row=row_num, end_column=15)
+    ws[f'A{row_num}'].alignment = Alignment(horizontal="center", vertical="center")
+    ws[f'A{row_num}'].font = header_font
+
+    # Agregar la antepenúltima fila y combinarla
+    antepenultima_fila = "Antepenúltima fila combinada"
+    ws.append([antepenultima_fila] + [''] * 14)
+    row_num += 1
+    ws.merge_cells(start_row=row_num, start_column=1, end_row=row_num, end_column=15)
+    ws[f'A{row_num}'].alignment = Alignment(horizontal="center", vertical="center")
+    ws[f'A{row_num}'].font = header_font
 
     # Crear la respuesta HTTP
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')

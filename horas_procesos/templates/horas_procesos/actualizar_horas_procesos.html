@@ -168,14 +168,21 @@
                 NI: 0,
                 ASI: 0
             };
-    
-            document.querySelectorAll('select[name^="tipo_inasistencia_"]').forEach(select => {
-                const value = select.value;
-                if (resumen.hasOwnProperty(value)) {
-                    resumen[value]++;
+        
+            const empleados = new Set();
+        
+            document.querySelectorAll('tr[data-codigo-emp]').forEach(row => {
+                const empleadoId = row.getAttribute('data-codigo-emp');
+                if (!empleados.has(empleadoId)) {
+                    empleados.add(empleadoId);
+                    const select = row.querySelector('select[name^="tipo_inasistencia_"]');
+                    const value = select.value;
+                    if (resumen.hasOwnProperty(value)) {
+                        resumen[value]++;
+                    }
                 }
             });
-    
+        
             for (const key in resumen) {
                 const spanElement = document.getElementById(`resumen-${key}`);
                 spanElement.textContent = resumen[key];
@@ -377,8 +384,8 @@
                 return;
             }
         
-            const { cambios, borrados } = contarCambiosYBorrados();
-            const mensaje = `Se realizaron ${cambios} cambios y se eliminarán ${borrados} registros. ¿Deseas continuar?`;
+            const { borrados } = contarCambiosYBorrados();
+            const mensaje = `Se eliminarán ${borrados} registros. ¿Deseas continuar?`;
             document.getElementById('confirmMessage').textContent = mensaje;
             const confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
             confirmModal.show();
@@ -512,60 +519,120 @@
 
     const exportarTablaAExcel = (idTabla, nombreArchivo) => {
         const tabla = document.getElementById(idTabla);
+        console.log("Tabla:", tabla);
         const filas = Array.from(tabla.querySelectorAll('tr'));
         const datos = [];
+        
     
         // Definir la estructura esperada de los datos
         const plantillaDatos = filas.map((fila) => {
             const celdas = Array.from(fila.querySelectorAll('th, td'));
             return celdas.map((celda) => {
-                const input = celda.querySelector('input, select');
-                if (input) {
-                    if (input.tagName.toLowerCase() === 'select') {
-                        return input.options[input.selectedIndex]?.text || '';
-                    } else if (input.type === 'checkbox') {
-                        return input.checked ? 'on' : '';
-                    } else {
-                        return input.value || '';
-                    }
+                const selects = celda.querySelectorAll('select');
+                if (selects.length > 1) {
+                    const proceso = selects[0].options[selects[0].selectedIndex]?.text || '';
+                    const producto = selects[1].options[selects[1].selectedIndex]?.text || '';
+                    console.log(`Proceso: ${proceso}, Producto: ${producto}`);
+                    return `${proceso} - ${producto}`;
+                } else if (selects.length === 1) {
+                    const selectedText = selects[0].options[selects[0].selectedIndex]?.text || '';
+                    console.log(`Select value: ${selectedText}`);
+                    return selectedText;
                 } else {
-                    return celda.innerText.trim() || '';
+                    const input = celda.querySelector('input');
+                    if (input) {
+                        if (input.type === 'checkbox') {
+                            return input.checked ? 'on' : '';
+                        } else {
+                            return input.value || '';
+                        }
+                    } else {
+                        return celda.innerText.trim() || '';
+                    }
                 }
             });
         });
     
         console.log("Plantilla de Datos:", plantillaDatos);
     
-         // Reorganizar los datos para que las celdas se acomoden correctamente
-         const datosAcomodados = [];
-         let currentRow = null;
- 
-         plantillaDatos.forEach((fila, index) => {
-             if (index === 0) {
-                 datosAcomodados.push(fila); // Encabezados
-             } else {
-                 if (fila[0] !== '') {
-                     // Si es una nueva fila principal
-                     if (currentRow) {
-                         datosAcomodados.push(currentRow);
-                     }
-                     currentRow = [...fila]; // Copia la fila completa
-                 } else {
-                     // Si es una subfila (fila dependiente)
-                     fila.forEach((dato, i) => {
-                         if (i >= 3) { // Acomoda los datos en la fila principal a partir de la columna "Proceso"
-                             currentRow[i] = dato;
-                         }
-                     });
-                 }
-             }
-         });
- 
-         if (currentRow) {
-             datosAcomodados.push(currentRow);
-         }
- 
-         // Asegurar que todas las filas, excepto la primera y las últimas dos, tengan 15 celdas, agregando celdas vacías al principio
+        // Generar resumen de asistencia dinámicamente
+        const resumen = {
+            "FALTA": 0,
+            "DESCANSO": 0,
+            "PERMISO": 0,
+            "RETARDO": 0,
+            "VACACIONES": 0,
+            "INCAPACIDAD": 0,
+            "SUSPENSIÓN": 0,
+            "BAJA": 0,
+            "RENUNCIA": 0,
+            "NUEVO INGRESO": 0,
+            "ASISTENCIA": 0
+        };
+    
+        plantillaDatos.forEach((fila, index) => {
+            if (index > 0) { // Ignorar encabezados
+                const inasistencia = fila[10]; // Columna de inasistencia
+                if (inasistencia in resumen) {
+                    resumen[inasistencia] += 1;
+                } else {
+                    resumen["ASISTENCIA"] += 1;
+                }
+            }
+        });
+    
+        const resumenAsistencia = (
+            `RESUMEN DE ASISTENCIA: ` +
+            `FALTA: ${resumen['FALTA']} ` +
+            `DESCANSO: ${resumen['DESCANSO']} ` +
+            `PERMISO: ${resumen['PERMISO']} ` +
+            `RETARDO: ${resumen['RETARDO']} ` +
+            `VACACIONES: ${resumen['VACACIONES']} ` +
+            `INCAPACIDAD: ${resumen['INCAPACIDAD']} ` +
+            `SUSPENSIÓN: ${resumen['SUSPENSIÓN']} ` +
+            `BAJA: ${resumen['BAJA']} ` +
+            `RENUNCIA: ${resumen['RENUNCIA']} ` +
+            `NUEVO INGRESO: ${resumen['NUEVO INGRESO']} ` +
+            `ASISTENCIA: ${resumen['ASISTENCIA']}`
+        );
+    
+        // Reorganizar los datos para que las celdas se acomoden correctamente
+        const datosAcomodados = [];
+        let currentRow = null;
+    
+        plantillaDatos.forEach((fila, index) => {
+            console.log(`Procesando fila ${index}:`, fila);
+            if (index === 0) {
+                datosAcomodados.push(fila); // Encabezados
+            } else {
+                if (fila[0] !== '') {
+                    // Si es una nueva fila principal
+                    if (currentRow) {
+                        datosAcomodados.push(currentRow);
+                    }
+                    currentRow = [...fila]; // Copia la fila completa
+                    console.log(`Nueva fila principal:`, currentRow);
+                } else {
+                    // Si es una subfila (fila dependiente)
+                    fila.forEach((dato, i) => {
+                        if (i === 3) { // Concatenar proceso y producto en la columna "Proceso y Producto"
+                            console.log(`Concatenando proceso y producto: ${currentRow[i]} - ${dato}`);
+                            currentRow[i] = `${currentRow[i]} - ${dato}`;
+                        } else if (i > 3) { // Acomoda los datos en la fila principal a partir de la columna "Fecha"
+                            currentRow[i] = dato;
+                        }
+                    });
+                    console.log(`Fila dependiente procesada:`, currentRow);
+                }
+            }
+        });
+    
+        if (currentRow) {
+            datosAcomodados.push(currentRow);
+        }
+        console.log("Datos Acomodados:", datosAcomodados);
+    
+        // Asegurar que todas las filas, excepto la primera y las últimas dos, tengan 15 celdas, agregando celdas vacías al principio
         datosAcomodados.forEach((fila, index) => {
             if (index > 0 && index < datosAcomodados.length - 2) {
                 while (fila.length < 15) {
@@ -573,30 +640,66 @@
                 }
             }
         });
-
-        // Modificar la penúltima fila para que solo tenga la primera celda
+    
+        // Declarar mergeRanges antes de su uso
+        const mergeRanges = [];
+    
+        // Modificar la penúltima fila para que solo tenga la primera celda y combinarla
         if (datosAcomodados.length > 2) {
             const penultimaFila = datosAcomodados[datosAcomodados.length - 2];
             datosAcomodados[datosAcomodados.length - 2] = [penultimaFila[0], ...Array(14).fill('')];
+            mergeRanges.push({ s: { r: datosAcomodados.length - 2, c: 0 }, e: { r: datosAcomodados.length - 2, c: 14 } });
         }
-
+    
         // Modificar la última fila para que solo tenga la primera y la última celda
         if (datosAcomodados.length > 1) {
             const ultimaFila = datosAcomodados[datosAcomodados.length - 1];
             const totalHoras = document.getElementById('total_proceso').textContent;
             datosAcomodados[datosAcomodados.length - 1] = ['', ...Array(12).fill(''), `Total Horas: ${totalHoras}`];
         }
-
-        console.log("Datos Acomodados:", datosAcomodados);
-
+    
+        console.log("Datos Acomodados Final:", datosAcomodados);
+    
         // Crear el archivo Excel
         const wb = XLSX.utils.book_new();
         const ws = XLSX.utils.aoa_to_sheet(datosAcomodados);
-
+    
+        // Definir los anchos de las columnas
+        const colWidths = [
+            { wch: 15 }, // Código Emp
+            { wch: 30 }, // Empleado
+            { wch: 15 }, // Departamento
+            { wch: 65 }, // Proceso y Producto
+            { wch: 17 }, // Fecha
+            { wch: 10 }, // Hora Entrada
+            { wch: 10 }, // Hora Salida
+            { wch: 10 }, // Horas
+            { wch: 10 }, // Total Horas
+            { wch: 10 }, // Horas Extras
+            { wch: 10 }, // Inasistencia
+            { wch: 10 }, // Creado Por
+            { wch: 13 }, // Modificado Por
+            { wch: 17 }  // F/Modificación
+        ];
+    
+        ws['!cols'] = colWidths;
+        // Alternar colores de las filas
+        plantillaDatos.forEach((fila, index) => {
+            const style = {
+                fill: {
+                    fgColor: { rgb: index % 2 === 0 ? 'FFFFF2CC' : 'FFD9EAD3' } // Color alternado
+                }
+            };
+            fila.forEach((_, colIndex) => {
+                const cellAddress = XLSX.utils.encode_cell({ r: index, c: colIndex });
+                if (!ws[cellAddress]) ws[cellAddress] = {};
+                ws[cellAddress].s = style;
+            });
+        });
+    
         // Fusionar celdas para "Código Emp", "Empleado" y "Departamento"
-        const mergeRanges = [];
         let startRow = 1;
-
+    
         datosAcomodados.forEach((fila, index) => {
             if (index > 0) {
                 if (fila[0] !== '') {
@@ -609,21 +712,38 @@
                 }
             }
         });
-
+    
         if (startRow < datosAcomodados.length) {
             mergeRanges.push({ s: { r: startRow, c: 0 }, e: { r: datosAcomodados.length - 1, c: 0 } });
             mergeRanges.push({ s: { r: startRow, c: 1 }, e: { r: datosAcomodados.length - 1, c: 1 } });
             mergeRanges.push({ s: { r: startRow, c: 2 }, e: { r: datosAcomodados.length - 1, c: 2 } });
         }
-
+    
+        // Agregar el resumen de asistencia en la primera fila
+        datosAcomodados.unshift([resumenAsistencia, ...Array(14).fill('')]);
+        mergeRanges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: 14 } });
+    
         ws['!merges'] = mergeRanges;
-
+    
+        // Centrar el contenido de la celda fusionada
+        ws['A1'].s = { alignment: { horizontal: 'center', vertical: 'center' }, wrapText: false };
+    
         // Agregar "Total Horas" en la celda 13 de la fila correspondiente
         const totalHoras = document.getElementById('total_proceso').textContent;
         if (datosAcomodados.length > 0) {
             datosAcomodados[datosAcomodados.length - 1][13] = `Total Horas: ${totalHoras}`;
         }
+    
+        // Agregar la fila de resumen de horas
+        const resumenHoras = "Apoyo Calidad : 4.00 horas\tFreidora : 3.00 horas";
+        datosAcomodados.push([resumenHoras, ...Array(14).fill('')]);
+        const resumenHorasRow = datosAcomodados.length;
+        mergeRanges.push({ s: { r: resumenHorasRow - 1, c: 0 }, e: { r: resumenHorasRow - 1, c: 14 } });
+    
+        ws['!merges'] = mergeRanges;
+    
 
+    
         XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
         XLSX.writeFile(wb, nombreArchivo);
     };
@@ -656,29 +776,15 @@
     
 
     const contarCambiosYBorrados = () => {
-        let cambios = 0;
         let borrados = 0;
     
-        document.querySelectorAll('input[name^="horaentrada_"], input[name^="horasalida_"], select[name^="proceso_"], select[name^="tipo_inasistencia_"]').forEach(input => {
-            const originalValue = input.getAttribute('data-original-value');
-            if (input.type === 'checkbox') {
-                if (input.checked.toString() !== originalValue) {
-                    cambios++;
-                }
-            } else {
-                if (input.value !== originalValue) {
-                    cambios++;
-                }
-            }
-        });
-    
-        document.querySelectorAll('select[name^="eliminar_"]').forEach(select => {
-            if (select.value === 'on') {
+        document.querySelectorAll('input[name^="eliminar_"]').forEach(checkbox => {
+            if (checkbox.checked) {
                 borrados++;
             }
         });
     
-        return { cambios, borrados };
+        return { borrados };
     };
 
     const actualizarHoras = (id) => {
