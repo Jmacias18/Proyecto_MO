@@ -10,6 +10,8 @@ from datetime import date
 from django.urls import reverse
 
 
+from .models import Conceptos  # Asegúrate de importar el modelo de Conceptos
+
 @login_required
 def production(request):
     # Obtener los parámetros de los filtros
@@ -18,6 +20,8 @@ def production(request):
     proceso_id = request.GET.get('ID_Pro')
     maquinaria_id = request.GET.get('ID_Maquinaria')
     fecha_paro = request.GET.get('FechaParo')  # Agregar el filtro por fecha
+    filter_type = request.GET.get('filter_type')  # Obtener el tipo de filtro
+    filter_select = request.GET.get('filter_select')  # Obtener el valor del filtro seleccionado
 
     # Comprobar si el usuario pertenece al grupo "Mantenimiento"
     user_is_maintenance = request.user.groups.filter(name='Mantenimiento').exists()
@@ -42,6 +46,12 @@ def production(request):
         if fecha_paro:
             paros = paros.filter(FechaParo=fecha_paro)  # Filtrar por fecha exacta
 
+        # Filtrar por tipo (Maquinaria o Concepto)
+        if filter_type == 'maquinaria':
+            paros = paros.filter(ID_Maquinaria__isnull=False)
+        elif filter_type == 'concepto':
+            paros = paros.filter(ID_Concepto__isnull=False)
+
         # Ordenar los resultados por FechaParo y HoraInicio
         paros = paros.order_by('-FechaParo', '-HoraInicio')
 
@@ -58,6 +68,20 @@ def production(request):
     maquinarias = Maquinaria.objects.using('spf_info').filter(Estado=True)
     productos = Productos.objects.using('spf_info').all()  # Filtrar productos activos
     clientes = Clientes.objects.all()
+    conceptos = Conceptos.objects.using('spf_info').all()  # Asegúrate de obtener los conceptos
+
+    if request.method == 'POST':
+        form = ParosProduccionForm(request.POST)
+        if form.is_valid():
+            paro = form.save(commit=False)
+            paro.SYNC = False  # Marca como no sincronizado
+            paro.save(using='spf_calidad')
+            messages.success(request, 'Paro registrado exitosamente.')
+            return redirect('production:production')
+        else:
+            messages.error(request, 'Error al registrar el paro.')
+    else:
+        form = ParosProduccionForm()
 
     # Crear el contexto con todos los datos necesarios
     context = {
@@ -68,22 +92,79 @@ def production(request):
         'clientes': clientes,
         'registros_por_syncronizar': registros_por_syncronizar,
         'user_is_maintenance': user_is_maintenance,  # Incluir la variable user_is_maintenance
+        'filter_type': filter_type,  # Incluir el tipo de filtro en el contexto
+        'filter_select': filter_select,  # Incluir el valor del filtro seleccionado en el contexto
+        'conceptos': conceptos,  # Incluir los conceptos en el contexto
+        'form': form,  # Incluir el formulario en el contexto
     }
 
     # Renderiza la plantilla con el contexto
     return render(request, 'production/production.html', context)
+@login_required
+def filtrar_paros(request):
+    # Obtener los parámetros de los filtros
+    fecha_paro = request.GET.get('FechaParo')
+    hora_inicio = request.GET.get('HoraInicio')
+    hora_fin = request.GET.get('HoraFin')
+    proceso_id = request.GET.get('ID_Pro')
+    filter_select = request.GET.get('filter_select')
 
+    # Filtrar los paros según los parámetros
+    paros = ParosProduccion.objects.all()
+    if fecha_paro:
+        paros = paros.filter(FechaParo=fecha_paro)
+    if hora_inicio:
+        paros = paros.filter(HoraInicio__gte=hora_inicio)
+    if hora_fin:
+        paros = paros.filter(HoraFin__lte=hora_fin)
+    if proceso_id:
+        paros = paros.filter(ID_Proceso_id=proceso_id)
+    if filter_select:
+        if filter_select.startswith('maquinaria_'):
+            maquinaria_id = filter_select.split('_')[1]
+            paros = paros.filter(ID_Maquinaria_id=maquinaria_id)
+        elif filter_select.startswith('concepto_'):
+            concepto_id = filter_select.split('_')[1]
+            paros = paros.filter(ID_Concepto_id=concepto_id)
 
+    # Obtener los datos necesarios para los filtros
+    procesos = Procesos.objects.all()
+    maquinarias = Maquinaria.objects.all()
+    conceptos = Conceptos.objects.all()
+
+    context = {
+        'paros': paros,
+        'procesos': procesos,
+        'maquinarias': maquinarias,
+        'conceptos': conceptos,
+    }
+
+    return render(request, 'production/filtrar_paros.html', context)
 @login_required
 def registrar_paro(request):
     if request.method == 'POST':
+        print("POST data received:", request.POST)
         form = ParosProduccionForm(request.POST)
         if form.is_valid():
             paro = form.save(commit=False)
             paro.SYNC = False  # Marca como no sincronizado
+
+            # Manejar dinámicamente los campos ID_Maquinaria y ID_Concepto
+            filter_type = request.POST.get('filter_type')
+            print("Filter type:", filter_type)
+            if filter_type == 'maquinaria':
+                print("Selected Maquinaria:", request.POST.get('ID_Maquinaria'))
+                paro.ID_Concepto = None  # Enviar None si se selecciona Maquinaria
+            elif filter_type == 'concepto':
+                print("Selected Concepto:", request.POST.get('ID_Concepto'))
+                paro.ID_Maquinaria = None
+
+            print("Paro object before saving:", paro)
             paro.save(using='spf_calidad')  # Cambiado a 'spf_calidad'
             messages.success(request, 'Paro registrado exitosamente.')
             return redirect('production:production')
+        else:
+            print("Form errors:", form.errors)
     else:
         form = ParosProduccionForm()
 
@@ -94,6 +175,7 @@ def registrar_paro(request):
     maquinarias = Maquinaria.objects.using('spf_info').filter(Estado=1)
     productos = Productos.objects.using('spf_info').all()  # Filtrar productos activos
     clientes = Clientes.objects.all()  # Cargar todos los clientes (puedes aplicar un filtro si lo deseas)
+    conceptos = Conceptos.objects.using('spf_info').all()  # Asegúrate de obtener los conceptos
 
     return render(request, 'production/production.html', {
         'form': form,
@@ -101,31 +183,35 @@ def registrar_paro(request):
         'procesos': procesos,
         'maquinarias': maquinarias,
         'productos': productos,
-        'clientes': clientes, 
+        'clientes': clientes,
+        'conceptos': conceptos,  # Incluir los conceptos en el contexto
     })
-
-
 
 
 @login_required
 def modificar_paro(request, paro_id):
-    paro = get_object_or_404(ParosProduccion.objects.using('spf_calidad'), ID_Paro=paro_id)
+    paro = get_object_or_404(ParosProduccion.objects.using('spf_calidad'), pk=paro_id)
 
     if request.method == 'POST':
-        form = ParosProduccionForm(request.POST, instance=paro)
+        form = ParoMantForm(request.POST, instance=paro)
         if form.is_valid():
-            form.save()
-            paro.SYNC = False  # Marca como no sincronizado
-            paro.save(using='spf_calidad')  # Guarda el cambio en la base de datos SPF_Calidad
-            messages.success(request, 'Paro modificado exitosamente. Ahora está marcado como no sincronizado.')
-            return redirect('production:production')
+            paro = form.save(commit=False)
+            paro.save(using='spf_calidad')
+            messages.success(request, 'Paro modificado exitosamente.')
+            print("Formulario válido, redirigiendo...")
+            return redirect('production:filtrar_paros')  # Redirigir a la página de filtrado después de guardar
+        else:
+            messages.error(request, 'Error al modificar el paro. Por favor, revisa los datos ingresados.')
+            print("Formulario no válido:", form.errors)
     else:
-        form = ParosProduccionForm(instance=paro)
+        form = ParoMantForm(instance=paro)
 
-    return render(request, 'production/modificar_paro.html', {
+    context = {
         'form': form,
-        'paro': paro
-    })
+        'paro': paro,
+    }
+
+    return render(request, 'production/modificar_paro.html', context)
 
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect, render

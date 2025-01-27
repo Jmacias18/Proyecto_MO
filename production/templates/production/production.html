@@ -1,3 +1,4 @@
+<!-- filepath: /c:/proyecto_Moo/production/templates/production/production.html -->
 {% extends 'core/base.html' %}
 {% load static %}
 {% block title %}Registros de Paros de Producción{% endblock %}
@@ -21,6 +22,30 @@
             {% endfor %}
         {% endif %}
     </div>
+    <!-- Filtro de Maquinaria y Concepto -->
+    <div class="mb-4">
+        <h4 class="text-dark">Filtrar por Maquinaria o Concepto</h4>
+        <form method="get" action="{% url 'production:production' %}" class="row g-3 justify-content-center">
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label for="filter_type" class="form-label">Filtrar por</label>
+                    <select name="filter_type" class="form-control" id="filter_type">
+                        <option value="">Seleccione Filtro</option>
+                        <option value="maquinaria" {% if request.GET.filter_type == 'maquinaria' %}selected{% endif %}>Maquinaria</option>
+                        <option value="concepto" {% if request.GET.filter_type == 'concepto' %}selected{% endif %}>Concepto</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <button type="submit" class="btn btn-success text-white w-100">Filtrar</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Botón para acceder a la página de filtrado -->
+    <div class="mb-4">
+        <a href="{% url 'production:filtrar_paros' %}" class="btn btn-primary w-100">Ir a Filtrar Paros</a>
+    </div>
 
     <h2 style="font-size: 24px; color: #333;">Registro de Paros</h2>
 
@@ -30,6 +55,8 @@
         <div style="max-width: 100%;">    
             <form method="post" action="{% url 'production:registrar_paro' %}">
                 {% csrf_token %}
+                <input type="hidden" name="filter_type" value="{{ request.GET.filter_type }}">
+                <input type="hidden" name="filter_select" value="{{ request.GET.filter_select }}">
                 <div style="overflow-x: auto; margin: 0 auto; max-width: 100%;">
                     <table style="margin: 0 auto; width: 100%; border-collapse: collapse; table-layout: auto;">
                         <thead>
@@ -43,7 +70,15 @@
                                 <th style="padding: 10px; width: 10%;">Personas afectadas</th>
                                 <th style="padding: 10px; width: 10%;">M.O</th>
                                 <th style="padding: 10px; width: 10%;">Proceso</th>
-                                <th style="padding: 10px; width: 10%;">Maquinaria</th>
+                                <th style="padding: 10px; width: 10%;">
+                                    {% if request.GET.filter_type == 'maquinaria' %}
+                                        Maquinaria
+                                    {% elif request.GET.filter_type == 'concepto' %}
+                                        Concepto
+                                    {% else %}
+                                        Maquinaria/Concepto
+                                    {% endif %}
+                                </th>
                                 <th style="padding: 10px; width: 10%;">Causa del Paro</th>
                             </tr>
                         </thead>
@@ -96,12 +131,31 @@
                                     </select>
                                 </td>
                                 <td>
-                                    <select name="ID_Maquinaria" required style="width: 100%;">
-                                        <option value="">Seleccione Maquinaria</option>
-                                        {% for maquinaria in maquinarias %}
-                                            <option value="{{ maquinaria.ID_Maquinaria }}">{{ maquinaria.DescripcionMaq }}</option>
-                                        {% endfor %}
-                                    </select>
+                                    {% if request.GET.filter_type == 'maquinaria' %}
+                                        <select name="ID_Maquinaria" required style="width: 100%;">
+                                            <option value="">Seleccione Maquinaria</option>
+                                            {% for maquinaria in maquinarias %}
+                                                <option value="{{ maquinaria.ID_Maquinaria }}">{{ maquinaria.DescripcionMaq }}</option>
+                                            {% endfor %}
+                                        </select>
+                                        <input type="hidden" name="ID_Concepto" value="">
+                                    {% elif request.GET.filter_type == 'concepto' %}
+                                        <select name="ID_Concepto" required style="width: 100%;">
+                                            <option value="">Seleccione Concepto</option>
+                                            {% for concepto in conceptos %}
+                                                <option value="{{ concepto.ID_Concepto }}">{{ concepto.Desc_Concepto }}</option>
+                                            {% endfor %}
+                                        </select>
+                                        <input type="hidden" name="ID_Maquinaria" value="">
+                                    {% else %}
+                                        <select name="ID_Maquinaria" required style="width: 100%;">
+                                            <option value="">Seleccione Maquinaria</option>
+                                            {% for maquinaria in maquinarias %}
+                                                <option value="{{ maquinaria.ID_Maquinaria }}">{{ maquinaria.DescripcionMaq }}</option>
+                                            {% endfor %}
+                                        </select>
+                                        <input type="hidden" name="ID_Concepto" value="">
+                                    {% endif %}
                                 </td>
                                 <td><textarea name="Causa" required style="width: 100%; height: 100px;"></textarea></td>
                             </tr>
@@ -115,128 +169,14 @@
         </div>
     {% endif %}
 
-    <hr class="my-4">
 
-    <h3 class="h4 text-dark mt-5">Lista de Paros en el Proceso</h3>
-    <form method="get" action="{% url 'production:production' %}" class="row g-3 justify-content-center">
-        <div class="col-md-3">
-            <div class="form-group">
-                <label for="FechaParo" class="form-label">Fecha Paro</label>
-                <input type="date" name="FechaParo" class="form-control" id="FechaParo" placeholder="Fecha Paro">
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="form-group">
-                <label for="HoraInicio" class="form-label">Hora Inicio</label>
-                <input type="time" name="HoraInicio" class="form-control" id="HoraInicio" placeholder="Hora Inicio">
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="form-group">
-                <label for="HoraFin" class="form-label">Hora Fin</label>
-                <input type="time" name="HoraFin" class="form-control" id="HoraFin" placeholder="Hora Fin">
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="form-group">
-                <label for="ID_Pro" class="form-label">Proceso</label>
-                <select name="ID_Pro" class="form-control" id="ID_Pro">
-                    <option value="">Seleccione Proceso</option>
-                    {% for proceso in procesos %}
-                        <option value="{{ proceso.ID_Pro }}">{{ proceso.Nombre_Pro }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="form-group">
-                <label for="ID_Maquinaria" class="form-label">Maquinaria</label>
-                <select name="ID_Maquinaria" class="form-control" id="ID_Maquinaria">
-                    <option value="">Seleccione Maquinaria</option>
-                    {% for maquinaria in maquinarias %}
-                        <option value="{{ maquinaria.ID_Maquinaria }}">{{ maquinaria.DescripcionMaq }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-        </div>
-        <div class="col-md-12 d-flex justify-content-center">
-            <button type="submit" class="btn btn-success text-white mt-4">Filtrar</button>
-        </div>
-    </form>
-    
-    <div class="table-responsive w-100">
-        <table class="table table-bordered">
-            <thead class="bg-danger text-white">
-                <tr style="background-color: #8B0000; color: white;">
-                    <th style="padding: 10px;">Fecha Paro</th>
-                    <th style="padding: 10px;">Cliente</th>                      
-                    <th style="padding: 10px;">Orden Fabricación SAP</th>
-                    <th style="padding: 10px;">Producto</th>
-                    <th style="padding: 10px;">Hora Inicio Paro</th>
-                    <th style="padding: 10px;">Hora Fin Paro</th>
-                    <th style="padding: 10px;">Tiempo Muerto (min)</th>
-                    <th style="padding: 10px;">Personas Afectadas</th>
-                    <th style="padding: 10px;">M.O</th>
-                    <th style="padding: 10px;">Proceso</th>
-                    <th style="padding: 10px;">Maquinaria</th>
-                    <th style="padding: 10px;">Causa del Paro</th>
-                    <th style="padding: 10px;">Diagnostico</th>
-                    <th style="padding: 10px;">CausaRaiz</th>
-                    <th style="padding: 10px; text-align: center;">Acciones</th>
-                    <th style="padding: 10px; text-align: center;">Acciones Mantenimiento</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% if paros %}
-                    {% for paro in paros %}
-                        <tr>
-                            <td>{{ paro.FechaParo }}</td>
-                            <td>{{ paro.ID_Cliente.Cliente}}</td>
-                            <td>{{ paro.OrdenFabricacionSAP }}</td>
-                            <td>{{ paro.ID_Producto }}</td>
-                            <td>{{ paro.HoraInicio }}</td>
-                            <td>{{ paro.HoraFin }}</td>
-                            <td>{{ paro.TiempoMuerto }}</td>
-                            <td>{{ paro.PersonasAfectadas }}</td>
-                            <td>{{ paro.MO }}</td>
-                            <td>{{ paro.ID_Proceso.Nombre_Pro }}</td>
-                            <td>{{ paro.ID_Maquinaria.DescripcionMaq }}</td>
-                            <td>{{ paro.Causa }}</td>
-                            <td>{{ paro.Diagnostico }}</td>
-                            <td>{{ paro.CausaRaiz }}</td>
-                            <td>
-                                <div style="display: flex; flex-direction: column; align-items: center;">
-                                    {% if not user_is_maintenance %}
-                                        <!-- Botón de Modificar azul visible solo para usuarios que NO son del grupo "Mantenimiento" -->
-                                        <a href="{% url 'production:modificar_paro' paro.ID_Paro %}" class="btn btn-primary" style="background-color: #007BFF; color: white; padding: 8px 12px; margin: 2px; border-radius: 4px; text-decoration: none;">Modificar</a>
-                                
-                                        <!-- Botón de Eliminar visible solo para usuarios que NO son del grupo "Mantenimiento" -->
-                                        <form method="post" action="{% url 'production:eliminar_paro' paro.ID_Paro %}" style="display: inline;">
-                                            {% csrf_token %}
-                                            <button type="submit" class="btn btn-danger" style="background-color: #DC3545; color: white; padding: 8px 12px; margin: 2px; border-radius: 4px; border: none; cursor: pointer;" onclick="return confirm('¿Estás seguro de eliminar este paro?');">Eliminar</button>
-                                        </form>
-                                    {% endif %}
-                                </div> 
-                            </td>
-                            <td>
-                                <div style="display: flex; flex-direction: column; align-items: center;">
-                                    {% if user_is_maintenance %}
-                                        <!-- Botón de Modificar verde solo visible para usuarios del grupo "Mantenimiento" -->
-                                        <a href="{% url 'production:modificar_paro_mant' paro.ID_Paro %}" class="btn btn-success" style="background-color: #28a745; color: white; padding: 8px 12px; margin: 2px; border-radius: 4px; text-decoration: none;">Modificar</a>
-                                    {% endif %}
-                                </div>
-                            </td>
-                        </tr>
-                    {% endfor %}
-                {% else %}
-                    <tr>
-                        <td colspan="16">No hay datos registrados.</td>
-                    </tr>
-                {% endif %}
+                            
+                    
             </tbody>
         </table>
     </div>
 </div>
+
 
     <style>
         /* Ajustes responsivos */

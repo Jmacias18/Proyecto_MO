@@ -18,4 +18,5 @@ urlpatterns = [
     path('syncProc/', views.sync_procesos_view, name='sync_procesos'),  # Nueva ruta
     path('syncMaq/', views.sync_maquinaria_view, name='sync_maquinaria'),  # Nueva ruta 
     path('modificar_paro_mant/<int:paro_id>/', views.modificar_paro_mant, name='modificar_paro_mant'),
+    path('filtrar_paros/', views.filtrar_paros, name='filtrar_paros'),
 ]

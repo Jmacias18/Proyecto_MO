@@ -1,5 +1,19 @@
 from django.db import models
 
+class Conceptos(models.Model):
+    ID_Concepto = models.IntegerField(primary_key=True)
+    Desc_Concepto = models.CharField(max_length=255)
+
+    class Meta:
+        db_table = 'Conceptos'  # Asegúrate de que este sea el nombre correcto de la tabla en la base de datos
+        managed = False  # No permitir que Django gestione la tabla
+        app_label = 'production'
+        verbose_name = 'Concepto'
+        verbose_name_plural = 'Conceptos'
+
+    def __str__(self):
+        return self.Desc_Concepto
+
 class Procesos(models.Model):
     ID_Pro = models.AutoField(primary_key=True)
     Nombre_Pro = models.CharField(max_length=255)
@@ -91,13 +105,14 @@ class ParosProduccion(models.Model):
     PersonasAfectadas = models.FloatField()
     MO = models.FloatField()
     ID_Proceso = models.ForeignKey(Procesos, on_delete=models.CASCADE, db_column='ID_Proceso')
-    ID_Maquinaria = models.ForeignKey(Maquinaria, on_delete=models.CASCADE, db_column='ID_Maquinaria')
+    ID_Maquinaria = models.ForeignKey(Maquinaria, on_delete=models.CASCADE, db_column='ID_Maquinaria', null=True, blank=True)
+    ID_Concepto = models.ForeignKey(Conceptos, on_delete=models.CASCADE, db_column='ID_Concepto', null=True, blank=True)
     Causa = models.CharField(max_length=999)
     Diagnostico = models.CharField(max_length=300)
     CausaRaiz = models.CharField(max_length=300)
     Estado = models.BooleanField(default=True)
     SYNC = models.BooleanField(default=False)
-
+    AccionesMantenimiento = models.CharField(max_length=300,db_column='AccionesMant')
 
     class Meta:
         db_table = 'ParosProduccion'
@@ -107,4 +122,4 @@ class ParosProduccion(models.Model):
         verbose_name_plural = 'ParosProduccion'
 
     def __str__(self):
-        return f"Paro en {self.ID_Proceso.Nombre_Proc} - {self.FechaParo}"
+        return f"Paro en {self.ID_Proceso.Nombre_Pro} - {self.FechaParo}"

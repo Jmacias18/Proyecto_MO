@@ -9,18 +9,18 @@ from django.views.decorators.csrf import csrf_exempt
 @method_decorator(login_required, name='dispatch')
 class HomePageView(TemplateView):
     template_name = "core/home.html"
+    
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['title'] = "Sana Premium Foods"
+        context['user_groups'] = self.request.user.groups.values_list('name', flat=True)
         return context
 
     def get(self, request, *args, **kwargs):
-        return render(request, self.template_name,{'title': 'Captura de Horas de Mano de Obra'})
+        return render(request, self.template_name, self.get_context_data())
 
 class SamplePageView(TemplateView):
     template_name = "core/sample.html"
-
-
 
 @csrf_exempt
 def sync_databases_view(request):
@@ -32,4 +32,3 @@ def sync_databases_view(request):
         except subprocess.CalledProcessError as e:
             return JsonResponse({'status': 'error', 'message': str(e)})
     return JsonResponse({'status': 'error', 'message': 'Método no permitido.'})
-

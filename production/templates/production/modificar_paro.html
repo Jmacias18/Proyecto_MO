@@ -1,10 +1,7 @@
 <!-- filepath: /c:/proyecto_Moo/production/templates/production/modificar_paro.html -->
 {% extends 'core/base.html' %}
-
-{% block title %}
-Modificar Paro
-{% endblock %}
-
+{% load static %}
+{% block title %}Modificar Paro{% endblock %}
 {% block content %}
 <div class="container mt-5">
     <div class="row justify-content-center">
@@ -72,19 +69,40 @@ Modificar Paro
                                         <td>{{ form.ID_Proceso.errors }}{{ form.ID_Proceso }}</td>
                                     </tr>
                                     <tr>
-                                        <th>Maquinaria</th>
-                                        <td>{{ form.ID_Maquinaria.errors }}{{ form.ID_Maquinaria }}</td>
+                                        <th>Maquinaria/Concepto</th>
+                                        <td>
+                                            {% if form.instance.ID_Maquinaria %}
+                                                {{ form.ID_Maquinaria.errors }}{{ form.ID_Maquinaria }}
+                                            {% elif form.instance.ID_Concepto %}
+                                                {{ form.ID_Concepto.errors }}{{ form.ID_Concepto }}
+                                            {% else %}
+                                                <!-- Opcional: Puedes mostrar un mensaje si no hay Maquinaria ni Concepto -->
+                                                <span>No hay Maquinaria ni Concepto seleccionado</span>
+                                            {% endif %}
+                                        </td>
                                     </tr>
                                     <tr>
-                                        <th>Causa del Paro</th>
+                                        <th>Causa</th>
                                         <td>{{ form.Causa.errors }}{{ form.Causa }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Diagnóstico</th>
+                                        <td>{{ form.Diagnostico.errors }}{{ form.Diagnostico }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Causa Raíz</th>
+                                        <td>{{ form.CausaRaiz.errors }}{{ form.CausaRaiz }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Acciones Mantenimiento</th>
+                                        <td>{{ form.AccionesMantenimiento.errors }}{{ form.AccionesMantenimiento }}</td>
                                     </tr>
                                 </tbody>
                             </table>
                         </div>
                         <div class="text-center">
                             <button type="submit" class="btn btn-success">Guardar Cambios</button>
-                            <a href="{% url 'production:production' %}" class="btn btn-secondary">Cancelar</a>
+                            <a href="{% url 'production:filtrar_paros' %}" class="btn btn-secondary">Cancelar</a>
                         </div>
                     </form>
                 </div>

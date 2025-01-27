@@ -32,48 +32,48 @@
             <div class="collapse navbar-collapse" id="navbarResponsive">
                 <ul class="navbar-nav me-auto ms-3">
                     {% if request.user.is_authenticated %}
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            Producción
-                        </a>
-                        <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
-                            <li><a class="dropdown-item" href="{% url 'production:production' %}">Registros de Paros de Producción</a></li>
-                            <li><a class="dropdown-item" href="{% url 'horas_procesos:gestion_horas_procesos' %}">Horas Procesos</a></li>
-                            {% if request.user.is_staff %}
-                            <li><a class="dropdown-item" href="{% url 'production:registro' %}">Catalogo De Procesos</a></li>
-                            {% endif %}
-
-                            
-                        </ul>
-                    </li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            Calidad
-                        </a>
-                        <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
-                            <li><a class="dropdown-item" href="{% url 'autoclave:temperature_list' %}">Temperaturas Autoclave</a></li>
-                            <li><a class="dropdown-item" href="{% url 'esterilizadores:tempester' %}">Temperaturas Esterilizador</a></li> 
-                            <li><a class="dropdown-item" href="{% url 'temperature:temperature' %}">Temperaturas Generales</a></li>
-                        </ul>
-                    </li>
-                    {% comment %} <li class="nav-item"><a class="nav-link" href="#">Calidad</a></li> {% endcomment %}
+                        {% if 'Produccion' in user_groups or 'IT' in user_groups %}
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    Producción
+                                </a>
+                                <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
+                                    <li><a class="dropdown-item" href="{% url 'production:production' %}">Registros de Paros de Producción</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'horas_procesos:gestion_horas_procesos' %}">Horas Procesos</a></li>
+                                    {% if request.user.is_staff %}
+                                    <li><a class="dropdown-item" href="{% url 'production:registro' %}">Catalogo De Procesos</a></li>
+                                    {% endif %}
+                                </ul>
+                            </li>
+                        {% endif %}
+                        {% if 'Calidad' in user_groups or 'IT' in user_groups %}
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    Calidad
+                                </a>
+                                <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
+                                    <li><a class="dropdown-item" href="{% url 'autoclave:temperature_list' %}">Temperaturas Autoclave</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'esterilizadores:tempester' %}">Temperaturas Esterilizador</a></li> 
+                                    <li><a class="dropdown-item" href="{% url 'temperature:temperature' %}">Temperaturas Generales</a></li>
+                                </ul>
+                            </li>
+                        {% endif %}
+                    {% endif %}
                     {% if request.user.is_superuser %}
                     <li class="nav-item"><a class="nav-link" href="{% url 'usuarios:user_list' %}">Usuarios</a></li>
                     {% endif %}
                     {% if request.user.is_staff %}
                     <li class="nav-item"><a class="nav-link" href="{% url 'procesos:procesos_list' %}">Procesos</a></li>
                     {% endif %}
-                    {% endif %}
                 </ul>
                 <ul class="navbar-nav ms-auto" id="navbar-right"> 
                     {% if not request.user.is_authenticated %}
                     <li class="nav-item"><a class="nav-link" href="{% url 'login' %}">Acceder</a></li>
                     {% else %}
-                    
                     <li class="nav-item">
                         <form id="logout-form" method="post" action="{% url 'logout' %}">
-                          {% csrf_token %}
-                          <button type="submit" class="nav-link btn btn-link" style="padding: 0;">{% trans "Log out" %}</button>
+                            {% csrf_token %}
+                            <button type="submit" class="nav-link btn btn-link" style="padding: 0;">{% trans "Log out" %}</button>
                         </form>
                     </li>
                     {% endif %}
