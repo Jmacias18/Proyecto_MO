@@ -1,24 +1,36 @@
 document.addEventListener('DOMContentLoaded', () => {
     const now = new Date();
-    document.getElementById('fecha').textContent = now.toLocaleDateString();
-    document.getElementById('tabla_empleados').style.display = 'none';
-
+    const fechaElement = document.getElementById('fecha');
+    const tablaEmpleados = document.getElementById('tabla_empleados');
     const guardarBtn = document.getElementById('guardar-btn');
     const procesoSelects = document.querySelectorAll('select[name^="proceso"]');
+    const form = document.querySelector('form');
+    const empleadosTbody = document.getElementById('empleados_tbody');
+    const deptoSelect = document.getElementById('depto_select');
+    const tipoInasistenciaSelects = document.querySelectorAll('select[name^="tipo_inasistencia_"]');
+    const inicioProcesoInputs = document.querySelectorAll('input[name^="inicio_proceso"]');
 
-    let algunoSeleccionado = false;
-    guardarBtn.disabled = !algunoSeleccionado
-    
+    fechaElement.textContent = now.toLocaleDateString();
+    tablaEmpleados.style.display = 'none';
+
     // Función para verificar si algún proceso está seleccionado
     function verificarSeleccionProcesos() {
-        let algunoSeleccionado = false;
-        procesoSelects.forEach(select => {
-            if (select.value) {
-                algunoSeleccionado = true;
-            }
+        // Array para registrar los recorridos
+        const recorridos = [];
+
+        // Usar Array.prototype.some para verificar si alguno de los selectores tiene un valor seleccionado
+        const algunoSeleccionado = Array.from(procesoSelects).some(select => {
+            const seleccionado = !!select.value;
+            recorridos.push(`Verificando selector ${select.name}: ${seleccionado ? 'Seleccionado' : 'No seleccionado'}`);
+            return seleccionado;
         });
-       
+
+        // Habilitar o deshabilitar el botón guardar basado en el resultado anterior
         guardarBtn.disabled = !algunoSeleccionado;
+        recorridos.push(`Botón guardar ${guardarBtn.disabled ? 'deshabilitado' : 'habilitado'}`);
+
+        // Imprimir el array de recorridos en la consola
+        console.log('Recorridos:verificarSeleccionProcesos', recorridos);
     }
 
     // Agregar evento change a todos los selectores de procesos
@@ -27,9 +39,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Verificar la selección de procesos al cargar la página
-   // verificarSeleccionProcesos(); comentada 16 diciembre
+    verificarSeleccionProcesos();
 
-    document.getElementById('empleados_tbody').addEventListener('change', (event) => {
+    // Manejar cambios en la tabla de empleados
+    empleadosTbody.addEventListener('change', (event) => {
         const target = event.target;
         if (target.classList.contains('copy-checkbox')) {
             handleCheckboxChange(event);
@@ -42,352 +55,379 @@ document.addEventListener('DOMContentLoaded', () => {
             const codigoEmp = target.name.split('_')[2];
             if (target.value < 0) target.value = 0;
             calcularTotalHoras(codigoEmp, 0);
+            console.log('Llamando a calcularTotalHoras desde funcion1');
+            calcularTotalHoras('codigoEmp1', 1);
         }
     });
 
-    document.querySelectorAll('[name^="horas_extras_"]').forEach(input => {
-        input.addEventListener('input', () => {
-            const codigoEmp = input.name.split('_')[2];
-            if (input.value < 0) input.value = 0; // No permitir valores negativos
-            calcularTotalHoras(codigoEmp, 0); // Recalcular el total
-        });
-    });
-
-    document.getElementById('depto_select').addEventListener('change', () => {
+    // Manejar cambio de departamento
+    deptoSelect.addEventListener('change', () => {
         restablecerFormulario();
         filtrarEmpleados();
-        //filtrarDescanso();
-    });
-
-    const form = document.querySelector('form');
-    form.addEventListener('submit', (event) => {
-        if (!validarHorasRegistradas() || !validarHorasInicioFinIguales()) {
-            event.preventDefault(); // Evitar el envío del formulario si la validación falla
-        } else {
-            event.preventDefault(); // Evitar el envío del formulario por defecto
-            const formData = new FormData(form);
-    
-            let data = [];	
-            // Ajustar las horas de inicio y fin a 00:00:00 para los empleados con inasistencia
-            document.querySelectorAll('select[name^="tipo_inasistencia_"]').forEach(select => {
-                const codigoEmp = select.name.split('_')[1];
-                const tipoInasistencia = select.value;
-                const inasistencia = ['F', 'D', 'P', 'V', 'INC', 'S', 'B', 'R'].includes(tipoInasistencia);
-                
-                data.push({ codigoEmp, inasistencia });
-
-                // if (inasistencia) {
-                //     for (let i = 1; i <= 15; i++) {
-                //         const inicioField = document.querySelector(`[name="inicio_proceso${i}_${codigoEmp}"]`);
-                //         const finField = document.querySelector(`[name="fin_proceso${i}_${codigoEmp}"]`);
-                //         if (inicioField && finField) {
-                //             inicioField.value = '00:00:00';
-                //             finField.value = '00:00:00';
-                //         }
-                //     }
-                // }
-            });
-    
-            const inasistencias = data.filter(empl => empl.inasistencia === true);
-
-            inasistencias.forEach(empl => {
-                for (let i = 1; i <= 15; i++) {
-                    const inicioField = document.querySelector(`[name="inicio_proceso${i}_${empl.codigoEmp}"]`);
-                    const finField = document.querySelector(`[name="fin_proceso${i}_${empl.codigoEmp}"]`);
-                    if (inicioField && finField) {
-                        inicioField.value = '00:00:00';
-                        finField.value = '00:00:00';
-                    }
-                }
-            });
-
-            fetch(form.action, {  // Use form action URL
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                const responseModal = new bootstrap.Modal(document.getElementById('responseModal'));
-                const responseModalBody = document.getElementById('responseModalBody');
-                if (data.success) {
-                    responseModalBody.textContent = 'Datos enviados correctamente.';
-                } else {
-                    responseModalBody.textContent = 'Error al enviar los datos: ' + data.message;
-                }
-                responseModal.show();
-            })
-            .catch(error => {
-                const responseModal = new bootstrap.Modal(document.getElementById('responseModal'));
-                const responseModalBody = document.getElementById('responseModalBody');
-                responseModalBody.textContent = 'Ocurrió un error al enviar los datos: ' + error.message;
-                responseModal.show();
-            });
-        }
-    });
-
-    form.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter') {
-            event.preventDefault(); // Evitar el envío del formulario al presionar Enter
-        }
     });
 
     // Agregar evento change a todos los selectores de inasistencia
-    document.querySelectorAll('select[name^="tipo_inasistencia_"]').forEach(select => {
+    tipoInasistenciaSelects.forEach(select => {
         select.addEventListener('change', (event) => {
             const codigoEmp = event.target.name.split('_')[1];
             toggleInputs(codigoEmp);
         });
     });
 
-    function filtrarDescanso() {
-        // Seleccionar automáticamente "DESCANSO" si es día de descanso
-        let empleados = document.querySelectorAll('tr[data-codigo_emp]');
-        const deptoSeleccionado = document.getElementById('depto_select').value;
-        empleados = Array.from(empleados);
-        empleados = empleados.filter(empleado => empleado.getAttribute('data-depto') === deptoSeleccionado);
-      
-        empleados.forEach(empleado => {
-            const codigoEmp = empleado.getAttribute('data-codigo_emp');
-            const esDescanso = empleado.getAttribute('data-es_descanso') === 'true';
-            if (esDescanso) {
-                const tipoInasistenciaElement = document.querySelector(`select[name="tipo_inasistencia_${codigoEmp}"]`);
-                if (tipoInasistenciaElement) {
-                    tipoInasistenciaElement.value = 'D';
-                    toggleInputs(codigoEmp);
-                }
-            }
-        });
-    }
-    
     // Agregar evento para marcar el campo como modificado por el usuario
-    function toggleInputs(codigoEmp) {
-        const tipoInasistenciaElement = document.querySelector(`select[name="tipo_inasistencia_${codigoEmp}"]`);
-        if (!tipoInasistenciaElement) {
-            console.error(`Elemento select[name="tipo_inasistencia_${codigoEmp}"] no encontrado`);
-            return;
-        }
-    
-        const tipoInasistencia = tipoInasistenciaElement.value;
-        const inasistencia = ['F', 'D', 'P', 'V', 'INC', 'S', 'B', 'R'].includes(tipoInasistencia);
-        const noDesbloquear = ['RT', 'NI', 'ASI'].includes(tipoInasistencia);
-        const inputs = document.querySelectorAll(`[name^="inicio_proceso"][name$="_${codigoEmp}"], [name^="fin_proceso"][name$="_${codigoEmp}"], [name="horas_extras_${codigoEmp}"]`);
-    
-        inputs.forEach(input => {
+    inicioProcesoInputs.forEach(input => {
+        input.addEventListener('input', function() {
+            this.dataset.userModified = true;
+        });
+    });
+});
+
+function verificarSeleccionProcesos() {
+    // Array para registrar los recorridos
+    const recorridos = [];
+
+    // Usar Array.prototype.some para verificar si alguno de los selectores tiene un valor seleccionado
+    const algunoSeleccionado = Array.from(procesoSelects).some(select => {
+        const seleccionado = !!select.value;
+        recorridos.push(`Verificando selector ${select.name}: ${seleccionado ? 'Seleccionado' : 'No seleccionado'}`);
+        return seleccionado;
+    });
+
+    // Habilitar o deshabilitar el botón guardar basado en el resultado anterior
+    guardarBtn.disabled = !algunoSeleccionado;
+    recorridos.push(`Botón guardar ${guardarBtn.disabled ? 'deshabilitado' : 'habilitado'}`);
+
+    // Imprimir el array de recorridos en la consola
+    console.log('Recorridos:verificarSeleccionProcesos', recorridos);
+}
+
+function toggleInputs(codigoEmp) {
+    const tipoInasistenciaElement = document.querySelector(`select[name="tipo_inasistencia_${codigoEmp}"]`);
+    if (!tipoInasistenciaElement) {
+        console.error(`Elemento select[name="tipo_inasistencia_${codigoEmp}"] no encontrado`);
+        return;
+    }
+
+    const tipoInasistencia = tipoInasistenciaElement.value;
+    const inasistencia = ['F', 'D', 'P', 'V', 'INC', 'S', 'B', 'R'].includes(tipoInasistencia);
+    const desbloquear = ['RT', 'NI', 'ASI'].includes(tipoInasistencia);
+
+    const inputs = document.querySelectorAll(`[name^="inicio_proceso"][name$="_${codigoEmp}"], [name^="fin_proceso"][name$="_${codigoEmp}"], [name="horas_extras_${codigoEmp}"]`);
+    const totalElement = document.querySelector(`[name="total_${codigoEmp}"]`);
+
+    // Array para registrar los recorridos
+    const recorridos = [];
+
+    inputs.forEach(input => {
+        const procesoNum = input.name.match(/\d+/)[0];
+        const procesoSelect = document.querySelector(`[name="proceso${procesoNum}_header"]`);
+        if (procesoSelect && procesoSelect.value) {
+            recorridos.push(`Procesando input ${input.name} para el empleado ${codigoEmp}`);
             if (inasistencia) {
                 input.value = '--:--';
                 input.disabled = true;
-            } else if (!noDesbloquear) {
-                input.disabled = false; // Habilitar los campos si no hay inasistencia y no es RT o NI
-            }
-        });
-    
-        if (inasistencia) {
-            const totalElement = document.querySelector(`[name="total_${codigoEmp}"]`);
-            if (totalElement) {
-                totalElement.value = '0.00';
-            }
-    
-            // Restablecer los totales de horas por proceso
-            for (let i = 1; i <= 15; i++) {
-                const totalProcesoField = document.querySelector(`[name="total_proceso${i}_${codigoEmp}"]`);
-                if (totalProcesoField) {
-                    totalProcesoField.value = '0.00';
-                }
+            } else if (desbloquear) {
+                input.disabled = false;
             }
         }
-    
-        sumarHorasPorProceso();
+    });
+
+    if (inasistencia && totalElement) {
+        totalElement.value = '0.00';
+
+        // Restablecer los totales de horas por proceso
+        for (let i = 1; i <= 10; i++) {
+            const totalProcesoField = document.querySelector(`[name="total_proceso${i}_${codigoEmp}"]`);
+            const procesoSelect = document.querySelector(`[name="proceso${i}_header"]`);
+            if (totalProcesoField && procesoSelect && procesoSelect.value) {
+                totalProcesoField.value = '0.00';
+                recorridos.push(`Restableciendo total para proceso ${i} del empleado ${codigoEmp}`);
+            }
+        }
     }
+
+    // Habilitar o deshabilitar los checkboxes de copiar y borrar
+    const copyCheckboxes = document.querySelectorAll(`.copy-checkbox[data-emp="${codigoEmp}"]`);
+    const deleteCheckboxes = document.querySelectorAll(`.delete-checkbox[data-emp="${codigoEmp}"]`);
+    copyCheckboxes.forEach(checkbox => {
+        const procesoNum = checkbox.dataset.proceso;
+        const procesoSelect = document.querySelector(`[name="proceso${procesoNum}_header"]`);
+        if (procesoSelect && procesoSelect.value) {
+            checkbox.disabled = !desbloquear;
+            recorridos.push(`Procesando checkbox de copiar para el empleado ${codigoEmp}`);
+        }
+    });
+    deleteCheckboxes.forEach(checkbox => {
+        const procesoNum = checkbox.dataset.proceso;
+        const procesoSelect = document.querySelector(`[name="proceso${procesoNum}_header"]`);
+        if (procesoSelect && procesoSelect.value) {
+            checkbox.disabled = !desbloquear;
+            recorridos.push(`Procesando checkbox de borrar para el empleado ${codigoEmp}`);
+        }
+    });
+
+    sumarHorasPorProceso();
+
+    // Imprimir el array de recorridos en la consola
+    console.log('Recorridos:', recorridos);
+}//yaaa mejorado el DOM
+
+/* function filtrarDescanso() {
+    // Seleccionar automáticamente "DESCANSO" si es día de descanso
+    let empleados = document.querySelectorAll('tr[data-codigo_emp]');
+    const deptoSeleccionado = document.getElementById('depto_select').value;
+    empleados = Array.from(empleados);
+    empleados = empleados.filter(empleado => empleado.getAttribute('data-depto') === deptoSeleccionado);
+  
+    empleados.forEach(empleado => {
+        const codigoEmp = empleado.getAttribute('data-codigo_emp');
+        const esDescanso = empleado.getAttribute('data-es_descanso') === 'true';
+        if (esDescanso) {
+            const tipoInasistenciaElement = document.querySelector(`select[name="tipo_inasistencia_${codigoEmp}"]`);
+            if (tipoInasistenciaElement) {
+                tipoInasistenciaElement.value = 'D';
+                toggleInputs(codigoEmp);
+            }
+        }
+    });
+} */
+
+    /* function prepararDatosParaEnvio() {
+        const datos = {
+            departamento: document.getElementById('depto_select').value,
+            empleados: []
+        };
+        const filasEmpleados = document.querySelectorAll('#empleados_tbody tr');
     
-   
-});
-
-
-
-function prepararDatosParaEnvio() {
-    const datos = {
-        departamento: document.getElementById('depto_select').value,
-        empleados: []
-    };
-    const filasEmpleados = document.querySelectorAll('#empleados_tbody tr');
-
-    filasEmpleados.forEach(fila => {
-        if (fila.style.display !== 'none') { // Solo procesar empleados visibles
-            const codigoEmp = fila.dataset.codigo_emp;
-            const procesos = [];
-
-            for (let i = 1; i <= 15; i++) {
-                const procesoSelect = document.querySelector(`[name="proceso${i}_header"]`);
-                const inicio = document.querySelector(`[name="inicio_proceso${i}_${codigoEmp}"]`);
-                const fin = document.querySelector(`[name="fin_proceso${i}_${codigoEmp}"]`);
-                const total = document.querySelector(`[name="total_proceso${i}_${codigoEmp}"]`);
-
-                if (procesoSelect && procesoSelect.value && !inicio.disabled && !fin.disabled) {
-                    if (inicio.value && fin.value) {
-                        procesos.push({
-                            procesoId: procesoSelect.value,
-                            inicio: inicio.value,
-                            fin: fin.value,
-                            total: total.value
-                        });
+        // Array para registrar los recorridos
+        const recorridos = [];
+    
+        filasEmpleados.forEach(fila => {
+            if (fila.style.display !== 'none') { // Solo procesar empleados visibles
+                const codigoEmp = fila.dataset.codigo_emp;
+                const procesos = [];
+    
+                for (let i = 1; i <= 15; i++) {
+                    const procesoSelect = document.querySelector(`[name="proceso${i}_header"]`);
+                    const inicio = document.querySelector(`[name="inicio_proceso${i}_${codigoEmp}"]`);
+                    const fin = document.querySelector(`[name="fin_proceso${i}_${codigoEmp}"]`);
+                    const total = document.querySelector(`[name="total_proceso${i}_${codigoEmp}"]`);
+    
+                    if (procesoSelect && procesoSelect.value && !inicio.disabled && !fin.disabled) {
+                        if (inicio.value && fin.value) {
+                            procesos.push({
+                                procesoId: procesoSelect.value,
+                                inicio: inicio.value,
+                                fin: fin.value,
+                                total: total.value
+                            });
+                            recorridos.push(`Procesando proceso ${i} para el empleado ${codigoEmp}`);
+                        }
                     }
                 }
-            }
-
-            const horasExtras = document.querySelector(`[name="horas_extras_${codigoEmp}"]`).value || 0;
-            const totalHoras = document.querySelector(`[name="total_${codigoEmp}"]`).value || 0;
-
-            if (procesos.length > 0 || horasExtras > 0) {
+    
+                const horasExtras = document.querySelector(`[name="horas_extras_${codigoEmp}"]`).value || 0;
+                const totalHoras = document.querySelector(`[name="total_${codigoEmp}"]`).value || 0;
+                const tipoInasistencia = document.querySelector(`select[name="tipo_inasistencia_${codigoEmp}"]`).value;
+    
                 datos.empleados.push({
                     codigoEmp: codigoEmp,
                     procesos: procesos,
                     horasExtras: horasExtras,
-                    totalHoras: totalHoras
+                    totalHoras: totalHoras,
+                    tipoInasistencia: tipoInasistencia
+                });
+                recorridos.push(`Agregando datos del empleado ${codigoEmp}`);
+            }
+        });
+    
+        // Enviar datos al servidor
+        fetch('/horas_procesos/gestion_horas_procesos/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify(datos)
+        })
+        .then(response => {
+            console.log("Estado de la respuesta:", response.status);  // Verificar el estado de la respuesta
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log("Respuesta del servidor:", data);  // Verificar la respuesta del servidor
+            if (data.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Éxito',
+                    text: 'Se envió correctamente.',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+    
+                // Recargar la página después de 2 segundos
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000);
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: `Error al enviar el formulario: ${data.error}`
                 });
             }
-        }
-    });
-
-    // Enviar datos al servidor
-    fetch('/horas_procesos/gestion_horas_procesos/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-        },
-        body: JSON.stringify(datos)
-    })
-    .then(response => {
-        console.log("Estado de la respuesta:", response.status);  // Verificar el estado de la respuesta
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
-        }
-        return response.json();
-    })
-    .then(data => {
-        console.log("Respuesta del servidor:", data);  // Verificar la respuesta del servidor
-        if (data.success) {
-            Swal.fire({
-                icon: 'success',
-                title: 'Éxito',
-                text: 'Se envió correctamente.',
-                timer: 2000,
-                showConfirmButton: false
-            });
-
-            // Recargar la página después de 2 segundos
-            setTimeout(() => {
-                window.location.reload();
-            }, 2000);
-        } else {
+        })
+        .catch(error => {
             Swal.fire({
                 icon: 'error',
                 title: 'Error',
-                text: `Error al enviar el formulario: ${data.error}`
+                text: `Error al enviar el formulario: ${error}`
             });
-        }
-    })
-    .catch(error => {
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: `Error al enviar el formulario: ${error}`
         });
-    });
-}
-document.querySelectorAll('[name^="horas_extras_"]').forEach(input => {
-    input.addEventListener('input', () => {
-        const codigoEmp = input.name.split('_')[2];
-        if (input.value < 0) input.value = 0; // No permitir valores negativos
-        calcularTotalHoras(codigoEmp, 0); // Recalcular el total
-    });
-});
+    
+        // Imprimir el array de recorridos en la consola
+        console.log('Recorridos:prepararDatosParaEnvio', recorridos);
+    }//yaaa */
 
 
+
+
+// Variables globales para el DOM
+const alerta = document.getElementById('alerta');
+const filasEmpleados = document.querySelectorAll('#empleados_tbody tr');
+const deptoSelect = document.getElementById('depto_select');
+const totalEmpleadosElement = document.getElementById('total_empleados');
+const tablaEmpleados = document.getElementById('tabla_empleados');
 
 function showAlert(message, type) {
-    const alerta = document.getElementById('alerta');
     alerta.querySelector('.alerta-mensaje').innerHTML = message.replace(/\n/g, '<br>'); // Reemplazar saltos de línea con <br>
     alerta.className = `alerta-centrada alert alert-${type}`;
     alerta.style.display = 'block';
 }
+
 function cerrarAlerta() {
-    const alerta = document.getElementById('alerta');
     alerta.style.display = 'none';
 }
+
 function validarHorasInicioFinIguales() {
-    const filasEmpleados = document.querySelectorAll('#empleados_tbody tr');
     let valid = true;
-    let mensajeAlerta = '';
+    let mensajesAlerta = [];
+
+    // Array para registrar los recorridos
+    const recorridos = [];
 
     filasEmpleados.forEach(fila => {
         if (fila.style.display !== 'none') { // Solo validar empleados visibles
             const codigoEmp = fila.dataset.codigo_emp;
+            const tipoInasistenciaElement = document.querySelector(`select[name="tipo_inasistencia_${codigoEmp}"]`);
+            const tipoInasistencia = tipoInasistenciaElement ? tipoInasistenciaElement.value : '';
 
-            for (let i = 1; i <= 15; i++) {
-                const inicio = document.querySelector(`[name="inicio_proceso${i}_${codigoEmp}"]`).value;
-                const fin = document.querySelector(`[name="fin_proceso${i}_${codigoEmp}"]`).value;
+            // Verificar si el tipo de inasistencia es ASI, RT o NI
+            if (['ASI', 'RT', 'NI'].includes(tipoInasistencia)) {
+                let tieneProcesoSeleccionado = false;
 
-                if (inicio && fin && inicio === fin) {
-                    mensajeAlerta += `El empleado con código ${codigoEmp} tiene horas de inicio y fin iguales en el proceso ${i}.\n`;
-                    valid = false;
+                // Verificar si la fila tiene al menos un proceso seleccionado
+                for (let i = 1; i <= 10; i++) {
+                    const procesoSelect = document.querySelector(`[name="proceso${i}_header"]`);
+                    if (procesoSelect && procesoSelect.value) {
+                        tieneProcesoSeleccionado = true;
+                        break;
+                    }
+                }
+
+                if (tieneProcesoSeleccionado) {
+                    for (let i = 1; i <= 10; i++) {
+                        const procesoSelect = document.querySelector(`[name="proceso${i}_header"]`);
+                        if (procesoSelect && procesoSelect.value) {
+                            const inicio = document.querySelector(`[name="inicio_proceso${i}_${codigoEmp}"]`);
+                            const fin = document.querySelector(`[name="fin_proceso${i}_${codigoEmp}"]`);
+
+                            recorridos.push(`Validando horas de inicio y fin para el proceso ${i} del empleado ${codigoEmp}`);
+
+                            if (inicio && fin && inicio.value === fin.value && inicio.value) {
+                                mensajesAlerta.push(`El empleado con código ${codigoEmp} tiene horas de inicio y fin iguales en el proceso ${i}.`);
+                                valid = false;
+                            }
+                        }
+                    }
                 }
             }
         }
     });
 
     if (!valid) {
-        showAlert(mensajeAlerta, 'danger');
+        showAlert(mensajesAlerta.join('\n'), 'danger');
     }
+
+    // Imprimir el array de recorridos en la consola
+    console.log('Recorridos:validarHorasInicioFinIguales', recorridos);
 
     return valid;
 }
+
 function restablecerFormulario() {
-    const filasEmpleados = document.querySelectorAll('#empleados_tbody tr');
+    // Array para registrar los recorridos
+    const recorridos = [];
 
     filasEmpleados.forEach(fila => {
-        // Limpiar los campos de horas, procesos y horas extras
-        const inputs = fila.querySelectorAll('input[type="time"], input[type="number"], input[type="text"]');
-        inputs.forEach(input => {
-            if (!input.name.startsWith('horas_extras_')) {
-                input.value = ''; // Limpiar el valor de los campos de tiempo y número
-                input.disabled = true; // Bloquear los inputs por defecto
-            } else {
-                input.value = ''; // Limpiar el valor del campo de horas extras
-                input.disabled = false; // Asegurarse de que el campo de horas extras no esté bloqueado
+        let tieneDatos = false;
+
+        // Verificar si hay datos en los campos de horas y procesos
+        fila.querySelectorAll('input[type="time"], input[type="number"], input[type="text"]').forEach(input => {
+            if (input.value) {
+                tieneDatos = true;
             }
         });
 
-        // Restablecer los checkboxes
-        const checkboxes = fila.querySelectorAll('input[type="checkbox"]');
-        checkboxes.forEach(checkbox => {
-            checkbox.checked = false; // Desmarcar todos los checkboxes
-        });
+        if (tieneDatos) {
+            // Limpiar y bloquear por defecto los campos de horas y procesos
+            fila.querySelectorAll('input[type="time"], input[type="number"], input[type="text"]').forEach(input => {
+                input.value = ''; // Limpiar el valor de los campos
+                input.disabled = !input.name.startsWith('horas_extras_'); // Bloquear todos excepto horas extras
+            });
+            recorridos.push(`Limpiando y bloqueando campos para el empleado ${fila.dataset.codigo_emp}`);
 
-        // Limpiar los campos de selección de procesos
-        const selects = fila.querySelectorAll('select[name^="proceso"]');
-        selects.forEach(select => {
-            select.selectedIndex = 0; // Restablecer el valor del selector al primer elemento
-        });
+            // Restablecer los checkboxes
+            fila.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+                checkbox.checked = false; // Desmarcar todos los checkboxes
+            });
+            recorridos.push(`Restableciendo checkboxes para el empleado ${fila.dataset.codigo_emp}`);
+
+            // Limpiar los campos de selección de procesos
+            fila.querySelectorAll('select[name^="proceso"]').forEach(select => {
+                select.selectedIndex = 0; // Restablecer el valor del selector al primer elemento
+            });
+            recorridos.push(`Restableciendo selectores para el empleado ${fila.dataset.codigo_emp}`);
+        }
     });
 
     // Restablecer los totales de horas por proceso
-    for (let i = 1; i <= 15; i++) {
+    Array.from({ length: 10 }, (_, i) => i + 1).forEach(i => {
         const totalProcesoField = document.querySelector(`#total_proceso${i}`);
         if (totalProcesoField) {
             totalProcesoField.textContent = '0.00'; // Restablecer los totales de horas a 0
         }
-    }
+    });
+    recorridos.push('Restableciendo totales de horas para todos los procesos');
+
+    // Imprimir el array de recorridos en la consola
+    console.log('Recorridos:restablecerFormulario', recorridos);
 }
+
 function filtrarEmpleados() {
-    const deptoSeleccionado = document.getElementById('depto_select').value;
-    const filasEmpleados = document.querySelectorAll('#empleados_tbody tr');
+    const deptoSeleccionado = deptoSelect.value;
     let contador = 1;
     let totalEmpleados = 0;
 
+    // Array para registrar los recorridos
+    const recorridos = [];
+
     if (deptoSeleccionado === "") {
-        document.getElementById('tabla_empleados').style.display = 'none';
-        document.getElementById('total_empleados').style.display = 'none';
+        tablaEmpleados.style.display = 'none';
+        totalEmpleadosElement.style.display = 'none';
         return;
     }
 
@@ -397,16 +437,21 @@ function filtrarEmpleados() {
             fila.style.display = "";
             fila.querySelector('.employee-number').textContent = contador++;
             totalEmpleados++;
+            recorridos.push(`Mostrando fila del empleado ${fila.dataset.codigo_emp} del departamento ${deptoEmpleado}`);
         } else {
             fila.style.display = "none";
         }
     });
 
-    document.getElementById('total_empleados').textContent = `Total de Empleados: ${totalEmpleados}`;
-    document.getElementById('total_empleados').style.display = 'block';
-    document.getElementById('tabla_empleados').style.display = totalEmpleados > 0 ? 'block' : 'none';
+    totalEmpleadosElement.textContent = `Total de Empleados: ${totalEmpleados}`;
+    totalEmpleadosElement.style.display = 'block';
+    tablaEmpleados.style.display = totalEmpleados > 0 ? 'block' : 'none';
+
+    // Imprimir el array de recorridos en la consola
+    console.log('Recorridos:filtrarEmpleados', recorridos);
 }
-function validarHorasInicioFinIguales() {
+
+/* function validarHorasInicioFinIguales() {
     const filasEmpleados = document.querySelectorAll('#empleados_tbody tr');
     let valid = true;
     let mensajeAlerta = '';
@@ -433,13 +478,13 @@ function validarHorasInicioFinIguales() {
 
     return valid;
 }
-
-
+ */
 function validarHorasRegistradas() {
-    const filasEmpleados = document.querySelectorAll('#empleados_tbody tr');
-    const deptoSeleccionado = document.getElementById('depto_select').value;
     let valid = true;
     let mensajeAlerta = '';
+
+    // Array para registrar los recorridos
+    const recorridos = [];
 
     filasEmpleados.forEach(fila => {
         const deptoEmpleado = fila.getAttribute('data-depto');
@@ -449,17 +494,19 @@ function validarHorasRegistradas() {
 
         if (deptoEmpleado === deptoSeleccionado && !inasistencia) {
             let tieneHorasRegistradas = false;
-            let horasRegistradas = new Set();
-            let horarios = [];
+            const horasRegistradas = new Set();
+            const horarios = [];
 
-            for (let i = 1; i <= 15; i++) {
+            for (let i = 1; i <= 10; i++) {
                 const procesoSelect = document.querySelector(`[name="proceso${i}_header"]`);
 
                 if (procesoSelect && procesoSelect.value) {
                     const inicio = document.querySelector(`[name="inicio_proceso${i}_${codigoEmp}"]`);
                     const fin = document.querySelector(`[name="fin_proceso${i}_${codigoEmp}"]`);
 
-                    // Verificar si el campo de inicio y fin no están deshabilitados y contienen valores
+                    recorridos.push(`Validando horas registradas para el proceso ${i} del empleado ${codigoEmp}`);
+
+                    // Verificar si los campos de inicio y fin no están deshabilitados y contienen valores
                     if (inicio && fin && !inicio.disabled && !fin.disabled) {
                         if (!inicio.value || !fin.value) {
                             mensajeAlerta += `El empleado con código ${codigoEmp} tiene campos de inicio o fin vacíos en el proceso ${i}.\n`;
@@ -494,40 +541,36 @@ function validarHorasRegistradas() {
                 mensajeAlerta += `El empleado con código ${codigoEmp} no tiene horas registradas en ningún proceso.\n`;
                 valid = false;
             }
-        } else if (['NI', 'RT','ASI'].includes(tipoInasistencia)) {
-            // No deshabilitar los campos ni poner las horas en 00:00:00 para "NUEVO INGRESO (NI)" o "RETARDO (RT)"
-            for (let i = 1; i <= 15; i++) {
-                const inicio = document.querySelector(`[name="inicio_proceso${i}_${codigoEmp}"]`);
-                const fin = document.querySelector(`[name="fin_proceso${i}_${codigoEmp}"]`);
-                if (inicio && fin) {
-                    inicio.disabled = false;
-                    fin.disabled = false;
-                }
-            }
         }
     });
 
-    // Si no es válido, mostramos el mensaje de alerta
+    // Si no es válido, mostrar el mensaje de alerta
     if (!valid) {
         showAlert(mensajeAlerta, 'danger');
     }
 
+    // Imprimir el array de recorridos en la consola
+    console.log('Recorridos:validarHorasRegistradas', recorridos);
+
     return valid;
 }
-
-
 
 // Verifica si hay horas de inicio y fin idénticas en más de un proceso
 function verificarHorasDuplicadas(codigoEmp) {
     let mensaje = '';
-    let horasRegistradas = new Set();
+    const horasRegistradas = new Set();
 
-    for (let i = 1; i <= 15; i++) {
+    // Array para registrar los recorridos
+    const recorridos = [];
+
+    // Seleccionar todos los campos de inicio y fin de proceso para el empleado
+    for (let i = 1; i <= 10; i++) {
         const inicio = document.querySelector(`[name="inicio_proceso${i}_${codigoEmp}"]`);
         const fin = document.querySelector(`[name="fin_proceso${i}_${codigoEmp}"]`);
 
         if (inicio && fin && !inicio.disabled && !fin.disabled && inicio.value && fin.value) {
             const horas = `${inicio.value}-${fin.value}`;
+            recorridos.push(`Verificando horas duplicadas para el proceso ${i} del empleado ${codigoEmp}`);
             if (horasRegistradas.has(horas)) {
                 mensaje += `El empleado con código ${codigoEmp} tiene horas de inicio y fin idénticas en más de un proceso.\n`;
             } else {
@@ -536,8 +579,12 @@ function verificarHorasDuplicadas(codigoEmp) {
         }
     }
 
+    // Imprimir el array de recorridos en la consola
+    console.log('Recorridos:verificarHorasDuplicadas', recorridos);
+
     return mensaje;
 }
+
 function handleCheckboxChange(event) {
     const checkbox = event.target;
     const proceso = checkbox.dataset.proceso;
@@ -545,8 +592,12 @@ function handleCheckboxChange(event) {
     const row = checkbox.closest('tr');
     const prevRow = getPreviousRowWithProceso(row, proceso);
 
+    // Obtener los elementos de entrada de inicio y fin
     const inicioInput = row.querySelector(`input[name="inicio_proceso${proceso}_${emp}"]`);
     const finInput = row.querySelector(`input[name="fin_proceso${proceso}_${emp}"]`);
+    const tipoInasistenciaSelect = row.querySelector(`select[name="tipo_inasistencia_${emp}"]`);
+    const isDescanso = tipoInasistenciaSelect.value === 'D' || tipoInasistenciaSelect.value === 'F';
+    const desbloquear = ['RT', 'NI', 'ASI'].includes(tipoInasistenciaSelect.value);
 
     // Validar que los elementos de entrada existen
     if (!inicioInput || !finInput) {
@@ -554,49 +605,77 @@ function handleCheckboxChange(event) {
         return;
     }
 
-    if (checkbox.checked) {
+    if (checkbox.checked && !isDescanso) {
         if (prevRow) {
             const prevInicio = prevRow.querySelector(`input[name="inicio_proceso${proceso}_${prevRow.dataset.codigo_emp}"]`).value;
             const prevFin = prevRow.querySelector(`input[name="fin_proceso${proceso}_${prevRow.dataset.codigo_emp}"]`).value;
 
+            // Guardar los valores originales
             inicioInput.dataset.originalValue = inicioInput.value;
             finInput.dataset.originalValue = finInput.value;
 
+            // Copiar los valores de la fila anterior
             inicioInput.value = prevInicio;
             finInput.value = prevFin;
-
-            calcularTotalHoras(emp, proceso);
         } else {
             console.warn(`No se encontró una fila anterior con el proceso ${proceso} para el empleado ${emp}`);
         }
     } else {
+        // Restaurar los valores originales
         inicioInput.value = inicioInput.dataset.originalValue || '';
         finInput.value = finInput.dataset.originalValue || '';
-
-        calcularTotalHoras(emp, proceso);
     }
 
+    // Habilitar o deshabilitar los checkboxes de copiar y borrar
+    if (desbloquear) {
+        checkbox.disabled = false;
+    } else {
+        checkbox.disabled = true;
+    }
+
+    // Calcular y sumar horas después de cualquier cambio
+    calcularTotalHoras(emp, proceso);
+    console.log('Llamando a calcularTotalHoras desde funcion2');
+    calcularTotalHoras('codigoEmp2', 1);
     sumarHorasPorProceso();
-}
+}//yaaa MEJORADO EN EL DOOM
 
 function getPreviousRowWithProceso(currentRow, proceso) {
     const deptoActual = currentRow.getAttribute('data-depto');
     let prevRow = currentRow.previousElementSibling;
+
+    // Array para registrar los recorridos
+    const recorridos = [];
+
     while (prevRow) {
-        const prevInicioInput = prevRow.querySelector(`input[name="inicio_proceso${proceso}_${prevRow.dataset.codigo_emp}"]`);
-        const prevFinInput = prevRow.querySelector(`input[name="fin_proceso${proceso}_${prevRow.dataset.codigo_emp}"]`);
-        if (prevRow.getAttribute('data-depto') === deptoActual && prevInicioInput && prevFinInput && prevInicioInput.value && prevFinInput.value) {
+        const codigoEmp = prevRow.dataset.codigo_emp;
+        const prevInicioInput = prevRow.querySelector(`input[name="inicio_proceso${proceso}_${codigoEmp}"]`);
+        const prevFinInput = prevRow.querySelector(`input[name="fin_proceso${proceso}_${codigoEmp}"]`);
+
+        if (prevRow.getAttribute('data-depto') === deptoActual && prevRow.style.display !== 'none' && prevInicioInput && prevFinInput && prevInicioInput.value && prevFinInput.value) {
+            recorridos.push(`Encontrada fila anterior con proceso ${proceso} para el empleado ${codigoEmp}`);
+            console.log('Recorridos:getPreviousRowWithProceso', recorridos);
             return prevRow;
         }
+        recorridos.push(`Revisando fila anterior con proceso ${proceso} para el empleado ${codigoEmp}`);
         prevRow = prevRow.previousElementSibling;
     }
+
+    console.log('Recorridos:getPreviousRowWithProceso', recorridos);
     return null;
 }
+
 function handleDeleteCheckboxChange(event) {
     const checkbox = event.target;
     const row = checkbox.closest('tr');
     const procesoNum = checkbox.dataset.proceso; // Obtener el número del proceso del dataset del checkbox
     const codigoEmp = checkbox.dataset.emp; // Obtener el código del empleado del dataset del checkbox
+    const tipoInasistenciaSelect = row.querySelector(`select[name="tipo_inasistencia_${codigoEmp}"]`);
+    const isDescanso = tipoInasistenciaSelect.value === 'D' || tipoInasistenciaSelect.value === 'F';
+    const desbloquear = ['RT', 'NI', 'ASI'].includes(tipoInasistenciaSelect.value);
+
+    // Array para registrar los recorridos
+    const recorridos = [];
 
     // Validar que los datos del dataset existen
     if (!procesoNum || !codigoEmp) {
@@ -607,96 +686,155 @@ function handleDeleteCheckboxChange(event) {
     // Seleccionar solo los campos de entrada correspondientes al proceso y empleado específicos
     const inputs = row.querySelectorAll(`input[name="inicio_proceso${procesoNum}_${codigoEmp}"], input[name="fin_proceso${procesoNum}_${codigoEmp}"], input[name="total_proceso${procesoNum}_${codigoEmp}"]`);
 
-    if (checkbox.checked) {
+    // Validar que los inputs existen
+    if (inputs.length === 0) {
+        console.error('No se encontraron los elementos de entrada correspondientes.');
+        return;
+    }
+
+    if (checkbox.checked && !isDescanso) {
         // Deshabilitar los campos de entrada correspondientes y limpiar sus valores
         inputs.forEach(input => {
             input.disabled = true;
             input.value = ''; // Limpiar el valor del campo
+            recorridos.push(`Deshabilitando y limpiando campo ${input.name} para el proceso ${procesoNum} del empleado ${codigoEmp}`);
         });
     } else {
         // Habilitar los campos de entrada correspondientes
         inputs.forEach(input => {
             input.disabled = false;
+            recorridos.push(`Habilitando campo ${input.name} para el proceso ${procesoNum} del empleado ${codigoEmp}`);
         });
     }
 
-    // Recalcular los totales de horas
+    // Habilitar o deshabilitar los checkboxes de copiar y borrar
+    if (desbloquear) {
+        checkbox.disabled = false;
+        recorridos.push(`Habilitando checkbox de borrar para el proceso ${procesoNum} del empleado ${codigoEmp}`);
+    } else {
+        checkbox.disabled = true;
+        recorridos.push(`Deshabilitando checkbox de borrar para el proceso ${procesoNum} del empleado ${codigoEmp}`);
+    }
+
+    // Calcular y sumar horas después de cualquier cambio
     calcularTotalHoras(codigoEmp, procesoNum);
+    console.log('Llamando a calcularTotalHoras desde funcion3');
     sumarHorasPorProceso();
+
+    // Imprimir el array de recorridos en la consola
+    console.log('Recorridos:handleDeleteCheckboxChange', recorridos);
 }
 
 function toggleProcesoInputs(procesoNum) {
     const procesoSelect = document.querySelector(`[name="proceso${procesoNum}_header"]`);
     const selectedValue = procesoSelect.value;
+    const deptoSeleccionado = document.getElementById('depto_select').value;
 
-    // Deshabilitar la opción seleccionada en todos los selectores de proceso posteriores
+    // Array para registrar los recorridos
+    const recorridos = [];
+
+    // Seleccionar todos los selectores de proceso
+    const allSelects = [];
     for (let i = 1; i <= 15; i++) {
-        if (procesoNum !== i) {
-            const otherSelect = document.querySelector(`[name="proceso${i}_header"]`);
+        const select = document.querySelector(`[name="proceso${i}_header"]`);
+        if (select) {
+            allSelects.push(select);
+        }
+    }
+
+    // Eliminar la lógica que deshabilita las opciones seleccionadas en otros selectores
+    /*
+    allSelects.forEach((otherSelect, index) => {
+        if (index + 1 !== procesoNum) {
             const options = otherSelect.querySelectorAll('option');
             options.forEach(option => {
                 if (option.value === selectedValue) {
                     option.disabled = true;
+                    recorridos.push(`Deshabilitando opción ${option.value} en selector ${index + 1}`);
                 } else {
-                    // Verificar si la opción está seleccionada en algún proceso anterior
                     let isSelectedInPrevious = false;
-                    for (let j = 1; j <= 15; j++) {
-                        if (j !== i) {
-                            const previousSelect = document.querySelector(`[name="proceso${j}_header"]`);
-                            if (previousSelect.value === option.value) {
-                                isSelectedInPrevious = true;
-                                break;
-                            }
+                    for (let prevIndex = 0; prevIndex < index; prevIndex++) {
+                        if (allSelects[prevIndex].value === option.value) {
+                            isSelectedInPrevious = true;
+                            break;
                         }
                     }
                     option.disabled = isSelectedInPrevious;
+                    if (isSelectedInPrevious) {
+                        recorridos.push(`Deshabilitando opción ${option.value} en selector ${index + 1} porque está seleccionada en un proceso anterior`);
+                    }
                 }
             });
         }
-    }
+    });
+    */
 
-    // Habilitar los campos de entrada correspondientes al proceso seleccionado
-    document.querySelectorAll('#empleados_tbody tr').forEach(fila => {
+    // Habilitar o deshabilitar los campos de entrada correspondientes al proceso seleccionado
+    filasEmpleados.forEach(fila => {
         const codigoEmp = fila.dataset.codigo_emp;
+        const deptoEmpleado = fila.getAttribute('data-depto');
         const tipoInasistenciaSelect = fila.querySelector(`select[name="tipo_inasistencia_${codigoEmp}"]`);
-        const isDescanso = tipoInasistenciaSelect.value === 'D';
-        const inicioInput = fila.querySelector(`[name="inicio_proceso${procesoNum}_${codigoEmp}"]`);
-        const finInput = fila.querySelector(`[name="fin_proceso${procesoNum}_${codigoEmp}"]`);
+        const tipoInasistencia = tipoInasistenciaSelect ? tipoInasistenciaSelect.value : '';
 
-        if (selectedValue && !isDescanso) {
-            if (inicioInput && finInput) {
-                inicioInput.disabled = false;
-                finInput.disabled = false;
+        if (deptoEmpleado === deptoSeleccionado && ['ASI', 'RT', 'NI'].includes(tipoInasistencia)) {
+            const inicioInput = fila.querySelector(`[name="inicio_proceso${procesoNum}_${codigoEmp}"]`);
+            const finInput = fila.querySelector(`[name="fin_proceso${procesoNum}_${codigoEmp}"]`);
+            const copyCheckbox = fila.querySelector(`.copy-checkbox[data-proceso="${procesoNum}"]`);
+            const deleteCheckbox = fila.querySelector(`.delete-checkbox[data-proceso="${procesoNum}"]`);
+
+            if (selectedValue) {
+                if (inicioInput && finInput) {
+                    inicioInput.disabled = false;
+                    finInput.disabled = false;
+                    recorridos.push(`Habilitando campos de entrada para el proceso ${procesoNum} del empleado ${codigoEmp}`);
+                } else {
+                    console.error(`No se encontraron los elementos de entrada para el proceso ${procesoNum} y el empleado ${codigoEmp}`);
+                }
             } else {
-                console.error(`No se encontraron los elementos de entrada para el proceso ${procesoNum} y el empleado ${codigoEmp}`);
+                if (inicioInput && finInput) {
+                    inicioInput.disabled = true;
+                    finInput.disabled = true;
+                    inicioInput.value = '';
+                    finInput.value = '';
+                    recorridos.push(`Deshabilitando y limpiando campos de entrada para el proceso ${procesoNum} del empleado ${codigoEmp}`);
+                }
             }
-        } else {
-            if (inicioInput && finInput) {
-                inicioInput.disabled = true;
-                finInput.disabled = true;
-                inicioInput.value = '';
-                finInput.value = '';
+
+            // Habilitar o deshabilitar los checkboxes de copiar y borrar
+            if (copyCheckbox) {
+                copyCheckbox.disabled = false;
+                recorridos.push(`Procesando checkbox de copiar para el proceso ${procesoNum} del empleado ${codigoEmp}`);
+            }
+            if (deleteCheckbox) {
+                deleteCheckbox.disabled = false;
+                recorridos.push(`Procesando checkbox de borrar para el proceso ${procesoNum} del empleado ${codigoEmp}`);
             }
         }
     });
 
     // Recalcula las horas cada vez que se selecciona un proceso
-    document.querySelectorAll('#empleados_tbody tr').forEach(fila => {
+    /* document.querySelectorAll('#empleados_tbody tr').forEach(fila => {
         const codigoEmp = fila.dataset.codigo_emp;
-        if (procesoSelect.value && fila.style.display !== 'none') { // Solo procesar empleados visibles
+        const deptoEmpleado = fila.getAttribute('data-depto');
+        if (deptoEmpleado === deptoSeleccionado && procesoSelect.value && fila.style.display !== 'none') { // Solo procesar empleados visibles
             calcularTotalHoras(codigoEmp, procesoNum);
+            console.log('Llamando a calcularTotalHoras desde funcion4');
+            recorridos.push(`Recalculando horas para el proceso ${procesoNum} del empleado ${codigoEmp}`);
         }
-    });
+    }); */
 
-    sumarHorasPorProceso();
+    sumarHorasPorProceso(); 
+
+    // Imprimir el array de recorridos en la consola
+    console.log('Recorridos:toggleProcesoInputs', recorridos);
 }
-
-
-
 function ajustarHoraFin(codigoEmp, procesoNum) {
     const inicioField = document.querySelector(`[name="inicio_proceso${procesoNum}_${codigoEmp}"]`);
     const finField = document.querySelector(`[name="fin_proceso${procesoNum}_${codigoEmp}"]`);
     const procesoSelect = document.querySelector(`[name="proceso${procesoNum}_header"]`);
+
+    // Array para registrar los recorridos
+    const recorridos = [];
 
     // Verificar si el proceso está seleccionado
     if (!procesoSelect || !procesoSelect.value) {
@@ -714,6 +852,7 @@ function ajustarHoraFin(codigoEmp, procesoNum) {
 
     if (!inicioField.value) return;
 
+    // Función auxiliar para ajustar la hora
     const ajustarHora = (horas, minutos) => {
         let nuevaHora = horas + 1;
         if (nuevaHora >= 24) nuevaHora -= 24;
@@ -730,17 +869,21 @@ function ajustarHoraFin(codigoEmp, procesoNum) {
 
     finField.value = ajustarHora(inicioHoras, inicioMinutos);
     calcularTotalHoras(codigoEmp, procesoNum);
+    console.log('Llamando a calcularTotalHoras desde funcion5');
 
     let horas = inicioHoras;
     let minutos = inicioMinutos;
 
-    for (let i = procesoNum + 1; i <= 15; i++) {
+    // Ajustar las horas de los procesos siguientes
+    for (let i = procesoNum + 1; i <= 10; i++) {
         const siguienteInicioField = document.querySelector(`[name="inicio_proceso${i}_${codigoEmp}"]`);
         const siguienteFinField = document.querySelector(`[name="fin_proceso${i}_${codigoEmp}"]`);
         const siguienteProcesoSelect = document.querySelector(`[name="proceso${i}_header"]`);
 
         // Verificar si el siguiente proceso está seleccionado
         if (!siguienteInicioField || !siguienteFinField || !siguienteProcesoSelect || !siguienteProcesoSelect.value) continue;
+
+        recorridos.push(`Ajustando proceso ${i} para el empleado ${codigoEmp}`);
 
         if (!siguienteInicioField.dataset.userModified) {
             siguienteInicioField.value = ajustarHora(horas, minutos);
@@ -749,26 +892,20 @@ function ajustarHoraFin(codigoEmp, procesoNum) {
         siguienteFinField.value = ajustarHora(horas, minutos);
 
         calcularTotalHoras(codigoEmp, i);
+        
     }
-}
 
-// Agregar evento input para marcar el campo como modificado por el usuario
-document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('input[name^="inicio_proceso"]').forEach(input => {
-        input.addEventListener('input', function() {
-            this.dataset.userModified = true;
-        });
-    });
-});
-
-
-
-
+    // Imprimir el array de recorridos en la consola
+    console.log('Recorridos:', recorridos);
+}//yaaa
 
 function calcularTotalHoras(codigoEmp, procesoNum) {
     const inicio = document.querySelector(`[name="inicio_proceso${procesoNum}_${codigoEmp}"]`);
     const fin = document.querySelector(`[name="fin_proceso${procesoNum}_${codigoEmp}"]`);
     const totalField = document.querySelector(`[name="total_proceso${procesoNum}_${codigoEmp}"]`);
+
+    // Array para registrar los recorridos
+    const recorridos = [];
 
     // Validar que los elementos de entrada existen
     if (!inicio || !fin || !totalField) {
@@ -798,15 +935,20 @@ function calcularTotalHoras(codigoEmp, procesoNum) {
         totalField.value = '';
     }
 
+    // Calcular el total de horas para todos los procesos seleccionados
     let totalHoras = 0;
-    for (let i = 1; i <= 15; i++) {
-        const procesoSelect = document.querySelector(`[name="proceso${i}_header"]`);
-        if (procesoSelect && procesoSelect.value) {
-            const totalProceso = document.querySelector(`[name="total_proceso${i}_${codigoEmp}"]`).value;
-            if (totalProceso) totalHoras += parseFloat(totalProceso) || 0;
+    document.querySelectorAll('select[name^="proceso"]').forEach(procesoSelect => {
+        const procesoNum = procesoSelect.name.match(/\d+/)[0];
+        if (procesoSelect.value) {
+            const totalProcesoField = document.querySelector(`[name="total_proceso${procesoNum}_${codigoEmp}"]`);
+            if (totalProcesoField && totalProcesoField.value) {
+                totalHoras += parseFloat(totalProcesoField.value) || 0;
+                recorridos.push(`Calculando total para proceso ${procesoNum} del empleado ${codigoEmp}`);
+            }
         }
-    }
+    });
 
+    // Agregar horas extras
     const horasExtrasField = document.querySelector(`[name="horas_extras_${codigoEmp}"]`);
     const horasExtras = parseFloat(horasExtrasField.value) || 0;
     totalHoras += horasExtras;
@@ -814,36 +956,46 @@ function calcularTotalHoras(codigoEmp, procesoNum) {
     horasExtrasField.value = horasExtras.toFixed(2);
     document.querySelector(`[name="total_${codigoEmp}"]`).value = totalHoras.toFixed(2);
 
-    sumarHorasPorProceso();
-}
+    // Imprimir el array de recorridos en la consola
+    console.log('Recorridos:calcularTotalHoras', recorridos);
+}//yaaa MEJORADO EN EL DOM
 
 function sumarHorasPorProceso() {
-    const totalHorasPorProceso = Array(15).fill(0);
+    const totalHorasPorProceso = Array(10).fill(0);
+    const deptoSeleccionado = document.getElementById('depto_select').value;
+
+    // Array para registrar los recorridos
+    const recorridos = [];
 
     document.querySelectorAll('#empleados_tbody tr').forEach(fila => {
-        let totalEmpleado = 0;
+        const deptoEmpleado = fila.getAttribute('data-depto');
+        if (deptoEmpleado === deptoSeleccionado) {
+            const codigoEmp = fila.dataset.codigo_emp;
 
-        for (let i = 1; i <= 15; i++) {
-            const procesoSelect = document.querySelector(`[name="proceso${i}_header"]`);
-            if (procesoSelect && procesoSelect.value) {
-                const totalProceso = fila.querySelector(`[name="total_proceso${i}_${fila.dataset.codigo_emp}"]`);
-                if (totalProceso && totalProceso.value) {
-                    totalHorasPorProceso[i - 1] += parseFloat(totalProceso.value) || 0;
-                    totalEmpleado += parseFloat(totalProceso.value) || 0;
+            for (let i = 1; i <= 10; i++) {
+                const procesoSelect = document.querySelector(`[name="proceso${i}_header"]`);
+                if (procesoSelect && procesoSelect.value) {
+                    const totalProceso = fila.querySelector(`[name="total_proceso${i}_${codigoEmp}"]`);
+                    if (totalProceso && totalProceso.value) {
+                        const totalProcesoValue = parseFloat(totalProceso.value) || 0;
+                        totalHorasPorProceso[i - 1] += totalProcesoValue;
+                        recorridos.push(`Sumando horas para el proceso ${i} del empleado ${codigoEmp}`);
+                    }
                 }
             }
         }
+    });
 
-        const totalEmpleadoField = fila.querySelector(`[name="total_${fila.dataset.codigo_emp}"]`);
-        if (totalEmpleadoField) {
-            totalEmpleadoField.value = totalEmpleado.toFixed(2);
+    totalHorasPorProceso.forEach((total, i) => {
+        if (total > 0) {
+            const totalProcesoField = document.querySelector(`#total_proceso${i + 1}`);
+            if (totalProcesoField) {
+                totalProcesoField.textContent = total.toFixed(2);
+                recorridos.push(`Actualizando total de horas para el proceso ${i + 1}`);
+            }
         }
     });
 
-    for (let i = 1; i <= 15; i++) {
-        const totalProcesoField = document.querySelector(`#total_proceso${i}`);
-        if (totalProcesoField) {
-            totalProcesoField.textContent = totalHorasPorProceso[i - 1].toFixed(2);
-        }
-    }
-}
+    // Imprimir el array de recorridos en la consola
+    console.log('Recorridos:sumarHorasPorProceso', recorridos);
+}//yaaa

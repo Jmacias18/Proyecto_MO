@@ -237,6 +237,7 @@
     }
     
     
+    
     {% comment %} document.addEventListener('DOMContentLoaded', function() {
         const guardarBtn = document.getElementById('guardar-btn');
         const form = document.getElementById('form-actualizar');
@@ -414,6 +415,7 @@
         actualizarTotalHoras();
     });
     
+    
     const validarHoras = (id) => {
         const entrada = document.querySelector(`input[name="horaentrada_${id}"]`).value;
         const salida = document.querySelector(`input[name="horasalida_${id}"]`).value;
@@ -469,8 +471,9 @@
         try {
             const totalHorasPorEmpleado = {};
             const totalHorasPorProceso = {};
+            const totalHorasExtrasPorProceso = {};
     
-            // Sumar las horas de todos los procesos por empleado
+            // Sumar las horas de todos los procesos por empleado y proceso
             document.querySelectorAll('input[name^="hrs_"]').forEach(input => {
                 const id = input.name.split('_')[1];
                 const row = document.querySelector(`tr[data-id="${id}"]`);
@@ -481,6 +484,7 @@
                 const codigoEmp = row.dataset.codigoEmp;
                 const proceso = document.querySelector(`select[name="proceso_${id}"]`).selectedOptions[0].textContent;
                 const horas = parseFloat(input.value) || 0;
+                const horasExtras = parseFloat(document.querySelector(`input[name="hrsextras_${id}"]`).value) || 0;
     
                 if (!totalHorasPorEmpleado[codigoEmp]) {
                     totalHorasPorEmpleado[codigoEmp] = 0;
@@ -488,10 +492,12 @@
     
                 if (!totalHorasPorProceso[proceso]) {
                     totalHorasPorProceso[proceso] = 0;
+                    totalHorasExtrasPorProceso[proceso] = 0;
                 }
     
                 totalHorasPorEmpleado[codigoEmp] += horas;
                 totalHorasPorProceso[proceso] += horas;
+                totalHorasExtrasPorProceso[proceso] += horasExtras;
             });
     
             // Asignar el valor de TotalHrs a todos los procesos del empleado
@@ -501,10 +507,13 @@
                 input.value = totalHorasPorEmpleado[codigoEmp].toFixed(2);
             });
     
-            // Mostrar el detalle de horas por proceso
+            // Mostrar el detalle de horas y horas extras por proceso
             const detalleProcesos = Object.entries(totalHorasPorProceso)
                 .filter(([proceso, horas]) => proceso !== "Sin Proceso")    // Filtrar el proceso "Sin Proceso"
-                .map(([proceso, horas]) => `<td>${proceso}: ${horas.toFixed(2)} horas</td>`)
+                .map(([proceso, horas]) => {
+                    const horasExtras = totalHorasExtrasPorProceso[proceso].toFixed(2);
+                    return `<td>${proceso}: ${horas.toFixed(2)} horas (Horas extras: ${horasExtras})</td>`;
+                })
                 .join('');
             document.getElementById('detalle_procesos_container').innerHTML = `<table><tr>${detalleProcesos}</tr></table>`;
     
@@ -516,27 +525,34 @@
             console.error("Error actualizando el total de horas:", error);
         }
     };
-
     const exportarTablaAExcel = (idTabla, nombreArchivo) => {
         const tabla = document.getElementById(idTabla);
-        console.log("Tabla:", tabla);
         const filas = Array.from(tabla.querySelectorAll('tr'));
-        const datos = [];
-        
+    
+        // Definir los encabezados de las columnas
+        const encabezados = [
+            "Código Emp", "Empleado", "Departamento", "Proceso", 
+            "Código Producto", "Nombre Producto", "Cliente",
+            "Fecha", "Hora Entrada", "Hora Salida", 
+            "Horas", "Total Horas", "Horas Extras", 
+            "Inasistencia", "Creado Por", "Modificado Por", "F/Modificación"
+        ];
     
         // Definir la estructura esperada de los datos
-        const plantillaDatos = filas.map((fila) => {
+        const plantillaDatos = filas.map((fila, filaIndex) => {
             const celdas = Array.from(fila.querySelectorAll('th, td'));
-            return celdas.map((celda) => {
+            return celdas.map((celda, celdaIndex) => {
                 const selects = celda.querySelectorAll('select');
                 if (selects.length > 1) {
                     const proceso = selects[0].options[selects[0].selectedIndex]?.text || '';
                     const producto = selects[1].options[selects[1].selectedIndex]?.text || '';
-                    console.log(`Proceso: ${proceso}, Producto: ${producto}`);
-                    return `${proceso} - ${producto}`;
+                    const productoSplit = producto.split(' - ');
+                    const codigoProducto = productoSplit[0] || '';
+                    const nombreProducto = productoSplit[1] || '';
+                    const cliente = productoSplit[2] || '';
+                    return [proceso, codigoProducto, nombreProducto, cliente];
                 } else if (selects.length === 1) {
                     const selectedText = selects[0].options[selects[0].selectedIndex]?.text || '';
-                    console.log(`Select value: ${selectedText}`);
                     return selectedText;
                 } else {
                     const input = celda.querySelector('input');
@@ -547,118 +563,78 @@
                             return input.value || '';
                         }
                     } else {
-                        return celda.innerText.trim() || '';
+                        const text = celda.innerText.trim() || '';
+                        if (['Horas', 'Total Horas', 'Horas Extras'].includes(celda.dataset.columnName)) {
+                            const numberValue = parseFloat(text.replace(',', '.'));
+                            return isNaN(numberValue) ? text : numberValue.toFixed(2);
+                        }
+                        return text;
                     }
                 }
-            });
+            }).flat();
         });
     
-        console.log("Plantilla de Datos:", plantillaDatos);
-    
-        // Generar resumen de asistencia dinámicamente
-        const resumen = {
-            "FALTA": 0,
-            "DESCANSO": 0,
-            "PERMISO": 0,
-            "RETARDO": 0,
-            "VACACIONES": 0,
-            "INCAPACIDAD": 0,
-            "SUSPENSIÓN": 0,
-            "BAJA": 0,
-            "RENUNCIA": 0,
-            "NUEVO INGRESO": 0,
-            "ASISTENCIA": 0
-        };
-    
-        plantillaDatos.forEach((fila, index) => {
-            if (index > 0) { // Ignorar encabezados
-                const inasistencia = fila[10]; // Columna de inasistencia
-                if (inasistencia in resumen) {
-                    resumen[inasistencia] += 1;
-                } else {
-                    resumen["ASISTENCIA"] += 1;
-                }
-            }
-        });
-    
-        const resumenAsistencia = (
-            `RESUMEN DE ASISTENCIA: ` +
-            `FALTA: ${resumen['FALTA']} ` +
-            `DESCANSO: ${resumen['DESCANSO']} ` +
-            `PERMISO: ${resumen['PERMISO']} ` +
-            `RETARDO: ${resumen['RETARDO']} ` +
-            `VACACIONES: ${resumen['VACACIONES']} ` +
-            `INCAPACIDAD: ${resumen['INCAPACIDAD']} ` +
-            `SUSPENSIÓN: ${resumen['SUSPENSIÓN']} ` +
-            `BAJA: ${resumen['BAJA']} ` +
-            `RENUNCIA: ${resumen['RENUNCIA']} ` +
-            `NUEVO INGRESO: ${resumen['NUEVO INGRESO']} ` +
-            `ASISTENCIA: ${resumen['ASISTENCIA']}`
-        );
+        // Obtener el resumen de asistencia de la tabla original
+        const resumenFila = Array.from(tabla.querySelectorAll('tr')).find(tr => tr.textContent.includes('RESUMEN DE ASISTENCIA'));
+        const resumenAsistencia = resumenFila ? resumenFila.innerText.trim() : 'RESUMEN DE ASISTENCIA NO ENCONTRADO';
     
         // Reorganizar los datos para que las celdas se acomoden correctamente
         const datosAcomodados = [];
         let currentRow = null;
     
         plantillaDatos.forEach((fila, index) => {
-            console.log(`Procesando fila ${index}:`, fila);
             if (index === 0) {
-                datosAcomodados.push(fila); // Encabezados
-            } else {
-                if (fila[0] !== '') {
-                    // Si es una nueva fila principal
-                    if (currentRow) {
-                        datosAcomodados.push(currentRow);
+                datosAcomodados.push(encabezados); // Agregar encabezados
+            } else if (index !== 1) { // Omitir la fila en el índice 1
+                let adjustedFila = fila;
+                if (fila.length < 18) {
+                    // Agregar espacios vacíos al principio solo si la fila tiene menos de 18 elementos
+                    const emptyCellsToAdd = 18 - fila.length;
+                    adjustedFila = Array(emptyCellsToAdd).fill('').concat(fila);
+                }
+                adjustedFila.length = 18; // Asegurar que la fila tenga 18 elementos
+                adjustedFila = adjustedFila.map((celda, celdaIndex) => {
+                    if (['Horas', 'Total Horas', 'Horas Extras'].includes(encabezados[celdaIndex]) && !isNaN(parseFloat(celda))) {
+                        return parseFloat(celda);
                     }
-                    currentRow = [...fila]; // Copia la fila completa
-                    console.log(`Nueva fila principal:`, currentRow);
-                } else {
-                    // Si es una subfila (fila dependiente)
-                    fila.forEach((dato, i) => {
-                        if (i === 3) { // Concatenar proceso y producto en la columna "Proceso y Producto"
-                            console.log(`Concatenando proceso y producto: ${currentRow[i]} - ${dato}`);
-                            currentRow[i] = `${currentRow[i]} - ${dato}`;
-                        } else if (i > 3) { // Acomoda los datos en la fila principal a partir de la columna "Fecha"
-                            currentRow[i] = dato;
-                        }
-                    });
-                    console.log(`Fila dependiente procesada:`, currentRow);
-                }
+                    return celda;
+                });
+                datosAcomodados.push(adjustedFila);
             }
         });
     
-        if (currentRow) {
-            datosAcomodados.push(currentRow);
-        }
-        console.log("Datos Acomodados:", datosAcomodados);
-    
-        // Asegurar que todas las filas, excepto la primera y las últimas dos, tengan 15 celdas, agregando celdas vacías al principio
-        datosAcomodados.forEach((fila, index) => {
-            if (index > 0 && index < datosAcomodados.length - 2) {
-                while (fila.length < 15) {
-                    fila.unshift(''); // Agrega celdas vacías al principio
-                }
-            }
-        });
+        // Agregar el resumen de asistencia en la primera fila
+        datosAcomodados.unshift([resumenAsistencia, ...Array(17).fill('')]);
     
         // Declarar mergeRanges antes de su uso
         const mergeRanges = [];
     
-        // Modificar la penúltima fila para que solo tenga la primera celda y combinarla
+        // Modificar la penúltima fila para que solo tenga la primera celda y combinarla hacia la derecha
         if (datosAcomodados.length > 2) {
             const penultimaFila = datosAcomodados[datosAcomodados.length - 2];
-            datosAcomodados[datosAcomodados.length - 2] = [penultimaFila[0], ...Array(14).fill('')];
-            mergeRanges.push({ s: { r: datosAcomodados.length - 2, c: 0 }, e: { r: datosAcomodados.length - 2, c: 14 } });
+            console.log("Penúltima fila original:", penultimaFila); // Log para ver la penúltima fila original
+            const penultimaFilaTexto = penultimaFila.find(cell => cell.trim() !== '');
+            console.log("Texto de la penúltima fila:", penultimaFilaTexto); // Log para ver el texto de la penúltima fila
+            if (penultimaFilaTexto) {
+                datosAcomodados[datosAcomodados.length - 2] = [penultimaFilaTexto, ...Array(17).fill('')];
+                mergeRanges.push({ s: { r: datosAcomodados.length - 2, c: 0 }, e: { r: datosAcomodados.length - 2, c: 17 } });
+            }
         }
     
         // Modificar la última fila para que solo tenga la primera y la última celda
         if (datosAcomodados.length > 1) {
             const ultimaFila = datosAcomodados[datosAcomodados.length - 1];
-            const totalHoras = document.getElementById('total_proceso').textContent;
-            datosAcomodados[datosAcomodados.length - 1] = ['', ...Array(12).fill(''), `Total Horas: ${totalHoras}`];
+            const totalHoras = parseFloat(document.getElementById('total_proceso').textContent.replace('Total Horas: ', ''));
+            datosAcomodados[datosAcomodados.length - 1] = ['', ...Array(14).fill(''), 'Total:', totalHoras, ''];
+            datosAcomodados[datosAcomodados.length - 1].length = 18; // Asegurar que la fila tenga 18 elementos
         }
     
-        console.log("Datos Acomodados Final:", datosAcomodados);
+        // Modificar la fila 18 para combinar las celdas hacia la derecha
+        if (datosAcomodados.length > 18) {
+            const fila18 = datosAcomodados[18];
+            datosAcomodados[18] = [fila18[0], ...Array(17).fill('')];
+            mergeRanges.push({ s: { r: 18, c: 0 }, e: { r: 18, c: 17 } });
+        }
     
         // Crear el archivo Excel
         const wb = XLSX.utils.book_new();
@@ -669,7 +645,10 @@
             { wch: 15 }, // Código Emp
             { wch: 30 }, // Empleado
             { wch: 15 }, // Departamento
-            { wch: 65 }, // Proceso y Producto
+            { wch: 20 }, // Proceso
+            { wch: 10 }, // Código Producto
+            { wch: 30 }, // Nombre Producto
+            { wch: 20 }, // Cliente
             { wch: 17 }, // Fecha
             { wch: 10 }, // Hora Entrada
             { wch: 10 }, // Hora Salida
@@ -683,30 +662,32 @@
         ];
     
         ws['!cols'] = colWidths;
+    
         // Alternar colores de las filas
-        plantillaDatos.forEach((fila, index) => {
+        datosAcomodados.forEach((fila, index) => {
             const style = {
                 fill: {
                     fgColor: { rgb: index % 2 === 0 ? 'FFFFF2CC' : 'FFD9EAD3' } // Color alternado
                 }
             };
-            fila.forEach((_, colIndex) => {
+            fila.forEach((celda, colIndex) => {
                 const cellAddress = XLSX.utils.encode_cell({ r: index, c: colIndex });
                 if (!ws[cellAddress]) ws[cellAddress] = {};
-                ws[cellAddress].s = style;
+                ws[cellAddress].s = { ...ws[cellAddress].s, ...style };
             });
         });
     
-        // Fusionar celdas para "Código Emp", "Empleado" y "Departamento"
+         // Fusionar celdas para "Código Emp", "Empleado" y "Departamento"
         let startRow = 1;
     
         datosAcomodados.forEach((fila, index) => {
             if (index > 0) {
-                if (fila[0] !== '') {
+                if (fila[4] !== '') { // Verificar que el primer campo de datos no esté vacío
                     if (index > startRow) {
                         mergeRanges.push({ s: { r: startRow, c: 0 }, e: { r: index - 1, c: 0 } });
                         mergeRanges.push({ s: { r: startRow, c: 1 }, e: { r: index - 1, c: 1 } });
                         mergeRanges.push({ s: { r: startRow, c: 2 }, e: { r: index - 1, c: 2 } });
+                        mergeRanges.push({ s: { r: startRow, c: 3 }, e: { r: index - 1, c: 3 } });
                     }
                     startRow = index;
                 }
@@ -717,37 +698,40 @@
             mergeRanges.push({ s: { r: startRow, c: 0 }, e: { r: datosAcomodados.length - 1, c: 0 } });
             mergeRanges.push({ s: { r: startRow, c: 1 }, e: { r: datosAcomodados.length - 1, c: 1 } });
             mergeRanges.push({ s: { r: startRow, c: 2 }, e: { r: datosAcomodados.length - 1, c: 2 } });
+            mergeRanges.push({ s: { r: startRow, c: 3 }, e: { r: datosAcomodados.length - 1, c: 3 } });
         }
     
-        // Agregar el resumen de asistencia en la primera fila
-        datosAcomodados.unshift([resumenAsistencia, ...Array(14).fill('')]);
-        mergeRanges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: 14 } });
+        // Fusionar las celdas de la primera fila para el resumen de asistencia
+        mergeRanges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: 17 } });
+    
+        // Fusionar las celdas de la fila 18
+        mergeRanges.push({ s: { r: 18, c: 0 }, e: { r: 18, c: 17 } });
     
         ws['!merges'] = mergeRanges;
     
-        // Centrar el contenido de la celda fusionada
-        ws['A1'].s = { alignment: { horizontal: 'center', vertical: 'center' }, wrapText: false };
-    
-        // Agregar "Total Horas" en la celda 13 de la fila correspondiente
-        const totalHoras = document.getElementById('total_proceso').textContent;
-        if (datosAcomodados.length > 0) {
-            datosAcomodados[datosAcomodados.length - 1][13] = `Total Horas: ${totalHoras}`;
+        // Centrar el contenido de la celda fusionada de la primera fila
+        if (ws['A1']) {
+            ws['A1'].s = { alignment: { horizontal: 'center', vertical: 'center' }, wrapText: true };
         }
     
-        // Agregar la fila de resumen de horas
-        const resumenHoras = "Apoyo Calidad : 4.00 horas\tFreidora : 3.00 horas";
-        datosAcomodados.push([resumenHoras, ...Array(14).fill('')]);
-        const resumenHorasRow = datosAcomodados.length;
-        mergeRanges.push({ s: { r: resumenHorasRow - 1, c: 0 }, e: { r: resumenHorasRow - 1, c: 14 } });
+        // Centrar el contenido de la celda fusionada de la fila 18
+        const fila18CellAddress = XLSX.utils.encode_cell({ r: 18, c: 0 });
+        if (ws[fila18CellAddress]) {
+            ws[fila18CellAddress].s = { alignment: { horizontal: 'center', vertical: 'center' }, wrapText: true };
+        }
     
-        ws['!merges'] = mergeRanges;
-    
-
+        // Centrar el contenido de la celda fusionada de la penúltima fila
+        if (typeof penultimaFilaIndex !== 'undefined') {
+            const penultimateRowIndex = datosAcomodados.length - 2;
+            const penultimateRowCellAddress = XLSX.utils.encode_cell({ r: penultimateRowIndex, c: penultimaFilaIndex });
+            if (ws[penultimateRowCellAddress]) {
+                ws[penultimateRowCellAddress].s = { alignment: { horizontal: 'center', vertical: 'center' }, wrapText: true };
+            }
+        }
     
         XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
         XLSX.writeFile(wb, nombreArchivo);
     };
-    
     
     
     const toggleInasistencia = (id, codigoEmp) => {
@@ -844,8 +828,6 @@
                 <button type="button" class="btn btn-success mt-3" id="exportar-btn">Exportar a Excel</button>
             {% endif %}
         </div>
-        
-        
     </form>
 
     {% if registros_combinados %}
@@ -855,7 +837,7 @@
             <table id="tabla-horas-procesos" class="table table-striped table-sm">
                 <thead>
                     <tr>
-                        <td colspan="16" class="text-start">
+                        <td colspan="15" class="text-start">
                             <div id="resumen-asistencia" style="display: none;">
                                 <h4 class="text-center">RESUMEN DE ASISTENCIA:</h4>
                                 <ul class="list-unstyled text-center">
@@ -895,7 +877,6 @@
                     </tr>
                 </thead>
                 <tbody>
-                    
                     {% for registro in registros_combinados %}
                     {% for proceso in registro.procesos %}
                     <tr data-codigo-emp="{{ registro.codigo_emp }}" data-id="{{ proceso.id_hrspro }}">
@@ -976,7 +957,6 @@
                             <span id="total_proceso" class="text-center">0.00</span>
                         </td>
                     </tr>
-                
                 </tfoot>
             </table>
         </div>

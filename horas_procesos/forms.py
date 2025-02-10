@@ -1,6 +1,7 @@
 # horas_procesos/forms.py
 from django import forms
 from procesos.models import Empleados, Procesos
+from .models import Motivo
 
 class HorasProcesosForm(forms.Form):
     empleado = forms.ModelChoiceField(queryset=Empleados.objects.all(), label="Empleado")
@@ -12,3 +13,8 @@ class HorasProcesosForm(forms.Form):
     proceso4 = forms.ModelChoiceField(queryset=Procesos.objects.all(), label="Proceso 6")
     horas_extras = forms.IntegerField(label="Horas Extras")
     total = forms.IntegerField(label="Total")
+
+class MotivoForm(forms.ModelForm):
+    class Meta:
+        model = Motivo
+        fields = ['motivo']

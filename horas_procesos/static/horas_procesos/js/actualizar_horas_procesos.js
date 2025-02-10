@@ -138,10 +138,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('guardar-btn').removeAttribute('disabled');
     });
 
-    // Agregar evento al botón "Exportar a Excel"
-    document.getElementById('exportar-btn').addEventListener('click', () => {
-        exportarTablaAExcel('tabla-horas-procesos', 'HorasProcesos.xlsx');
-    });
+   
 
     document.querySelectorAll('input[name^="horaentrada_"], input[name^="horasalida_"], input[name^="hrsextras_"], select[name^="proceso_"]').forEach(input => {
         input.setAttribute('data-original-value', input.value);
@@ -311,93 +308,7 @@ const actualizarTotalHoras = () => {
     }
 };
 
-const exportarTablaAExcel = (idTabla, nombreArchivo) => {
-    const tabla = document.getElementById(idTabla);
-    const filas = Array.from(tabla.querySelectorAll('tr'));
-    const datos = [];
 
-    // Procesar cada fila de la tabla
-    filas.forEach(fila => {
-        const celdas = Array.from(fila.querySelectorAll('th, td'));
-        const filaDatos = [];
-
-        celdas.forEach(celda => {
-            const input = celda.querySelector('input, select');
-            if (input) {
-                if (input.tagName.toLowerCase() === 'select') {
-                    filaDatos.push(input.options[input.selectedIndex]?.text || '');
-                } else if (input.type === 'checkbox') {
-                    filaDatos.push(input.checked ? 'on' : '');
-                } else {
-                    filaDatos.push(input.value || '');
-                }
-            } else {
-                filaDatos.push(celda.innerText.trim() || '');
-            }
-        });
-
-        datos.push(filaDatos);
-    });
-
-    // Reorganizar los datos para que las celdas se acomoden correctamente
-    const datosAcomodados = [];
-    let currentRow = null;
-
-    datos.forEach((fila, index) => {
-        if (index === 0) {
-            datosAcomodados.push(fila); // Encabezados
-        } else {
-            if (fila[0] !== '') {
-                // Si es una nueva fila principal
-                if (currentRow) {
-                    datosAcomodados.push(currentRow);
-                }
-                currentRow = [...fila]; // Copia la fila completa
-            } else {
-                // Si es una subfila (fila dependiente)
-                fila.slice(3).forEach((dato, i) => {
-                    currentRow[3 + i] = dato; // Acomoda los datos en la fila principal
-                });
-            }
-        }
-    });
-
-    if (currentRow) {
-        datosAcomodados.push(currentRow);
-    }
-
-    // Crear el archivo Excel
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet(datosAcomodados);
-
-    // Fusionar celdas para "Código Emp", "Empleado" y "Departamento"
-    const mergeRanges = [];
-    let startRow = 1;
-
-    datosAcomodados.forEach((fila, index) => {
-        if (index > 0) {
-            if (fila[0] !== '') {
-                if (index > startRow) {
-                    mergeRanges.push({ s: { r: startRow, c: 0 }, e: { r: index - 1, c: 0 } });
-                    mergeRanges.push({ s: { r: startRow, c: 1 }, e: { r: index - 1, c: 1 } });
-                    mergeRanges.push({ s: { r: startRow, c: 2 }, e: { r: index - 1, c: 2 } });
-                }
-                startRow = index;
-            }
-        }
-    });
-
-    if (startRow < datosAcomodados.length) {
-        mergeRanges.push({ s: { r: startRow, c: 0 }, e: { r: datosAcomodados.length - 1, c: 0 } });
-        mergeRanges.push({ s: { r: startRow, c: 1 }, e: { r: datosAcomodados.length - 1, c: 1 } });
-        mergeRanges.push({ s: { r: startRow, c: 2 }, e: { r: datosAcomodados.length - 1, c: 2 } });
-    }
-
-    ws['!merges'] = mergeRanges;
-
-    XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
-    XLSX.writeFile(wb, nombreArchivo);
-};
 
 
 

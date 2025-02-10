@@ -81,6 +81,8 @@ class Productos(models.Model):
     ID_Producto = models.CharField(max_length=50, primary_key=True)
     DescripcionProd = models.CharField(max_length=200, default='Descripción por defecto')
     ID_TipoProducto = models.ForeignKey(TipoProducto, on_delete=models.CASCADE, db_column='ID_TipoProducto')
+    ID_Cliente = models.ForeignKey(Clientes, on_delete=models.CASCADE, db_column='ID_Cliente')
+
 
     class Meta:
         db_table = 'Productos'

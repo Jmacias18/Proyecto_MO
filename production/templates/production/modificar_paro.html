@@ -23,7 +23,10 @@
                                     </tr>
                                     <tr>
                                         <th>Cliente</th>
-                                        <td>{{ form.ID_Cliente.errors }}{{ form.ID_Cliente }}</td>
+                                        <td>
+                                            {{ form.ID_Cliente.errors }}
+                                            {{ form.ID_Cliente }}
+                                        </td>
                                     </tr>
                                     <tr>
                                         <th>Orden Fabricacion SAP</th>
@@ -31,7 +34,15 @@
                                     </tr>
                                     <tr>
                                         <th>ID Producto</th>
-                                        <td>{{ form.ID_Producto.errors }}{{ form.ID_Producto }}</td>
+                                        <td>
+                                            {{ form.ID_Producto.errors }}
+                                            <select id="id_ID_Producto" name="ID_Producto" class="form-control">
+                                                <option value="">Seleccione Producto</option>
+                                                {% for producto in productos %}
+                                                <option value="{{ producto.ID_Producto }}" {% if producto.ID_Producto == form.ID_Producto.value %}selected{% endif %}>{{ producto.DescripcionProd }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </td>
                                     </tr>
                                     <tr>
                                         <th>Hora Inicio Paro</th>
@@ -76,7 +87,7 @@
                                             {% elif form.instance.ID_Concepto %}
                                                 {{ form.ID_Concepto.errors }}{{ form.ID_Concepto }}
                                             {% else %}
-                                                <!-- Opcional: Puedes mostrar un mensaje si no hay Maquinaria ni Concepto -->
+                                                <!-- Opcional: Puedes mostrar un mensaje si no hay Maquinaria ni Concepto seleccionado -->
                                                 <span>No hay Maquinaria ni Concepto seleccionado</span>
                                             {% endif %}
                                         </td>
@@ -139,6 +150,34 @@
 </style>
 
 <script>
+    function fetchProductos(clienteId) {
+        fetch(`{% url 'production:get_productos' %}?cliente_id=${clienteId}`)
+            .then(response => response.json())
+            .then(data => {
+                const productoSelect = document.getElementById('id_ID_Producto');
+                productoSelect.innerHTML = '<option value="">Seleccione Producto</option>';
+                data.productos.forEach(producto => {
+                    const option = document.createElement('option');
+                    option.value = producto.ID_Producto;
+                    option.textContent = producto.DescripcionProd; // Mostrar DescripcionProd en el campo de selección
+                    productoSelect.appendChild(option);
+                });
+            })
+            .catch(error => console.error('Error fetching productos:', error));
+    }
+
+    document.getElementById('id_ID_Cliente').addEventListener('change', function() {
+        fetchProductos(this.value);
+    });
+
+    // Inicializar el campo de productos si ya hay un cliente seleccionado
+    document.addEventListener('DOMContentLoaded', function() {
+        const clienteSelect = document.getElementById('id_ID_Cliente');
+        if (clienteSelect.value) {
+            fetchProductos(clienteSelect.value);
+        }
+    });
+
     // Lógica de validación para la hora de inicio y fin
     function validateHoraFin() {
         const horaInicio = document.getElementById('id_HoraInicio');
@@ -230,4 +269,3 @@
     window.addEventListener('online', updateOnlineStatus);
     window.addEventListener('offline', updateOnlineStatus);
 </script>
-

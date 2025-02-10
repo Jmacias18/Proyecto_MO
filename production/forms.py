@@ -1,6 +1,6 @@
 from django import forms
 from django.forms.widgets import TimeInput
-from .models import ParosProduccion, Procesos, Maquinaria, Conceptos
+from .models import ParosProduccion, Procesos, Maquinaria, Conceptos, Clientes, Productos
 
 class ParosProduccionForm(forms.ModelForm):
     class Meta:
@@ -23,6 +23,19 @@ class ParosProduccionForm(forms.ModelForm):
             'HoraInicio': TimeInput(attrs={'type': 'time'}),
             'HoraFin': TimeInput(attrs={'type': 'time'}),
         }
+
+    ID_Cliente = forms.ModelChoiceField(queryset=Clientes.objects.all(), required=True)
+    ID_Producto = forms.CharField(required=True)  # Cambiar a CharField para aceptar cualquier valor
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if 'instance' in kwargs:
+            instance = kwargs['instance']
+            self.fields['ID_Producto'].initial = instance.ID_Producto
+        elif 'data' in kwargs:
+            data = kwargs['data']
+            if 'ID_Cliente' in data:
+                self.fields['ID_Producto'].initial = data.get('ID_Producto')
 
     def clean(self):
         cleaned_data = super().clean()
@@ -47,7 +60,6 @@ class ParosProduccionForm(forms.ModelForm):
         cleaned_data['AccionesMantenimiento'] = ''
 
         return cleaned_data
-
 class ParoMantForm(forms.ModelForm):
     class Meta:
         model = ParosProduccion
@@ -69,8 +81,8 @@ class ParoMantForm(forms.ModelForm):
             'AccionesMantenimiento',
         ]
         widgets = {
-            'HoraInicio': TimeInput(attrs={'type': 'time'}),
-            'HoraFin': TimeInput(attrs={'type': 'time'}),
+            'HoraInicio': forms.TimeInput(attrs={'type': 'time'}),
+            'HoraFin': forms.TimeInput(attrs={'type': 'time'}),
         }
 
 class ProcesosForm(forms.ModelForm):
@@ -82,7 +94,6 @@ class MaquinariaForm(forms.ModelForm):
     class Meta:
         model = Maquinaria
         fields = ['DescripcionMaq', 'AreaMaq']
-
 
 """ 
 # Formulario para registrar un proceso

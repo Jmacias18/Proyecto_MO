@@ -18,9 +18,22 @@ class Horasprocesos(models.Model):
     ucreado = models.CharField(db_column='UCreado', max_length=20, null=True, blank=True)  # Nueva columna UCreado
     umod = models.CharField(db_column='UMod', max_length=20, null=True, blank=True)  # Nueva columna UMod
     fmod = models.DateField(db_column='FMod', null=True)  # Nueva columna FMod
-
     class Meta:
         db_table = 'HorasProcesos'
         managed = True
 
 
+class Motivo(models.Model):
+    codigo_emp = models.CharField(max_length=10)
+    nombre_emp = models.CharField(max_length=100)
+    departamento = models.CharField(max_length=100)
+    motivo = models.TextField(max_length=350)
+    sync = models.BooleanField(default=False)
+    estado = models.BooleanField(default=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'Motivo'  # Especifica el nombre de la tabla en la base de datos
+
+    def __str__(self):
+        return f'{self.codigo_emp} - {self.motivo}'

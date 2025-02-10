@@ -1,4 +1,3 @@
-<!-- filepath: /c:/proyecto_Moo/production/templates/production/production.html -->
 {% extends 'core/base.html' %}
 {% load static %}
 {% block title %}Registros de Paros de Producción{% endblock %}
@@ -25,14 +24,14 @@
     <!-- Filtro de Maquinaria y Concepto -->
     <div class="mb-4">
         <h4 class="text-dark">Filtrar por Maquinaria o Concepto</h4>
-        <form method="get" action="{% url 'production:production' %}" class="row g-3 justify-content-center">
+        <form method="get" action="{% url 'production:production' %}" class="row g-3 justify-content-center" id="filterForm">
             <div class="col-md-4">
                 <div class="form-group">
                     <label for="filter_type" class="form-label">Filtrar por</label>
                     <select name="filter_type" class="form-control" id="filter_type">
                         <option value="">Seleccione Filtro</option>
-                        <option value="maquinaria" {% if request.GET.filter_type == 'maquinaria' %}selected{% endif %}>Maquinaria</option>
-                        <option value="concepto" {% if request.GET.filter_type == 'concepto' %}selected{% endif %}>Concepto</option>
+                        <option value="maquinaria" {% if filter_type == 'maquinaria' %}selected{% endif %}>Maquinaria</option>
+                        <option value="concepto" {% if filter_type == 'concepto' %}selected{% endif %}>Concepto</option>
                     </select>
                 </div>
             </div>
@@ -51,12 +50,12 @@
 
     {% if user_is_maintenance %}
         <p class="alert alert-warning">No tienes permisos para registrar nuevos paros. Este formulario está deshabilitado para los usuarios de mantenimiento.</p>
-    {% else %}
+    {% elif filter_type %}
         <div style="max-width: 100%;">    
             <form method="post" action="{% url 'production:registrar_paro' %}">
                 {% csrf_token %}
-                <input type="hidden" name="filter_type" value="{{ request.GET.filter_type }}">
-                <input type="hidden" name="filter_select" value="{{ request.GET.filter_select }}">
+                <input type="hidden" name="filter_type" value="{{ filter_type }}">
+                <input type="hidden" name="filter_select" value="{{ filter_select }}">
                 <div style="overflow-x: auto; margin: 0 auto; max-width: 100%;">
                     <table style="margin: 0 auto; width: 100%; border-collapse: collapse; table-layout: auto;">
                         <thead>
@@ -71,9 +70,9 @@
                                 <th style="padding: 10px; width: 10%;">M.O</th>
                                 <th style="padding: 10px; width: 10%;">Proceso</th>
                                 <th style="padding: 10px; width: 10%;">
-                                    {% if request.GET.filter_type == 'maquinaria' %}
+                                    {% if filter_type == 'maquinaria' %}
                                         Maquinaria
-                                    {% elif request.GET.filter_type == 'concepto' %}
+                                    {% elif filter_type == 'concepto' %}
                                         Concepto
                                     {% else %}
                                         Maquinaria/Concepto
@@ -86,10 +85,10 @@
                             <tr>
                                 <!-- Cliente Selection -->
                                 <td>
-                                    <select name="ID_Cliente" id="clienteSelect" required style="width: 100%;">
+                                    <select name="ID_Cliente" id="clienteSelect" required style="width: 100%;" onchange="fetchProductos(this.value)">
                                         <option value="">Seleccione Cliente</option>
                                         {% for cliente in clientes %}
-                                            <option value="{{ cliente.ID_Cliente }}">{{ cliente.Cliente }}</option>
+                                            <option value="{{ cliente.ID_Cliente }}" {% if cliente_id == cliente.ID_Cliente|stringformat:"s" %}selected{% endif %}>{{ cliente.Cliente }}</option>
                                         {% endfor %}
                                     </select>
                                 </td>
@@ -126,24 +125,24 @@
                                     <select name="ID_Proceso" required style="width: 100%;">
                                         <option value="">Seleccione Proceso</option>
                                         {% for proceso in procesos %}
-                                            <option value="{{ proceso.ID_Pro }}">{{ proceso.Nombre_Pro }}</option>
+                                            <option value="{{ proceso.ID_Pro }}" {% if proceso_id == proceso.ID_Pro|stringformat:"s" %}selected{% endif %}>{{ proceso.Nombre_Pro }}</option>
                                         {% endfor %}
                                     </select>
                                 </td>
                                 <td>
-                                    {% if request.GET.filter_type == 'maquinaria' %}
+                                    {% if filter_type == 'maquinaria' %}
                                         <select name="ID_Maquinaria" required style="width: 100%;">
                                             <option value="">Seleccione Maquinaria</option>
                                             {% for maquinaria in maquinarias %}
-                                                <option value="{{ maquinaria.ID_Maquinaria }}">{{ maquinaria.DescripcionMaq }}</option>
+                                                <option value="{{ maquinaria.ID_Maquinaria }}" {% if maquinaria_id == maquinaria.ID_Maquinaria|stringformat:"s" %}selected{% endif %}>{{ maquinaria.DescripcionMaq }}</option>
                                             {% endfor %}
                                         </select>
                                         <input type="hidden" name="ID_Concepto" value="">
-                                    {% elif request.GET.filter_type == 'concepto' %}
+                                    {% elif filter_type == 'concepto' %}
                                         <select name="ID_Concepto" required style="width: 100%;">
                                             <option value="">Seleccione Concepto</option>
                                             {% for concepto in conceptos %}
-                                                <option value="{{ concepto.ID_Concepto }}">{{ concepto.Desc_Concepto }}</option>
+                                                <option value="{{ concepto.ID_Concepto }}" {% if filter_select == "concepto_"|add:concepto.ID_Concepto|stringformat:"s" %}selected{% endif %}>{{ concepto.Desc_Concepto }}</option>
                                             {% endfor %}
                                         </select>
                                         <input type="hidden" name="ID_Maquinaria" value="">
@@ -151,7 +150,7 @@
                                         <select name="ID_Maquinaria" required style="width: 100%;">
                                             <option value="">Seleccione Maquinaria</option>
                                             {% for maquinaria in maquinarias %}
-                                                <option value="{{ maquinaria.ID_Maquinaria }}">{{ maquinaria.DescripcionMaq }}</option>
+                                                <option value="{{ maquinaria.ID_Maquinaria }}" {% if maquinaria_id == maquinaria.ID_Maquinaria|stringformat:"s" %}selected{% endif %}>{{ maquinaria.DescripcionMaq }}</option>
                                             {% endfor %}
                                         </select>
                                         <input type="hidden" name="ID_Concepto" value="">
@@ -168,16 +167,7 @@
             </form>
         </div>
     {% endif %}
-
-
-                            
-                    
-            </tbody>
-        </table>
-    </div>
 </div>
-
-
     <style>
         /* Ajustes responsivos */
         @media (max-width: 768px) {
@@ -206,13 +196,48 @@
 
 
 <script>
+    function fetchProductos(clienteId) {
+        fetch(`{% url 'production:get_productos' %}?cliente_id=${clienteId}`)
+            .then(response => response.json())
+            .then(data => {
+                const productoSelect = document.getElementById('productoSelect');
+                productoSelect.innerHTML = '<option value="">Seleccione Producto</option>';
+                data.productos.forEach(producto => {
+                    const option = document.createElement('option');
+                    option.value = producto.ID_Producto;
+                    option.textContent = producto.ID_Producto; // Mostrar ID_Producto en el campo de selección
+                    option.setAttribute('data-nombre', producto.DescripcionProd); // Mantener DescripcionProd como atributo de datos
+                    productoSelect.appendChild(option);
+                });
+            })
+            .catch(error => console.error('Error fetching productos:', error));
+    }
+
     // Function to update the product name display
     function updateProductoNombre() {
         const select = document.getElementById('productoSelect');
         const selectedOption = select.options[select.selectedIndex];
         const nombreProducto = document.getElementById('nombreProducto');
         nombreProducto.value = selectedOption.getAttribute('data-nombre') || '';
+        console.log('Producto seleccionado:', selectedOption.value, 'Nombre:', nombreProducto.value);
     }
+
+    function submitFormWithParams() {
+        const filterForm = document.getElementById('filterForm');
+        const clienteForm = document.getElementById('clienteForm');
+        const filterType = document.getElementById('filter_type').value;
+
+        // Agregar los valores de los filtros al formulario de cliente
+        const filterTypeInput = document.createElement('input');
+        filterTypeInput.type = 'hidden';
+        filterTypeInput.name = 'filter_type';
+        filterTypeInput.value = filterType;
+        clienteForm.appendChild(filterTypeInput);
+
+        // Enviar el formulario de cliente
+        clienteForm.submit();
+    }
+    
 
     // Function to validate time inputs and calculate downtime
     function validateHoraFin() {

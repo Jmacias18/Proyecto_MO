@@ -3,7 +3,29 @@
 {% load static %}
 {% block title %}Filtrar Paros de Producción{% endblock %}
 {% block content %}
+{% block head %}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+
+{% endblock %}
+
+
+
+<style>
+    .back-icon {
+        font-size: 20px;
+        cursor: pointer;
+        margin-bottom: 20px;
+        margin-top: 20px;
+        display: block;
+        color: #333;
+    }
+</style>
 <div class="container my-5">
+    <!-- Botón para acceder a la página de filtrado -->
+    <br><br>
+    <a href="{% url 'production:production' %}" class="back-icon">
+        <i class="fas fa-arrow-left"></i>
+    </a>
     <br><br>
     <h3 class="h4 text-dark mt-5">Lista de Paros en el Proceso</h3>
     

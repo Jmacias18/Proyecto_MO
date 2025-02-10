@@ -1,0 +1,21 @@
+<!-- filepath: /c:/proyecto_Moo/horas_procesos/templates/horas_procesos/actualizar_motivo.html -->
+{% extends 'core/base.html' %}
+{% block title %}Actualizar Motivo{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h1 class="text-center my-4">Actualizar Motivo</h1>
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">Empleado: {{ motivo.nombre_emp }}</h5>
+            <h6 class="card-subtitle mb-2 text-muted">Código: {{ motivo.codigo_emp }}</h6>
+            <h6 class="card-subtitle mb-2 text-muted">Departamento: {{ departamento_descripcion }}</h6>
+            <form method="POST" action="">
+                {% csrf_token %}
+                {{ form.as_p }}
+                <button type="submit" class="btn btn-primary">Actualizar</button>
+                <button type="button" class="btn btn-secondary" onclick="window.history.back()">Cancelar</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
