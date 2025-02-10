@@ -13,6 +13,42 @@
 {% block navbar_extra %}
 
 <script>
+    function actualizarResumenAsistencia() {
+        const resumen = {
+            F: 0,
+            D: 0,
+            P: 0,
+            RT: 0,
+            V: 0,
+            INC: 0,
+            S: 0,
+            B: 0,
+            R: 0,
+            NI: 0,
+            ASI: 0
+        };
+        const filasEmpleados = Array.from(document.querySelectorAll('#empleados_tbody tr')).filter(fila => fila.style.display !== 'none');
+        console.log(filasEmpleados);
+    
+        filasEmpleados.forEach(fila => {
+            const codigoEmp = fila.getAttribute('data-codigo_emp');
+            const selectInasistencia = fila.querySelector(`select[name="tipo_inasistencia_${codigoEmp}"]`);
+            const value = selectInasistencia.value;
+            if (resumen.hasOwnProperty(value)) {
+                resumen[value]++;
+            }
+        });
+    
+        for (const key in resumen) {
+            const spanElement = document.getElementById(`resumen-${key}`);
+            if (spanElement) {
+                spanElement.textContent = resumen[key];
+            }
+        }
+    }
+    
+    
+    
     document.addEventListener('DOMContentLoaded', function() {
         const resumenAsistencia = document.getElementById('resumen-asistencia');
         const deptoSelect = document.getElementById('depto_select');
@@ -278,7 +314,7 @@
                 {% endfor %}
             </select>
         </div>
-        
+        <div id="empleados_container" class="mb-4"></div>
         <div class="mb-4">
             <p id="total_empleados" class="form-label" style="display: none;">Total de Empleados: 0</p>   
         </div>
@@ -291,7 +327,7 @@
             <table class="table table-bordered table-sm">
                 <thead class="thead-dark">
                     <td colspan="24" class="text-start">
-                        <div id="resumen-asistencia" style="display: none;">
+                        <div id="resumen-asistencia" style="display: block;">
                             <h4 class="text-center">RESUMEN DE ASISTENCIA:</h4>
                             <ul class="list-unstyled text-center">
                                 <li>FALTA: <span id="resumen-F">0</span></li>
