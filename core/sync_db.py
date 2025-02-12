@@ -51,6 +51,12 @@ def get_connection(conn_info):
             pwd=conn_info['pwd']
         )
 
+def table_exists(conn, table_name):
+    query = f"SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '{table_name}'"
+    cursor = conn.cursor()
+    cursor.execute(query)
+    return cursor.fetchone() is not None
+
 def sync_table(remote_conn, local_conn, table_name, primary_key, where_clause=""):
     with remote_conn.cursor() as remote_cur, local_conn.cursor() as local_cur:
         # Obtener todos los datos de la tabla remota con la cláusula WHERE
@@ -133,6 +139,14 @@ def sync_databases():
         print("Sincronizando tabla Turnos desde SPF_Info a SPF_Info local...")
         sync_table(remote_info_conn, local_info_conn, 'Turnos', 'ID_Turno')
         print("Tabla Turnos sincronizada con éxito en SPF_Info local.")
+        
+        # Sincronizar tabla Motivo en SPF_HRS_MO
+        if table_exists(remote_hrs_conn, 'Motivo'):
+            print("Sincronizando tabla Motivo desde SPF_HRS_MO a SPF_HRS_MO local...")
+            sync_table(remote_hrs_conn, local_hrs_conn, 'Motivo', 'ID')
+            print("Tabla Motivo sincronizada con éxito en SPF_HRS_MO local.")
+        else:
+            print("La tabla 'Motivo' no existe en la base de datos remota SPF_HRS_MO.")
         
     finally:
         # Cerrar las conexiones a las bases de datos

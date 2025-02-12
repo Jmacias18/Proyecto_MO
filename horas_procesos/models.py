@@ -18,6 +18,7 @@ class Horasprocesos(models.Model):
     ucreado = models.CharField(db_column='UCreado', max_length=20, null=True, blank=True)  # Nueva columna UCreado
     umod = models.CharField(db_column='UMod', max_length=20, null=True, blank=True)  # Nueva columna UMod
     fmod = models.DateField(db_column='FMod', null=True)  # Nueva columna FMod
+    hrcomida = models.BooleanField(default=False)  # Asegúrate de que este campo esté definido
     class Meta:
         db_table = 'HorasProcesos'
         managed = True

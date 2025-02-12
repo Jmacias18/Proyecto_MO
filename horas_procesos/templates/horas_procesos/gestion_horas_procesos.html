@@ -46,6 +46,7 @@
             }
         }
     }
+
     
     
     
@@ -199,7 +200,7 @@
     
     // Validar el formulario al enviarlo
     function validarFormulario() {
-        if (validarHorasRegistradas() && validarHorasInicioFinIguales()) {
+        if (validarHorasRegistradas() && validartotalhoras()) {
             mostrarAnimacionCarga();
             return true;
         }
@@ -393,6 +394,16 @@
                         </td>
                         {% for i in rango_procesos %}
                         <td>
+                            <!-- Dentro del loop que genera las filas de empleados -->
+
+                            <!-- Dentro del loop que genera las filas de empleados -->
+
+                            <input type="checkbox" class="form-check-input comida-checkbox" data-proceso="${i + 1}" data-emp="${empleado.codigo_emp}" name="comida_proceso${i + 1}_${empleado.codigo_emp}" onchange="handleComidaCheckboxChange(event)">
+                            <input type="hidden" name="comida_proceso${i + 1}_${empleado.codigo_emp}_hidden" value="off">
+                            <label for="comida-checkbox">
+                                <img src="/static/icons/hora_comida.png" alt="Comida" style="width: 15px; height: 15px;">
+                            </label>
+
                             <input type="time" class="form-control form-control-sm mb-2" name="inicio_proceso{{ i }}_{{ empleado.codigo_emp }}" placeholder="Inicio" disabled step="60" onchange="ajustarHoraFin('{{ empleado.codigo_emp }}', {{ i }})">
                             <input type="time" class="form-control form-control-sm mb-2" name="fin_proceso{{ i }}_{{ empleado.codigo_emp }}" placeholder="Fin" disabled step="60" onchange="calcularTotalHoras('{{ empleado.codigo_emp }}', {{ i }})">
                             <input type="text" class="form-control form-control-sm mb-2" name="total_proceso{{ i }}_{{ empleado.codigo_emp }}" readonly>

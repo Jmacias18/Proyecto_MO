@@ -14,5 +14,6 @@ urlpatterns = [
     path('eliminar_motivo/<int:id>/', eliminar_motivo, name='eliminar_motivo'),
     path('actualizar_motivo/<int:id>/', actualizar_motivo, name='actualizar_motivo'),
     
+    
 ]
     

@@ -467,11 +467,13 @@
 
         return true;
     };
+   
     const actualizarTotalHoras = () => {
         try {
             const totalHorasPorEmpleado = {};
             const totalHorasPorProceso = {};
             const totalHorasExtrasPorProceso = {};
+            const totalHorasComidaPorProceso = {};
     
             // Sumar las horas de todos los procesos por empleado y proceso
             document.querySelectorAll('input[name^="hrs_"]').forEach(input => {
@@ -485,6 +487,8 @@
                 const proceso = document.querySelector(`select[name="proceso_${id}"]`).selectedOptions[0].textContent;
                 const horas = parseFloat(input.value) || 0;
                 const horasExtras = parseFloat(document.querySelector(`input[name="hrsextras_${id}"]`).value) || 0;
+                const hrComida = row.dataset.hrcomida === 'True';  // Convertir a booleano
+                const horasComida = hrComida ? 0.75 : 0; // 45 minutos de tiempo de comida si hrComida es True
     
                 if (!totalHorasPorEmpleado[codigoEmp]) {
                     totalHorasPorEmpleado[codigoEmp] = 0;
@@ -493,11 +497,13 @@
                 if (!totalHorasPorProceso[proceso]) {
                     totalHorasPorProceso[proceso] = 0;
                     totalHorasExtrasPorProceso[proceso] = 0;
+                    totalHorasComidaPorProceso[proceso] = 0;
                 }
     
                 totalHorasPorEmpleado[codigoEmp] += horas;
                 totalHorasPorProceso[proceso] += horas;
                 totalHorasExtrasPorProceso[proceso] += horasExtras;
+                totalHorasComidaPorProceso[proceso] += horasComida;
             });
     
             // Asignar el valor de TotalHrs a todos los procesos del empleado
@@ -507,12 +513,13 @@
                 input.value = totalHorasPorEmpleado[codigoEmp].toFixed(2);
             });
     
-            // Mostrar el detalle de horas y horas extras por proceso
+            // Mostrar el detalle de horas, horas extras y horas de comida por proceso
             const detalleProcesos = Object.entries(totalHorasPorProceso)
                 .filter(([proceso, horas]) => proceso !== "Sin Proceso")    // Filtrar el proceso "Sin Proceso"
                 .map(([proceso, horas]) => {
                     const horasExtras = totalHorasExtrasPorProceso[proceso].toFixed(2);
-                    return `<td>${proceso}: ${horas.toFixed(2)} horas (Horas extras: ${horasExtras})</td>`;
+                    const horasComida = totalHorasComidaPorProceso[proceso].toFixed(2);
+                    return `<td>${proceso}: ${horas.toFixed(2)} horas (Horas extras: ${horasExtras}, Horas comida: ${horasComida})</td>`;
                 })
                 .join('');
             document.getElementById('detalle_procesos_container').innerHTML = `<table><tr>${detalleProcesos}</tr></table>`;
@@ -877,9 +884,10 @@
                     </tr>
                 </thead>
                 <tbody>
+                    <!-- filepath: /c:/proyecto_Moo/horas_procesos/templates/horas_procesos/actualizar_horas_procesos.html -->
                     {% for registro in registros_combinados %}
                     {% for proceso in registro.procesos %}
-                    <tr data-codigo-emp="{{ registro.codigo_emp }}" data-id="{{ proceso.id_hrspro }}">
+                    <tr data-codigo-emp="{{ registro.codigo_emp }}" data-id="{{ proceso.id_hrspro }}" data-hrcomida="{{ proceso.hrcomida }}">
                         {% if forloop.first %}
                         <td rowspan="{{ registro.procesos|length }}">{{ registro.codigo_emp }}</td>
                         <td rowspan="{{ registro.procesos|length }}">{{ registro.nombre_emp }}</td>

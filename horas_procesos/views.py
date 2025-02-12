@@ -101,8 +101,6 @@ def gestion_horas_procesos(request):
     # Traducir el día de la semana a sin acentos
     dia_actual_sin_acento = dias_semana_sin_acentos[dia_actual_con_acento]
 
-    print(f"El día actual es: {dia_actual_sin_acento}")
-
     empleados_con_descripcion = []
     descanso_por_turno = {}
 
@@ -111,8 +109,6 @@ def gestion_horas_procesos(request):
         fecha_seleccionada = request.POST.get('fecha')
         if not fecha_seleccionada:
             fecha_seleccionada = timezone.now().date()  # Usar la fecha actual si no se selecciona ninguna
-
-        print(f"Fecha seleccionada: {fecha_seleccionada}")
 
         tipos_inasistencia = cache.get('tipos_inasistencia')
         if not tipos_inasistencia:
@@ -125,7 +121,6 @@ def gestion_horas_procesos(request):
 
         # Crear un diccionario para mapear la descripción al ID_Asis
         descripcion_a_id = {tipo[1]: tipo[0] for tipo in tipos_inasistencia}
-        print(f"Descripcion a ID: {descripcion_a_id}")
 
         turnos = cache.get('turnos')
         if not turnos:
@@ -138,7 +133,6 @@ def gestion_horas_procesos(request):
 
         # Crear un diccionario para mapear el ID del turno a los días de descanso
         descanso_por_turno = {turno[0]: [dia.strip().capitalize() for dia in turno[1].split('/')] if turno[1] else [] for turno in turnos}
-        print(f"Descanso por turno: {descanso_por_turno}")
 
         # Obtener los ID_Asis para los diferentes tipos de inasistencia
         id_asistencia = descripcion_a_id.get('ASISTENCIA')
@@ -166,15 +160,12 @@ def gestion_horas_procesos(request):
             'NI': (id_nuevo_ingreso, 'NUEVO INGRESO'),
             'RT': (id_retardo, 'RETARDO')
         }
-        print(f"Inasistencia map: {inasistencia_map}")
 
         # Obtener los datos de TempusAccesos
         registros_entrada = obtener_datos_tempus_accesos()
-        print(f"Registros de entrada: {registros_entrada}")
 
         # Filtrar empleados por departamento seleccionado
         departamento_seleccionado = request.POST.get('departamento')
-        print(f"Departamento seleccionado: {departamento_seleccionado}")
         empleados = Empleados.objects.filter(id_departamento=departamento_seleccionado)
 
         # Obtener la descripción de los departamentos
@@ -205,12 +196,10 @@ def gestion_horas_procesos(request):
                 tipo_inasistencia = 'D'
             else:
                 tipo_inasistencia = 'F'
-            print(f"Tipo de inasistencia determinado: {tipo_inasistencia}")
 
             # Asignar el ID_Asis y el mensaje correspondiente
             ID_Asis, mensaje = inasistencia_map.get(tipo_inasistencia, (id_falta, 'FALTA'))
             inasistencia = tipo_inasistencia in ['F', 'D', 'P', 'V', 'INC', 'S', 'B', 'R']
-            print(f"ID_Asis: {ID_Asis}, Mensaje: {mensaje}, Inasistencia: {inasistencia}")
 
             empleados_con_descripcion.append({
                 'codigo_emp': empleado.codigo_emp,
@@ -241,9 +230,9 @@ def gestion_horas_procesos(request):
                         sync=False,
                         ucreado=request.user.username,  # Guardar el usuario que creó el registro
                         umod=None,  # Guardar el usuario que modificó el registro
-                        fmod=None
+                        fmod=None,
+                        hrcomida=False
                     )
-                    print(f"Registro de inasistencia creado para empleado: {codigo_emp}")
                 else:
                     # Insertar registros de horas de procesos solo si no es inasistencia
                     horas_extras = request.POST.get(f'horas_extras_{codigo_emp}', 0)
@@ -253,8 +242,9 @@ def gestion_horas_procesos(request):
                         hora_entrada = request.POST.get(f'inicio_proceso{i}_{codigo_emp}') or None
                         hora_salida = request.POST.get(f'fin_proceso{i}_{codigo_emp}') or None
                         id_producto = request.POST.get(f'producto{i}_header')
-
-                        print(f"Proceso {i}: id_proceso={id_proceso}, hora_entrada={hora_entrada}, hora_salida={hora_salida}, horas_extras={horas_extras}")
+                        hrs = request.POST.get(f'total_proceso{i}_{codigo_emp}', 0)
+                        hrcomida = request.POST.get(f'comida_proceso{i}_{codigo_emp}', 'off') == 'on'  # Obtener el valor del checkbox de comida
+                        print(f"Proceso {i}: id_proceso={id_proceso}, hora_entrada={hora_entrada}, hora_salida={hora_salida}, horas_extras={horas_extras}, hrcomida={hrcomida}")
 
                         if id_proceso and hora_entrada and hora_salida:
                             # Calcular las horas trabajadas
@@ -277,7 +267,12 @@ def gestion_horas_procesos(request):
                                 horas_extras = 0.0
                                 total_hrs = horas_trabajadas
 
-                            print(f"Insertando registro de horas para empleado: {codigo_emp}, horas_trabajadas={horas_trabajadas}, horas_extras={horas_extras}")
+                            try:
+                                hrs = float(hrs)
+                            except ValueError:
+                                hrs = 0.0
+
+                            print(f"Creando registro: fecha_hrspro={fecha_seleccionada}, codigo_emp={empleado}, ID_Asis={ID_Asis}, id_pro={id_proceso}, id_producto={id_producto}, horaentrada={hora_entrada}, horasalida={hora_salida}, hrs={hrs}, totalhrs={total_hrs}, hrsextras={horas_extras}, hrcomida={hrcomida}")
 
                             Horasprocesos.objects.create(
                                 fecha_hrspro=fecha_seleccionada,
@@ -287,16 +282,16 @@ def gestion_horas_procesos(request):
                                 id_producto=id_producto,
                                 horaentrada=hora_entrada,
                                 horasalida=hora_salida,
-                                hrs=total_hrs,
+                                hrs=hrs,
                                 totalhrs=total_hrs,
                                 hrsextras=horas_extras,
                                 autorizado=False,
                                 sync=False,
                                 ucreado=request.user.username,  # Guardar el usuario que creó el registro
                                 umod=None,  # Guardar el usuario que modificó el registro
-                                fmod=None
+                                fmod=None,
+                                hrcomida=hrcomida  # Guardar el valor del checkbox de comida
                             )
-                            print(f"Registro insertado para empleado: {codigo_emp}")
             except Exception as e:
                 print(f"Error al crear registro para empleado {codigo_emp}: {e}")
 
@@ -338,7 +333,6 @@ def gestion_horas_procesos(request):
 
     # Obtener los datos de TempusAccesos
     registros_entrada = obtener_datos_tempus_accesos()
-    print(f"Registros de entrada: {registros_entrada}")
 
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
         departamento_seleccionado = request.GET.get('departamento')
@@ -357,8 +351,6 @@ def gestion_horas_procesos(request):
             for emp in empleados
         ]
         return JsonResponse({'empleados': empleados_con_descripcion, 'tipos_inasistencia': [{'ID_Asis': tipo[0], 'Descripcion': tipo[1]} for tipo in tipos_inasistencia]})
-
-    print(f"Total de empleados cargados: {len(empleados_con_descripcion)}")  # Agregar esta línea para imprimir la cantidad de empleados
 
     procesos = Procesos.objects.filter(estado_pro=True)  # Filtrar solo los procesos activos
     rango_procesos = range(1, 11)  # Generar el rango de números del 1 al 11
@@ -412,6 +404,7 @@ def gestion_horas_procesos(request):
         'departamentos_a_mostrar': [12, 16, 17, 18, 19, 20, 21, 22, 23],  # Pasar la lista de IDs de departamentos a mostrar al contexto
         'empleados_motivo': list(Motivo.objects.values_list('codigo_emp', flat=True))  # Pasar la lista de empleados de la tabla Motivo al contexto
     })
+
 @csrf_exempt
 def sync_to_server_view(request):
     if request.method == 'POST':
@@ -508,30 +501,38 @@ def actualizar_motivo(request, id):
     })
 from django.shortcuts import redirect
 
-from .models import Motivo
-from .forms import MotivoForm
 
+
+from django.shortcuts import redirect, get_object_or_404
+from django.http import JsonResponse
+from .models import Motivo, Empleados
+from .forms import MotivoForm
 
 def agregar_motivo(request):
     if request.method == 'POST':
+        print("Solicitud POST recibida en agregar_motivo")
         for key, value in request.POST.items():
+            print(f"Clave: {key}, Valor: {value}")
             if key.startswith('motivo_'):
                 codigo_emp = key.split('_')[1]
                 motivo = value
-                empleado = Empleados.objects.get(codigo_emp=codigo_emp)
-                # Guardar el motivo en la base de datos
-                Motivo.objects.create(
-                    codigo_emp=codigo_emp,
-                    nombre_emp=empleado.nombre_emp,
-                    departamento=empleado.id_departamento,
-                    motivo=motivo,
-                    sync=False,
-                    estado=True
-                )
-                print(f'Empleado: {codigo_emp}, Motivo: {motivo}')
+                try:
+                    empleado = Empleados.objects.get(codigo_emp=codigo_emp)
+                    # Guardar el motivo en la base de datos
+                    Motivo.objects.create(
+                        codigo_emp=codigo_emp,
+                        nombre_emp=empleado.nombre_emp,
+                        departamento=empleado.id_departamento,
+                        motivo=motivo,
+                        sync=False,
+                        estado=True
+                    )
+                    print(f'Empleado: {codigo_emp}, Motivo: {motivo}')
+                except Empleados.DoesNotExist:
+                    print(f'Empleado con código {codigo_emp} no encontrado')
         return redirect('horas_procesos:display_employees')
+    print("Solicitud GET recibida en agregar_motivo")
     return redirect('horas_procesos:display_employees')
-
 def actualizar_horas_procesos(request):
     departamento_seleccionado = request.GET.get('departamento', None)
     fecha_seleccionada = request.GET.get('fecha', None)
@@ -626,7 +627,6 @@ def actualizar_horas_procesos(request):
                         proceso.hrsextras = 0
                         proceso.id_pro = 0
                     proceso.save()
-                    print(f'Proceso guardado para ID {id_hrspro}')  # Depuración
                 except Horasprocesos.DoesNotExist:
                     messages.error(request, f'El proceso con ID {id_hrspro} no existe.')
             elif key.startswith('eliminar_') and value == 'on':
@@ -636,7 +636,6 @@ def actualizar_horas_procesos(request):
             try:
                 proceso = Horasprocesos.objects.get(id_hrspro=id_hrspro)
                 proceso.delete()
-                print(f'Proceso eliminado para ID {id_hrspro}')  # Depuración
             except Horasprocesos.DoesNotExist:
                 messages.error(request, f'El proceso con ID {id_hrspro} no existe.')
 
@@ -677,9 +676,3 @@ def eliminar_proceso(request):
         return JsonResponse({'status': 'success'})
     return JsonResponse({'status': 'error'}, status=400)
 
-from django.http import HttpResponse
-from openpyxl import Workbook
-from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
-from openpyxl.utils import get_column_letter
-from openpyxl.cell.cell import MergedCell
-from django.db import connection

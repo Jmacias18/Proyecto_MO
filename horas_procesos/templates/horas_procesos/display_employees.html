@@ -16,7 +16,7 @@
 
 <div class="container mt-4">
     <h4 class="text-center my-4">Lista de Empleados</h4>
-    <form id="filter-form" method="GET" action="{% url 'horas_procesos:display_employees' %}">
+    <form id="filter-form" class="filter-form" method="GET" action="{% url 'horas_procesos:display_employees' %}">
         <div class="form-group">
             <label for="codigo_emp">Código de Empleado:</label>
             <input type="text" id="codigo_emp" name="codigo_emp" class="form-control" value="{{ request.GET.codigo_emp }}">
@@ -44,7 +44,7 @@
                     <th>No. Emp</th>
                     <th>Empleado</th>
                     <th>Departamento</th>
-                    <th>Motivo</th>>
+                    <th>Motivo</th>
                     <th>Acción</th>
                 </tr>
             </thead>
@@ -55,12 +55,14 @@
                     <td>{{ empleado.nombre_emp }}</td>
                     <td>{{ empleado.descripcion_departamento }}</td>
                     <td>
-                        <form method="POST" action="{% url 'horas_procesos:agregar_motivo' %}">
-                            {% csrf_token %}
-                            <input type="text" name="motivo_{{ empleado.codigo_emp }}" class="form-control">
+                        <input type="text" name="motivo_{{ empleado.codigo_emp }}" class="form-control motivo-input">
                     </td>
                     <td>
-                            <button type="submit" class="btn btn-success">Agregar</button>
+                        <form class="agregar-motivo-form" method="POST" action="{% url 'horas_procesos:agregar_motivo' %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="codigo_emp" value="{{ empleado.codigo_emp }}">
+                            <input type="hidden" name="motivo" value="">
+                            <button type="submit" class="btn btn-success mt-2">Agregar</button>
                         </form>
                     </td>
                 </tr>
@@ -112,33 +114,91 @@
 </div>
 
 <script>
-document.getElementById('filter-form').addEventListener('submit', function(event) {
+document.querySelector('.filter-form').addEventListener('submit', function(event) {
     event.preventDefault();
+    console.log("Formulario de filtro enviado");
     const form = event.target;
     const formData = new FormData(form);
     const params = new URLSearchParams(formData).toString();
+    console.log("Parámetros de búsqueda:", params);
 
     fetch(form.action + '?' + params, {
         headers: {
             'X-Requested-With': 'XMLHttpRequest'
         }
     })
-    .then(response => response.json())
+    .then(response => {
+        console.log("Respuesta recibida:", response);
+        return response.json();
+    })
     .then(data => {
+        console.log("Datos recibidos:", data);
         const tableContainer = document.getElementById('employees-table');
         let tableHtml = '<table class="table table-bordered table-sm mt-4"><thead class="thead-dark"><tr><th>No. Emp</th><th>Empleado</th><th>Departamento</th><th>Motivo</th><th>Acción</th></tr></thead><tbody>';
         data.empleados.forEach(empleado => {
+            console.log("Generando formulario para empleado:", empleado.codigo_emp);
             tableHtml += `<tr>
                 <td>${empleado.codigo_emp}</td>
                 <td>${empleado.nombre_emp}</td>
                 <td>${empleado.descripcion_departamento}</td>
-                <td><form method="POST" action="{% url 'horas_procesos:agregar_motivo' %}">{% csrf_token %}<input type="text" name="motivo_${empleado.codigo_emp}" class="form-control"></td>
-        
-                <td><button type="submit" class="btn btn-success">Agregar</button></form></td>
+                <td><input type="text" name="motivo_${empleado.codigo_emp}" class="form-control motivo-input"></td>
+                <td>
+                    <form class="agregar-motivo-form" method="POST" action="{% url 'horas_procesos:agregar_motivo' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="codigo_emp" value="${empleado.codigo_emp}">
+                        <input type="hidden" name="motivo" value="">
+                        <button type="submit" class="btn btn-success mt-2">Agregar</button>
+                    </form>
+                </td>
             </tr>`;
         });
         tableHtml += '</tbody></table>';
         tableContainer.innerHTML = tableHtml;
+
+        // Agregar evento submit a los nuevos formularios
+        document.querySelectorAll('.agregar-motivo-form').forEach(form => {
+            console.log("Agregando evento submit al formulario:", form);
+            form.addEventListener('submit', function(event) {
+                event.preventDefault();
+                console.log("Formulario de agregar motivo enviado");
+                const codigoEmp = form.querySelector('input[name="codigo_emp"]').value;
+                const inputMotivo = form.closest('tr').querySelector(`input[name="motivo_${codigoEmp}"]`);
+                if (inputMotivo) {
+                    form.querySelector('input[name="motivo"]').value = inputMotivo.value;
+                } else {
+                    console.error(`No se encontró el campo de texto motivo para el empleado con código ${codigoEmp}`);
+                }
+                const formData = new FormData(form);
+                console.log("Datos del formulario:", formData);
+                fetch(form.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => {
+                    if (response.redirected) {
+                        window.location.href = response.url;
+                    } else {
+                        console.log("Respuesta recibida del servidor:", response);
+                        return response.json();
+                    }
+                })
+                .then(data => {
+                    if (data) {
+                        console.log("Datos recibidos del servidor:", data);
+                        // Aquí puedes actualizar la tabla o realizar otras acciones según sea necesario
+                    }
+                })
+                .catch(error => {
+                    console.error("Error al procesar la solicitud:", error);
+                });
+            });
+        });
+    })
+    .catch(error => {
+        console.error("Error al procesar la solicitud:", error);
     });
 });
 </script>
