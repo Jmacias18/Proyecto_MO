@@ -250,7 +250,7 @@ function toggleInputs(codigoEmp) {
     
                 if (totalField) {
                     const totalHoras = parseFloat(totalField.value) || 0;
-                    console.log(`Empleado ${codigoEmp} - Total Horas: ${totalHoras}`); // Log para depuración
+                    
     
                     if (totalHoras < 11.25) {
                         mensajesAlerta.push(`El empleado con código ${codigoEmp} tiene menos de 11.25 horas trabajadas.`);
@@ -329,7 +329,6 @@ let totalEmpleadosElement;
 
 function filtrarEmpleados() {
     var departamento = document.getElementById('depto_select').value;
-    console.log(`Departamento seleccionado: ${departamento}`);
     
     var xhr = new XMLHttpRequest();
     xhr.open('GET', '/horas_procesos/gestion_horas_procesos/?departamento=' + departamento, true);
@@ -337,13 +336,12 @@ function filtrarEmpleados() {
     xhr.onreadystatechange = function () {
         if (xhr.readyState === 4 && xhr.status === 200) {
             var response = JSON.parse(xhr.responseText);
-            console.log('Respuesta del servidor:', response);
+            
             
             var empleadosTbody = document.getElementById('empleados_tbody');
             if (empleadosTbody) {
                 empleadosTbody.innerHTML = '';
                 response.empleados.forEach(function (empleado, index) {
-                    console.log(`Procesando empleado: ${empleado.codigo_emp}, es_descanso: ${empleado.es_descanso}, tipo_inasistencia: ${empleado.tipo_inasistencia}`);
                     
                     var row = document.createElement('tr');
                     row.setAttribute('data-depto', empleado.id_departamento);
@@ -411,29 +409,31 @@ function filtrarEmpleados() {
         const deptoSeleccionado = document.getElementById('depto_select').value;
         let valid = true;
         let mensajeAlerta = '';
-        const recorridos = [];
-    
+
         filasEmpleados.forEach(fila => {
             const deptoEmpleado = fila.getAttribute('data-depto');
             const codigoEmp = fila.dataset.codigo_emp;
             const tipoInasistencia = document.querySelector(`select[name="tipo_inasistencia_${codigoEmp}"]`).value;
             const inasistencia = ['F', 'D', 'P', 'V', 'INC', 'S', 'B', 'R'].includes(tipoInasistencia);
-    
+
             if (deptoEmpleado === deptoSeleccionado && !inasistencia) {
                 let tieneHorasRegistradas = false;
                 const horasRegistradas = new Set();
                 const horarios = [];
-    
+
                 for (let i = 1; i <= 10; i++) {
                     const procesoSelect = document.querySelector(`[name="proceso${i}_header"]`);
-    
+
                     if (procesoSelect && procesoSelect.value) {
                         const inicio = document.querySelector(`[name="inicio_proceso${i}_${codigoEmp}"]`);
                         const fin = document.querySelector(`[name="fin_proceso${i}_${codigoEmp}"]`);
-    
+
                         if (inicio && fin && !inicio.disabled && !fin.disabled) {
                             if (!inicio.value || !fin.value) {
                                 mensajeAlerta += `El empleado con código ${codigoEmp} tiene campos de inicio o fin vacíos en el proceso ${i}.\n`;
+                                valid = false;
+                            } else if (inicio.value === fin.value) {
+                                mensajeAlerta += `El empleado con código ${codigoEmp} tiene la misma hora de inicio y fin en el proceso ${i}.\n`;
                                 valid = false;
                             } else {
                                 tieneHorasRegistradas = true;
@@ -444,13 +444,12 @@ function filtrarEmpleados() {
                                 } else {
                                     horasRegistradas.add(horas);
                                     horarios.push({ inicio: inicio.value, fin: fin.value });
-                                    recorridos.push(`Empleado ${codigoEmp} - Proceso ${i} - Inicio: ${inicio.value}, Fin: ${fin.value}`);
                                 }
                             }
                         }
                     }
                 }
-    
+
                 horarios.sort((a, b) => a.inicio.localeCompare(b.inicio));
                 for (let i = 0; i < horarios.length - 1; i++) {
                     if (horarios[i].fin > horarios[i + 1].inicio) {
@@ -459,22 +458,20 @@ function filtrarEmpleados() {
                         break;
                     }
                 }
-    
+
                 if (!tieneHorasRegistradas) {
                     mensajeAlerta += `El empleado con código ${codigoEmp} no tiene horas registradas en ningún proceso.\n`;
                     valid = false;
                 }
             }
         });
-    
+
         if (!valid) {
             showAlert(mensajeAlerta, 'danger');
         }
-    
-        console.log('Recorridos: validarHorasRegistradas', recorridos);
+
         return valid;
     }
-
     function handleCopyAllCheckboxChange(event) {
         const checkbox = event.target;
         const deptoActual = document.getElementById('depto_select').value; // Obtener el departamento seleccionado
@@ -482,10 +479,10 @@ function filtrarEmpleados() {
             console.error('No se pudo encontrar el departamento seleccionado.');
             return;
         }
-        console.log(`Departamento seleccionado: ${deptoActual}`);
+        
         
         const rows = document.querySelectorAll(`tr[data-depto="${deptoActual}"]`);
-        console.log(`Número de filas encontradas: ${rows.length}`);
+        
         
         let inicioValues = [];
         let finValues = [];
@@ -498,19 +495,19 @@ function filtrarEmpleados() {
                 const tipoInasistenciaSelect = row.querySelector(`select[name="tipo_inasistencia_${codigoEmp}"]`);
                 const tipoInasistencia = tipoInasistenciaSelect ? tipoInasistenciaSelect.value : null;
     
-                console.log(`Empleado ${codigoEmp} - Tipo de inasistencia: ${tipoInasistencia}`);
+                
     
                 if (['ASI', 'RT', 'NI'].includes(tipoInasistencia)) {
                     const inicioInput = row.querySelector(`input[name="inicio_proceso${i}_${codigoEmp}"]`);
                     const finInput = row.querySelector(`input[name="fin_proceso${i}_${codigoEmp}"]`);
                     const deleteCheckbox = row.querySelector(`.delete-checkbox[data-proceso="${i}"][data-emp="${codigoEmp}"]`);
     
-                    console.log(`Empleado ${codigoEmp} - Proceso ${i} - Inicio: ${inicioInput.value}, Fin: ${finInput.value}, Delete Checkbox: ${deleteCheckbox ? deleteCheckbox.checked : 'No existe'}`);
+                   
                     if (inicioInput.value && finInput.value && (!deleteCheckbox || !deleteCheckbox.checked)) {
                         inicioValues[i - 1] = inicioInput.value;
                         finValues[i - 1] = finInput.value;
                         foundValidRow = true;
-                        console.log(`Fila válida encontrada para empleado ${codigoEmp} en proceso ${i}`);
+                        
                         break;
                     }
                 }
@@ -522,8 +519,7 @@ function filtrarEmpleados() {
             return;
         }
     
-        console.log(`Valores de inicio encontrados: ${inicioValues}`);
-        console.log(`Valores de fin encontrados: ${finValues}`);
+        
     
         // Procesar cada proceso individualmente
         for (let i = 1; i <= 10; i++) {
@@ -547,9 +543,9 @@ function filtrarEmpleados() {
                 // Verificar si el checkbox delete-checkbox está marcado
                 const deleteCheckbox = row.querySelector(`.delete-checkbox[data-proceso="${i}"][data-emp="${codigoEmp}"]`);
                 if (deleteCheckbox && deleteCheckbox.checked) {
-                    console.log(`Empleado ${codigoEmp} tiene el checkbox de eliminación marcado. No se copiarán las horas.`);
+                    
                 } else if (tipoInasistencia === 'F' || tipoInasistencia === 'D') {
-                    console.log(`Empleado ${codigoEmp} tiene tipo de inasistencia ${tipoInasistencia}. No se desbloquearán los campos ni se asignarán horas.`);
+                    
                 } else if (['ASI', 'RT', 'NI'].includes(tipoInasistencia)) {
                     const inicioInput = row.querySelector(`input[name="inicio_proceso${i}_${codigoEmp}"]`);
                     const finInput = row.querySelector(`input[name="fin_proceso${i}_${codigoEmp}"]`);
@@ -563,7 +559,7 @@ function filtrarEmpleados() {
                         if (inicioValues[i - 1] && finValues[i - 1]) {
                             inicioInput.value = inicioValues[i - 1];
                             finInput.value = finValues[i - 1];
-                            console.log(`Copiando valores - Inicio: ${inicioValues[i - 1]}, Fin: ${finValues[i - 1]} para empleado ${codigoEmp}`);
+                            
     
                             // Llamar a las funciones de ajuste y cálculo si es necesario
                             ajustarHoraFin(codigoEmp, i);
@@ -746,7 +742,7 @@ function calcularTotalHoras(codigoEmp, procesoNum) {
         // Descontar tiempo de comida si el checkbox está marcado
         const comidaCheckbox = document.querySelector(`.comida-checkbox[data-proceso="${procesoNum}"][data-emp="${codigoEmp}"]`);
         if (comidaCheckbox && comidaCheckbox.checked) {
-            console.log(`Checkbox de comida marcado para empleado ${codigoEmp}, proceso ${procesoNum}`);
+            
             diff -= 0.75; // Descontar 45 minutos
         } else {
             console.log(`Checkbox de comida no marcado para empleado ${codigoEmp}, proceso ${procesoNum}`);
@@ -813,8 +809,7 @@ function handleComidaCheckboxChange(event) {
     const procesoNum = checkbox.dataset.proceso; // Obtener el número del proceso del dataset del checkbox
 
     // Agregar logs para depuración
-    console.log(`Checkbox cambiado: ${checkbox.checked}`);
-    console.log(`Empleado: ${codigoEmp}, Proceso: ${procesoNum}`);
+   
 
     // Deshabilitar todos los checkboxes de comida del mismo empleado excepto el que se seleccionó
     document.querySelectorAll(`.comida-checkbox[data-emp="${codigoEmp}"]`).forEach(cb => {
@@ -827,7 +822,7 @@ function handleComidaCheckboxChange(event) {
     const hiddenField = document.querySelector(`[name="comida_proceso${procesoNum}_${codigoEmp}_hidden"]`);
     if (hiddenField) {
         hiddenField.value = checkbox.checked ? 'on' : 'off';
-        console.log(`Campo oculto actualizado: ${hiddenField.name} = ${hiddenField.value}`);
+        
     }
 
     // Calcular las horas para el empleado y proceso específicos

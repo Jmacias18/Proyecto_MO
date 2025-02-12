@@ -180,14 +180,14 @@ def gestion_horas_procesos(request):
 
         for empleado in empleados:
             codigo_emp = str(empleado.codigo_emp).strip()[-4:]  # Convertir a string y mantener solo los últimos 4 dígitos
-            print(f"Empleado: {empleado.nombre_emp}, Código: {codigo_emp}")
+            
 
             es_descanso = dia_actual_sin_acento in descanso_por_turno.get(str(empleado.id_turno), [])
-            print(f"Es descanso: {es_descanso}")
+            
 
             # Verificar si el empleado tiene una checada registrada
             tiene_checada = codigo_emp in registros_entrada
-            print(f"Tiene checada: {tiene_checada}")
+            
 
             # Determinar el tipo de inasistencia basado en las checadas y el día de descanso
             if tiene_checada:
@@ -196,6 +196,11 @@ def gestion_horas_procesos(request):
                 tipo_inasistencia = 'D'
             else:
                 tipo_inasistencia = 'F'
+
+            # Verificar si hay un tipo de inasistencia seleccionado en el formulario
+            tipo_inasistencia_form = request.POST.get(f'tipo_inasistencia_{codigo_emp}')
+            if tipo_inasistencia_form:
+                tipo_inasistencia = tipo_inasistencia_form
 
             # Asignar el ID_Asis y el mensaje correspondiente
             ID_Asis, mensaje = inasistencia_map.get(tipo_inasistencia, (id_falta, 'FALTA'))
@@ -244,7 +249,7 @@ def gestion_horas_procesos(request):
                         id_producto = request.POST.get(f'producto{i}_header')
                         hrs = request.POST.get(f'total_proceso{i}_{codigo_emp}', 0)
                         hrcomida = request.POST.get(f'comida_proceso{i}_{codigo_emp}', 'off') == 'on'  # Obtener el valor del checkbox de comida
-                        print(f"Proceso {i}: id_proceso={id_proceso}, hora_entrada={hora_entrada}, hora_salida={hora_salida}, horas_extras={horas_extras}, hrcomida={hrcomida}")
+                       
 
                         if id_proceso and hora_entrada and hora_salida:
                             # Calcular las horas trabajadas
@@ -272,7 +277,7 @@ def gestion_horas_procesos(request):
                             except ValueError:
                                 hrs = 0.0
 
-                            print(f"Creando registro: fecha_hrspro={fecha_seleccionada}, codigo_emp={empleado}, ID_Asis={ID_Asis}, id_pro={id_proceso}, id_producto={id_producto}, horaentrada={hora_entrada}, horasalida={hora_salida}, hrs={hrs}, totalhrs={total_hrs}, hrsextras={horas_extras}, hrcomida={hrcomida}")
+                           
 
                             Horasprocesos.objects.create(
                                 fecha_hrspro=fecha_seleccionada,
