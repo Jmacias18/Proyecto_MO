@@ -3,7 +3,7 @@ import pyodbc
 # Configuración de la conexión a la base de datos remota
 remote_conn_info = {
     'driver': '{ODBC Driver 17 for SQL Server}',
-    'server': r'QBSERVER\SQLEXPRESS',
+    'server': r'192.168.0.5\SQLEXPRESS',
     'database': 'SPF_HRS_MO',
     'uid': 'IT',
     'pwd': 'sqlSPF#2024'

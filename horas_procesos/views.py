@@ -348,7 +348,7 @@ def gestion_horas_procesos(request):
                 'nombre_emp': emp.nombre_emp,
                 'id_departamento': emp.id_departamento,
                 'descripcion_departamento': departamentos_dict.get(emp.id_departamento, ''),
-                'id_turno': emp.id_turno,
+                'id_turno': emp.id_turno,  # Agregar el turno del empleado
                 'dias_descanso': descanso_por_turno.get(str(emp.id_turno), []),
                 'es_descanso': dia_actual_sin_acento in descanso_por_turno.get(str(emp.id_turno), []),
                 'tipo_inasistencia': 'ASI' if emp.codigo_emp in registros_entrada else 'D' if dia_actual_sin_acento in descanso_por_turno.get(str(emp.id_turno), []) else 'F'

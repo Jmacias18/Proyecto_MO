@@ -239,9 +239,13 @@ function toggleInputs(codigoEmp) {
         const filasEmpleados = Array.from(document.querySelectorAll('#empleados_tbody tr')).filter(fila => fila.style.display !== 'none');
         let valid = true;
         let mensajesAlerta = [];
+        const diasSemana = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+        const hoy = new Date();
+        const diaActual = diasSemana[hoy.getDay()];
     
         filasEmpleados.forEach(fila => {
             const codigoEmp = fila.dataset.codigo_emp;
+            const idTurno = fila.dataset.id_turno; // Obtener el id_turno del dataset
             const tipoInasistenciaElement = document.querySelector(`select[name="tipo_inasistencia_${codigoEmp}"]`);
             const tipoInasistencia = tipoInasistenciaElement ? tipoInasistenciaElement.value : '';
     
@@ -250,14 +254,72 @@ function toggleInputs(codigoEmp) {
     
                 if (totalField) {
                     const totalHoras = parseFloat(totalField.value) || 0;
-                    
     
-                    if (totalHoras < 11.25) {
-                        mensajesAlerta.push(`El empleado con código ${codigoEmp} tiene menos de 11.25 horas trabajadas.`);
-                        valid = false;
-                    } else if (totalHoras > 11.25) {
-                        mensajesAlerta.push(`El empleado con código ${codigoEmp} tiene más de 11.25 horas trabajadas.`);
-                        valid = false;
+                    // Validación para empleados con id_turno="100"
+                    if (idTurno === "100") {
+                        if (['lunes', 'martes', 'miércoles', 'jueves'].includes(diaActual)) {
+                            if (totalHoras < 11.25) {
+                                mensajesAlerta.push(`El empleado con código ${codigoEmp} tiene menos de 11.25 horas trabajadas.`);
+                                valid = false;
+                            } else if (totalHoras > 11.25) {
+                                mensajesAlerta.push(`El empleado con código ${codigoEmp} tiene más de 11.25 horas trabajadas.`);
+                                valid = false;
+                            }
+                        } else if (['viernes', 'sábado'].includes(diaActual)) {
+                            if (totalHoras < 7.50) {
+                                mensajesAlerta.push(`El empleado con código ${codigoEmp} tiene menos de 7.50 horas trabajadas.`);
+                                valid = false;
+                            } else if (totalHoras > 7.50) {
+                                mensajesAlerta.push(`El empleado con código ${codigoEmp} tiene más de 7.50 horas trabajadas.`);
+                                valid = false;
+                            }
+                        }
+                    } else if (["4", "1009", "10"].includes(idTurno)) {
+                        // Validación para empleados con id_turno="4", "1009", "10"
+                        if (totalHoras < 8.25) {
+                            mensajesAlerta.push(`El empleado con código ${codigoEmp} tiene menos de 8.25 horas trabajadas.`);
+                            valid = false;
+                        } else if (totalHoras > 8.25) {
+                            mensajesAlerta.push(`El empleado con código ${codigoEmp} tiene más de 8.25 horas trabajadas.`);
+                            valid = false;
+                        }
+                    } else if (["1035", "1033", "1031", "1041", "1034", "1032"].includes(idTurno)) {
+                        // Validación para empleados con id_turno="1035", "1033", "1031", "1041", "1034", "1032"
+                        if (diaActual === 'lunes') {
+                            if (totalHoras < 11.25) {
+                                mensajesAlerta.push(`El empleado con código ${codigoEmp} tiene menos de 11.25 horas trabajadas.`);
+                                valid = false;
+                            } else if (totalHoras > 11.25) {
+                                mensajesAlerta.push(`El empleado con código ${codigoEmp} tiene más de 11.25 horas trabajadas.`);
+                                valid = false;
+                            }
+                        } else {
+                            if (totalHoras < 10.40) {
+                                mensajesAlerta.push(`El empleado con código ${codigoEmp} tiene menos de 10.40 horas trabajadas.`);
+                                valid = false;
+                            } else if (totalHoras > 10.40) {
+                                mensajesAlerta.push(`El empleado con código ${codigoEmp} tiene más de 10.40 horas trabajadas.`);
+                                valid = false;
+                            }
+                        }
+                    } else if (idTurno === "1044") {
+                        // Validación para empleados con id_turno="1044"
+                        if (totalHoras < 10.25) {
+                            mensajesAlerta.push(`El empleado con código ${codigoEmp} tiene menos de 10.25 horas trabajadas.`);
+                            valid = false;
+                        } else if (totalHoras > 10.25) {
+                            mensajesAlerta.push(`El empleado con código ${codigoEmp} tiene más de 10.25 horas trabajadas.`);
+                            valid = false;
+                        }
+                    } else {
+                        // Validación para otros empleados
+                        if (totalHoras < 11.25) {
+                            mensajesAlerta.push(`El empleado con código ${codigoEmp} tiene menos de 11.25 horas trabajadas.`);
+                            valid = false;
+                        } else if (totalHoras > 11.25) {
+                            mensajesAlerta.push(`El empleado con código ${codigoEmp} tiene más de 11.25 horas trabajadas.`);
+                            valid = false;
+                        }
                     }
                 }
             }
@@ -715,6 +777,10 @@ function calcularTotalHoras(codigoEmp, procesoNum) {
     const inicio = document.querySelector(`[name="inicio_proceso${procesoNum}_${codigoEmp}"]`);
     const fin = document.querySelector(`[name="fin_proceso${procesoNum}_${codigoEmp}"]`);
     const totalField = document.querySelector(`[name="total_proceso${procesoNum}_${codigoEmp}"]`);
+    const idTurno = document.querySelector(`tr[data-codigo_emp="${codigoEmp}"]`).dataset.id_turno; // Obtener el id_turno del dataset
+    const diasSemana = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+    const hoy = new Date();
+    const diaActual = diasSemana[hoy.getDay()];
 
     // Validar que los elementos de entrada existen
     if (!inicio || !fin || !totalField) {
@@ -742,8 +808,11 @@ function calcularTotalHoras(codigoEmp, procesoNum) {
         // Descontar tiempo de comida si el checkbox está marcado
         const comidaCheckbox = document.querySelector(`.comida-checkbox[data-proceso="${procesoNum}"][data-emp="${codigoEmp}"]`);
         if (comidaCheckbox && comidaCheckbox.checked) {
-            
-            diff -= 0.75; // Descontar 45 minutos
+            if (idTurno === "100" && (diaActual === 'viernes' || diaActual === 'sábado')) {
+                diff -= 0.5; // Descontar 30 minutos
+            } else {
+                diff -= 0.75; // Descontar 45 minutos
+            }
         } else {
             console.log(`Checkbox de comida no marcado para empleado ${codigoEmp}, proceso ${procesoNum}`);
         }

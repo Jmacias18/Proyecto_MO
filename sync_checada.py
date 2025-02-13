@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 # Configuración de la conexión a la base de datos remota TempusAccesos
 remote_conn_info = {
     'driver': '{ODBC Driver 17 for SQL Server}',
-    'server': r'APPSSERVER\SPFSQLSERVER',
+    'server': r'192.168.0.9\SPFSQLSERVER',
     'database': 'TempusAccesos',
     'uid': 'IT',
     'pwd': 'sqlSPF#2024'

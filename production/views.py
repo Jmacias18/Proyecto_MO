@@ -453,7 +453,7 @@ def sync_data_view(request):
     # Cadena de conexión al servidor
     server_conn_str = (
         "Driver={ODBC Driver 17 for SQL Server};"
-        "Server=QBSERVER\\SQLEXPRESS;"
+        "Server=192.168.0.5\\SQLEXPRESS;"
         "Database=SPF_Calidad;"
         "UID=it;"
         "PWD=sqlSPF#2024;"
@@ -464,72 +464,83 @@ def sync_data_view(request):
             cursor = conn.cursor()
 
             for registro in registros_no_sync:
-                if getattr(registro, 'DELETED', False):
-                    cursor.execute("DELETE FROM ParosProduccion WHERE ID_Paro = ?", (registro.ID_Paro,))
-                else:
-                    id_cliente = registro.ID_Cliente_id if registro.ID_Cliente is not None else None
-                    orden_fabricacion = registro.OrdenFabricacionSAP if registro.OrdenFabricacionSAP is not None else 0
-                    id_producto = registro.ID_Producto if registro.ID_Producto is not None else ''
-                    fecha_paro = registro.FechaParo if registro.FechaParo is not None else date.today()
-                    hora_inicio = registro.HoraInicio if registro.HoraInicio is not None else '00:00:00'
-                    hora_fin = registro.HoraFin if registro.HoraFin is not None else '00:00:00'
-                    tiempo_muerto = registro.TiempoMuerto if registro.TiempoMuerto is not None else 0
-                    personas_afectadas = registro.PersonasAfectadas if registro.PersonasAfectadas is not None else 0
-                    mo = registro.MO if registro.MO is not None else 0
-                    id_proceso = registro.ID_Proceso_id if registro.ID_Proceso is not None else None
-                    id_maquinaria = registro.ID_Maquinaria_id if registro.ID_Maquinaria is not None else None
-                    causa = registro.Causa if registro.Causa is not None else ''
-                    diagnostico = registro.Diagnostico if registro.Diagnostico is not None else ''
-                    causaraiz = registro.CausaRaiz if registro.CausaRaiz is not None else ''
-
-                    cursor.execute("SELECT COUNT(*) FROM ParosProduccion WHERE ID_Paro = ?", (registro.ID_Paro,))
-                    existe = cursor.fetchone()[0] > 0
-
-                    if existe:
-                        # Actualizar el registro
-                        cursor.execute("""UPDATE ParosProduccion 
-                                          SET ID_Cliente = ?, OrdenFabricacionSAP = ?, ID_Producto = ?, 
-                                              FechaParo = ?, HoraInicio = ?, HoraFin = ?, 
-                                              TiempoMuerto = ?, PersonasAfectadas = ?, 
-                                              MO = ?, ID_Proceso = ?, ID_Maquinaria = ?, 
-                                              Causa = ?, Diagnostico = ?, CausaRaiz = ?, SYNC = ? 
-                                          WHERE ID_Paro = ?""",
-                                       (id_cliente, orden_fabricacion, id_producto, 
-                                        fecha_paro, hora_inicio, 
-                                        hora_fin, tiempo_muerto, 
-                                        personas_afectadas, mo, 
-                                        id_proceso, id_maquinaria, 
-                                        causa, diagnostico, causaraiz, True, registro.ID_Paro))
-
+                try:
+                    if getattr(registro, 'DELETED', False):
+                        cursor.execute("DELETE FROM ParosProduccion WHERE ID_Paro = ?", (registro.ID_Paro,))
+                        print(f"Registro {registro.ID_Paro} eliminado.")
                     else:
-                        cursor.execute("SET IDENTITY_INSERT ParosProduccion ON")
-                        cursor.execute("""INSERT INTO ParosProduccion (ID_Paro, ID_Cliente, OrdenFabricacionSAP, 
-                                          ID_Producto, FechaParo, HoraInicio, HoraFin, 
-                                          TiempoMuerto, PersonasAfectadas, MO, 
-                                          ID_Proceso, ID_Maquinaria, Causa, Diagnostico, CausaRaiz, SYNC) 
-                                          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                                       (registro.ID_Paro, 
-                                        id_cliente, orden_fabricacion, 
-                                        id_producto, fecha_paro, 
-                                        hora_inicio, hora_fin, 
-                                        tiempo_muerto, personas_afectadas, 
-                                        mo, id_proceso, id_maquinaria, 
-                                        causa, diagnostico, causaraiz, True))
-                        cursor.execute("SET IDENTITY_INSERT ParosProduccion OFF")
+                        id_cliente = registro.ID_Cliente_id if registro.ID_Cliente is not None else None
+                        orden_fabricacion = registro.OrdenFabricacionSAP if registro.OrdenFabricacionSAP is not None else 0
+                        id_producto = registro.ID_Producto if registro.ID_Producto is not None else ''
+                        fecha_paro = registro.FechaParo if registro.FechaParo is not None else date.today()
+                        hora_inicio = registro.HoraInicio if registro.HoraInicio is not None else '00:00:00'
+                        hora_fin = registro.HoraFin if registro.HoraFin is not None else '00:00:00'
+                        tiempo_muerto = registro.TiempoMuerto if registro.TiempoMuerto is not None else 0
+                        personas_afectadas = registro.PersonasAfectadas if registro.PersonasAfectadas is not None else 0
+                        mo = registro.MO if registro.MO is not None else 0
+                        id_proceso = registro.ID_Proceso_id if registro.ID_Proceso is not None else None
+                        id_maquinaria = registro.ID_Maquinaria_id if registro.ID_Maquinaria is not None else None
+                        causa = registro.Causa if registro.Causa is not None else ''
+                        diagnostico = registro.Diagnostico if registro.Diagnostico is not None else ''
+                        causaraiz = registro.CausaRaiz if registro.CausaRaiz is not None else ''
 
-                    # Marcar como sincronizado en la base de datos local
-                    registro.SYNC = True
-                    registro.save(using='spf_calidad')
+                        cursor.execute("SELECT COUNT(*) FROM ParosProduccion WHERE ID_Paro = ?", (registro.ID_Paro,))
+                        existe = cursor.fetchone()[0] > 0
+
+                        if existe:
+                            # Actualizar el registro
+                            cursor.execute("""UPDATE ParosProduccion 
+                                              SET ID_Cliente = ?, OrdenFabricacionSAP = ?, ID_Producto = ?, 
+                                                  FechaParo = ?, HoraInicio = ?, HoraFin = ?, 
+                                                  TiempoMuerto = ?, PersonasAfectadas = ?, 
+                                                  MO = ?, ID_Proceso = ?, ID_Maquinaria = ?, 
+                                                  Causa = ?, Diagnostico = ?, CausaRaiz = ?, SYNC = ? 
+                                              WHERE ID_Paro = ?""",
+                                           (id_cliente, orden_fabricacion, id_producto, 
+                                            fecha_paro, hora_inicio, 
+                                            hora_fin, tiempo_muerto, 
+                                            personas_afectadas, mo, 
+                                            id_proceso, id_maquinaria, 
+                                            causa, diagnostico, causaraiz, True, registro.ID_Paro))
+                            print(f"Registro {registro.ID_Paro} actualizado.")
+                        else:
+                            cursor.execute("SET IDENTITY_INSERT ParosProduccion ON")
+                            cursor.execute("""INSERT INTO ParosProduccion (ID_Paro, ID_Cliente, OrdenFabricacionSAP, 
+                                              ID_Producto, FechaParo, HoraInicio, HoraFin, 
+                                              TiempoMuerto, PersonasAfectadas, MO, 
+                                              ID_Proceso, ID_Maquinaria, Causa, Diagnostico, CausaRaiz, SYNC) 
+                                              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                                           (registro.ID_Paro, 
+                                            id_cliente, orden_fabricacion, 
+                                            id_producto, fecha_paro, 
+                                            hora_inicio, hora_fin, 
+                                            tiempo_muerto, personas_afectadas, 
+                                            mo, id_proceso, id_maquinaria, 
+                                            causa, diagnostico, causaraiz, True))
+                            cursor.execute("SET IDENTITY_INSERT ParosProduccion OFF")
+                            print(f"Registro {registro.ID_Paro} insertado.")
+
+                        # Marcar como sincronizado en la base de datos local
+                        registro.SYNC = True
+                        registro.save(using='spf_calidad')
+                        print(f"Registro {registro.ID_Paro} marcado como sincronizado.")
+
+                except Exception as e:
+                    messages.error(request, f'Error al procesar el registro {registro.ID_Paro}: {str(e)}', extra_tags='sync')
+                    print(f"Error al procesar el registro {registro.ID_Paro}: {str(e)}")
+                    continue
 
             conn.commit()
+            print("Cambios confirmados en la base de datos del servidor.")
 
     except Exception as e:
         messages.error(request, f'Error al sincronizar los datos: {str(e)}', extra_tags='sync')
+        print(f"Error al sincronizar los datos: {str(e)}")
         return redirect(reverse('production:production'))
 
     messages.success(request, 'Sincronización exitosa.', extra_tags='sync')
+    print("Sincronización exitosa.")
     return redirect(reverse('production:production'))
-
 
 @login_required
 def sync_procesos_view(request):
@@ -537,7 +548,7 @@ def sync_procesos_view(request):
 
     server_conn_str = (
         "Driver={ODBC Driver 17 for SQL Server};"
-        "Server=QBSERVER\\SQLEXPRESS;"
+        "Server=192.168.0.5\\SQLEXPRESS;"
         "Database=SPF_Info;"
         "UID=it;"
         "PWD=sqlSPF#2024;"
@@ -596,7 +607,7 @@ def sync_maquinaria_view(request):
 
     server_conn_str = (
         "Driver={ODBC Driver 17 for SQL Server};"
-        "Server=QBSERVER\\SQLEXPRESS;"
+        "Server=192.168.0.5\\SQLEXPRESS;"
         "Database=SPF_Info;"
         "UID=it;"
         "PWD=sqlSPF#2024;"

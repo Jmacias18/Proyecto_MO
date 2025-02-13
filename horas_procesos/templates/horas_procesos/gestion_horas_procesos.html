@@ -285,7 +285,7 @@
 <!-- filepath: /c:/proyecto_Moo/horas_procesos/templates/horas_procesos/gestion_horas_procesos.html -->
 <div class="container mt-4">
     <h1 class="text-center my-4">Gestión de Procesos</h1>
-    <a href="{% url 'horas_procesos:display_employees' %}" class="btn btn-secondary">Lista de Empleados</a>
+    {% comment %} <a href="{% url 'horas_procesos:display_employees' %}" class="btn btn-secondary">Lista de Empleados</a> {% endcomment %}
    
     <div id="alerta" class="alerta-centrada" style="display: none;">
         <button class="close-btn" onclick="cerrarAlerta()">×</button>
