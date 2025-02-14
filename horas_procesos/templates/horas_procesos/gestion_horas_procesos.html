@@ -102,7 +102,7 @@
             };
             const selectedDepto = deptoSelect.value;
             const filasEmpleados = Array.from(document.querySelectorAll('#empleados_tbody tr')).filter(fila => fila.style.display !== 'none' && fila.getAttribute('data-depto') === selectedDepto);
-            console.log(filasEmpleados);
+            
     
             filasEmpleados.forEach(fila => {
                 const codigoEmp = fila.getAttribute('data-codigo_emp');

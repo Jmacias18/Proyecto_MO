@@ -240,8 +240,15 @@ function toggleInputs(codigoEmp) {
         let valid = true;
         let mensajesAlerta = [];
         const diasSemana = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
-        const hoy = new Date();
-        const diaActual = diasSemana[hoy.getDay()];
+        
+        // Obtener la fecha seleccionada en el input de tipo date
+        const fechaInput = document.getElementById('fecha').value;
+        const fechaSeleccionada = new Date(fechaInput + 'T00:00:00'); // Asegurarse de que se tome la fecha correctamente
+        const diaActual = diasSemana[fechaSeleccionada.getUTCDay()];
+        
+        /* // Agregar console.log para verificar cómo se toma el día
+        console.log(`Fecha seleccionada: ${fechaSeleccionada}`);
+        console.log(`Día de la semana: ${diaActual}`); */
     
         filasEmpleados.forEach(fila => {
             const codigoEmp = fila.dataset.codigo_emp;
@@ -779,8 +786,11 @@ function calcularTotalHoras(codigoEmp, procesoNum) {
     const totalField = document.querySelector(`[name="total_proceso${procesoNum}_${codigoEmp}"]`);
     const idTurno = document.querySelector(`tr[data-codigo_emp="${codigoEmp}"]`).dataset.id_turno; // Obtener el id_turno del dataset
     const diasSemana = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
-    const hoy = new Date();
-    const diaActual = diasSemana[hoy.getDay()];
+    
+    // Obtener la fecha seleccionada en el input de tipo date
+    const fechaInput = document.getElementById('fecha').value;
+    const fechaSeleccionada = new Date(fechaInput + 'T00:00:00'); // Asegurarse de que se tome la fecha correctamente
+    const diaActual = diasSemana[fechaSeleccionada.getUTCDay()];
 
     // Validar que los elementos de entrada existen
     if (!inicio || !fin || !totalField) {
