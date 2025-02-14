@@ -95,6 +95,12 @@ class MaquinariaForm(forms.ModelForm):
         model = Maquinaria
         fields = ['DescripcionMaq', 'AreaMaq']
 
+class ConceptosForm(forms.ModelForm):
+    class Meta:
+        model = Conceptos
+        fields = ['ID_Concepto', 'Desc_Concepto']
+
+
 """ 
 # Formulario para registrar un proceso
 class ProcesosForm(forms.ModelForm):

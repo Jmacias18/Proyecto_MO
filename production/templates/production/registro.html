@@ -18,6 +18,12 @@
         <a href="{% url 'production:registro_maquinaria' %}" class="btn btn-success w-100">Registrar Maquinaria</a>
     </div>
 
+    <!-- Botón para Registrar Concepto -->
+    <div class="mb-4">
+        <h3>Registrar Concepto</h3>
+        <a href="{% url 'production:registro_concepto' %}" class="btn btn-success w-100">Registrar Concepto</a>
+    </div>
+
     <hr class="my-4">
 
     <!-- Sincronización de Procesos -->
@@ -40,8 +46,18 @@
         </form>
     </div>
 
+    <!-- Sincronización de Conceptos -->
     <div class="mb-4">
-        <h3>Lista de Procesos y Maquinarias Registrados</h3>
+        <h5 class="text-dark">Sincronización de Conceptos en la base de datos</h5>
+        <p class="text-dark">Registros por sincronizar: {{ registros_conceptos_por_syncronizar }}</p>
+        <form method="post" action="{% url 'production:sync_conceptos' %}" data-sync-type="conceptos" class="sync-form">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-warning w-100">Sincronizar Conceptos</button>
+        </form>
+    </div>
+
+    <div class="mb-4">
+        <h3>Lista de Procesos, Maquinarias y Conceptos Registrados</h3>
 
         <!-- Selector para Filtrar por Tipo -->
         <label for="tipoFiltro">Filtrar por Tipo:</label>
@@ -49,6 +65,7 @@
             <option value="">Todos</option>
             <option value="proceso">Proceso</option>
             <option value="maquinaria">Maquinaria</option>
+            <option value="concepto">Concepto</option>
         </select>
 
         <!-- Selector para Filtrar por Estado -->
@@ -118,6 +135,29 @@
                 {% empty %}
                     <tr>
                         <td colspan="4" class="text-center">No hay maquinarias registradas.</td>
+                    </tr>
+                {% endfor %}
+                <tr>
+                    <td colspan="3"><strong>Conceptos</strong></td>
+                </tr>
+                {% for concepto in conceptos %}
+                    <tr class="registro-row" data-tipo="concepto" data-estado="activo">
+                        <td>Concepto</td>
+                        <td>{{ concepto.Desc_Concepto }}</td>
+                        <td class="text-center" style="background-color: #4CAF50;">
+                            Activo
+                        </td>
+                        <td class="text-center">
+                            {% if concepto.ID_Concepto %}
+                                <a href="{% url 'production:modificar_concepto' concepto.ID_Concepto %}" class="btn btn-primary btn-sm">Modificar</a>
+                            {% else %}
+                                <span class="text-danger">ID no disponible</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center">No hay conceptos registrados.</td>
                     </tr>
                 {% endfor %}
             </tbody>

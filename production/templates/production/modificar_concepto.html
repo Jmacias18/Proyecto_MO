@@ -1,0 +1,19 @@
+{% extends 'core/base.html' %}
+{% load static %}
+{% block title %}Modificar Concepto{% endblock %}
+
+{% block content %}
+<div class="container d-flex flex-column justify-content-center align-items-center min-vh-100 text-center">
+    <br><br>
+    <h2 class="text-center">Modificar Concepto</h2>
+
+    <div class="mb-4">
+        <form method="post" class="form">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" class="btn btn-primary success">Guardar Cambios</button>
+            <a href="{% url 'production:registro' %}" class="btn btn-secondary  ">Cancelar</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

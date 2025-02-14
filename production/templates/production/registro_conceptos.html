@@ -1,0 +1,44 @@
+{% extends 'core/base.html' %}
+{% load static %}
+{% block title %}Registrar Concepto{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <br><br>
+    <h2 class="text-center">Registrar Concepto</h2>
+
+    <div class="mb-4">
+        <form method="post" class="form">
+            {% csrf_token %}
+            {{ concepto_form.as_p }}
+            <button type="submit" class="btn btn-success w-100">Registrar Concepto</button>
+        </form>
+    </div>
+
+    <hr class="my-4">
+
+    <div class="mb-4">
+        <h3>Lista de Conceptos Registrados</h3>
+        <table class="table table-bordered">
+            <thead class="table-light">
+                <tr>
+                    <th>ID</th>
+                    <th>Descripción</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for concepto in conceptos %}
+                    <tr>
+                        <td>{{ concepto.ID_Concepto }}</td>
+                        <td>{{ concepto.Desc_Concepto }}</td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="2" class="text-center">No hay conceptos registrados.</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

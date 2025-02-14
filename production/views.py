@@ -3,7 +3,7 @@ from django import forms
 from django.db import OperationalError
 from django.contrib import messages
 from .models import ParosProduccion, Procesos, Maquinaria, Productos, Clientes
-from .forms import ParosProduccionForm, ProcesosForm, MaquinariaForm, ParoMantForm
+from .forms import ParosProduccionForm, ProcesosForm, MaquinariaForm, ParoMantForm, ConceptosForm
 from django.contrib.auth.decorators import login_required
 import pyodbc
 from django.db import ProgrammingError
@@ -327,17 +327,19 @@ def registro(request):
     except ProgrammingError:
         messages.error(request, 'Error al acceder a las Tablas.')
 
-    # Obtiene todos los procesos y maquinarias existentes
+    # Obtiene todos los procesos, maquinarias y conceptos existentes
     procesos = Procesos.objects.using('default').all()
     maquinarias = Maquinaria.objects.using('spf_info').all()
+    conceptos = Conceptos.objects.using('spf_info').all()
 
     return render(request, 'production/registro.html', {
         'proceso_form': proceso_form,
         'maquinaria_form': maquinaria_form,
         'procesos': procesos,
         'maquinarias': maquinarias,
+        'conceptos': conceptos,
         'registros_proc_por_syncronizar': registros_proc_por_syncronizar,
-        'registros_maq_por_syncronizar': registros_maq_por_syncronizar, # Agregar la cuenta al contexto
+        'registros_maq_por_syncronizar': registros_maq_por_syncronizar,
     })
 
 @login_required
@@ -444,7 +446,98 @@ def cambiar_estado_maquinaria(request, id_maquinaria):
 
     return redirect('production:registro')
 
+@login_required
+def registro_concepto(request):
+    if request.method == 'POST':
+        concepto_form = ConceptosForm(request.POST)
+        if concepto_form.is_valid():
+            concepto_form.save()
+            messages.success(request, 'Concepto registrado exitosamente.')
+            return redirect('production:registro_concepto')
+    else:
+        concepto_form = ConceptosForm()
 
+    # Obtiene todos los conceptos existentes
+    conceptos = Conceptos.objects.using('spf_info').all()
+
+    return render(request, 'production/registro_conceptos.html', {
+        'concepto_form': concepto_form,
+        'conceptos': conceptos,
+    })
+
+@login_required
+def modificar_concepto(request, concepto_id):
+    concepto = get_object_or_404(Conceptos, ID_Concepto=concepto_id)
+
+    if request.method == 'POST':
+        form = ConceptosForm(request.POST, instance=concepto)
+        if form.is_valid():
+            concepto.SYNC = False
+            form.save()
+            messages.success(request, 'Concepto modificado exitosamente.')
+            return redirect('production:registro')
+    else:
+        form = ConceptosForm(instance=concepto)
+
+    return render(request, 'production/modificar_concepto.html', {
+        'form': form,
+        'concepto': concepto
+    })
+
+
+
+@login_required
+def sync_conceptos_view(request):
+    registros_conceptos_no_sync = Conceptos.objects.using('spf_info').all()  # Eliminar el filtro SYNC=False
+
+    server_conn_str = (
+        "Driver={ODBC Driver 17 for SQL Server};"
+        "Server=192.168.0.5\\SQLEXPRESS;"
+        "Database=SPF_Info;"
+        "UID=it;"
+        "PWD=sqlSPF#2024;"
+    )
+
+    try:
+        with pyodbc.connect(server_conn_str) as conn:
+            cursor = conn.cursor()
+
+            for registro_concepto in registros_conceptos_no_sync:
+                cursor.execute("SELECT * FROM Conceptos WHERE ID_Concepto = ?", (registro_concepto.ID_Concepto,))
+                existing_record = cursor.fetchone()
+
+                if existing_record:
+                    # Actualizar el registro
+                    cursor.execute(
+                        """
+                        UPDATE Conceptos
+                        SET 
+                            Desc_Concepto = ?
+                        WHERE ID_Concepto = ?
+                        """,
+                        (registro_concepto.Desc_Concepto, registro_concepto.ID_Concepto)
+                    )
+                else:
+                    # Insertar un nuevo registro
+                    cursor.execute(
+                        """
+                        INSERT INTO Conceptos (ID_Concepto, Desc_Concepto)
+                        VALUES (?, ?)
+                        """,
+                        (registro_concepto.ID_Concepto, registro_concepto.Desc_Concepto)
+                    )
+
+                # Marcar como sincronizado en la base de datos local
+                registro_concepto.save(using='spf_info')
+
+            conn.commit()
+
+    except Exception as e:
+        messages.error(request, f'Error al sincronizar conceptos: {str(e)}')
+        return redirect('production:registro')
+
+    messages.success(request, 'Sincronización de conceptos exitosa.')
+    return redirect('production:registro')
 @login_required
 def sync_data_view(request):
     # Obtener registros no sincronizados de la base de datos local
