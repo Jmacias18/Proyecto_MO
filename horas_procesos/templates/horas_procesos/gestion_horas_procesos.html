@@ -28,7 +28,6 @@
             ASI: 0
         };
         const filasEmpleados = Array.from(document.querySelectorAll('#empleados_tbody tr')).filter(fila => fila.style.display !== 'none');
-        console.log(filasEmpleados);
     
         filasEmpleados.forEach(fila => {
             const codigoEmp = fila.getAttribute('data-codigo_emp');
@@ -47,14 +46,11 @@
         }
     }
 
-    
-    
-    
     document.addEventListener('DOMContentLoaded', function() {
         const resumenAsistencia = document.getElementById('resumen-asistencia');
         const deptoSelect = document.getElementById('depto_select');
+        const searchContainer = document.getElementById('search-container');
         const empleadosMotivo = {{ empleados_motivo|safe }};
-        console.log("Empleados en la tabla Motivo:", empleadosMotivo);  // Agregar este console.log
     
         // Función para obtener el día de la semana en español
         function obtenerDiaSemanaEnEspanol(diaIngles) {
@@ -77,16 +73,8 @@
             return diasDescanso.includes(diaActualEspanol);
         }
     
-        // Contador para registrar cuántas veces se ejecuta la función
-        let contadorEjecucionesActualizarResumen = 0;
-        // Array para registrar los valores que procesa la función
-        let recorridosActualizarResumen = [];
-    
         // Función para actualizar el resumen de asistencia
         function actualizarResumenAsistencia() {
-            // Limpiar el array de recorridos antes de cada ejecución
-            recorridosActualizarResumen = [];
-    
             const resumen = {
                 F: 0,
                 D: 0,
@@ -102,7 +90,6 @@
             };
             const selectedDepto = deptoSelect.value;
             const filasEmpleados = Array.from(document.querySelectorAll('#empleados_tbody tr')).filter(fila => fila.style.display !== 'none' && fila.getAttribute('data-depto') === selectedDepto);
-            
     
             filasEmpleados.forEach(fila => {
                 const codigoEmp = fila.getAttribute('data-codigo_emp');
@@ -110,7 +97,6 @@
                 const value = selectInasistencia.value;
                 if (resumen.hasOwnProperty(value)) {
                     resumen[value]++;
-                    recorridosActualizarResumen.push(`Empleado ${codigoEmp} tiene inasistencia tipo ${value}`);
                 }
             });
     
@@ -118,22 +104,18 @@
                 const spanElement = document.getElementById(`resumen-${key}`);
                 if (spanElement) {
                     spanElement.textContent = resumen[key];
-                    recorridosActualizarResumen.push(`Actualizando resumen para ${key} con valor ${resumen[key]}`);
                 }
             }
-    
-            // Incrementar el contador de ejecuciones
-            contadorEjecucionesActualizarResumen++;
-            console.log(`Función actualizarResumenAsistencia ejecutada ${contadorEjecucionesActualizarResumen} veces`);
-            console.log('Recorrido actualizarResumenAsistencia:', recorridosActualizarResumen);
         }
     
         function mostrarResumenAsistencia() {
             if (deptoSelect.value) {
                 resumenAsistencia.style.display = 'block';
+                searchContainer.style.display = 'block';
                 actualizarResumenAsistencia(); // Llamar a la función solo cuando se selecciona un departamento
             } else {
                 resumenAsistencia.style.display = 'none';
+                searchContainer.style.display = 'none';
             }
         }
     
@@ -281,6 +263,29 @@
         margin-right: 15px;
         font-size: 1rem; /* Ajustar el tamaño de fuente para que coincida con el encabezado <h4> */
     }
+    .sticky-header {
+        position: sticky;
+        top: 60px; /* Ajusta este valor según la altura de tu navbar */
+        background-color: white;
+        z-index: 1000;
+        box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.4);
+    }
+    
+    .sticky-summary {
+        position: sticky;
+        top: 60px; /* Ajusta este valor según la altura de tu navbar */
+        background-color: white;
+        z-index: 999;
+        box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.4);
+        padding: 10px;
+    }
+
+    .fixed-button-container {
+        position: fixed;
+        top: 100px; /* Ajusta este valor según sea necesario */
+        left: 20px; /* Ajusta este valor según sea necesario */
+        z-index: 1000;
+    }
 </style>
 <!-- filepath: /c:/proyecto_Moo/horas_procesos/templates/horas_procesos/gestion_horas_procesos.html -->
 <div class="container mt-4">
@@ -314,6 +319,11 @@
                     {% endif %}
                 {% endfor %}
             </select>
+
+        </div>
+        <!-- Campo de búsqueda -->
+        <div class="mb-4" id="search-container" style="display: none;">
+            <input type="text" id="search" class="form-control" placeholder="Buscar por nombre o No.Emp" onkeyup="buscarEmpleado()">
         </div>
         <div id="empleados_container" class="mb-4"></div>
         <div class="mb-4">
@@ -324,10 +334,14 @@
             <label for="copy-all-checkbox" id="copy-all-label" style="display: none;">Copiar Horas a Todo el Departamento</label>
         </div>
         
+        
         <div id="tabla_empleados" class="table-wrapper" style="display: none;">
+            <div class="fixed-button-container">
+                <button type="button" class="btn btn-secondary" id="deshacer-btn" onclick="deshacerCambio()">Deshacer</button>
+            </div>
             <table class="table table-bordered table-sm">
                 <thead class="thead-dark">
-                    <td colspan="24" class="text-start">
+                    <td colspan="24" class="text-start sticky-summary">
                         <div id="resumen-asistencia" style="display: block;">
                             <h4 class="text-center">RESUMEN DE ASISTENCIA:</h4>
                             <ul class="list-unstyled text-center">
@@ -346,13 +360,14 @@
                         </div>
                     </td>
                     <tr>
-                        <th></th>
-                        <th>No.Emp</th>
-                        <th>Empleado</th>
-                        <th>Departamento</th>
-                        <th>Inasistencia</th>
+                        <th class="sticky-header"></th>
+                        <th class="sticky-header">No.Emp</th>
+                        <th class="sticky-header">Empleado</th>
+                        <th class="sticky-header">Departamento</th>
+                        <th class="sticky-header">Inasistencia</th>
+                        <th class="sticky-header">Horarios</th>
                         {% for i in rango_procesos %}
-                            <th>
+                            <th class="sticky-header">
                                 <select class="form-select form-select-sm" name="proceso{{ i }}_header" id="proceso{{ i }}_header" onchange="toggleProcesoInputs({{ i }})">
                                     <option value="" disabled selected>Proceso {{ i }}</option>
                                     {% for proceso in procesos %}
@@ -367,9 +382,9 @@
                                 </select>
                             </th>
                         {% endfor %}
-                        <th>Horas Extras</th>
-                        <th>Total</th>
-                        <th>No.Emp</th>
+                        <th class="sticky-header">Horas Extras</th>
+                        <th class="sticky-header">Total</th>
+                        <th class="sticky-header">No.Emp</th>
                     </tr>
                 </thead>
                 <tbody id="empleados_tbody">
@@ -391,6 +406,15 @@
                                     <option value="{{ tipo.ID_Asis }}" {% if empleado.tipo_inasistencia == tipo.ID_Asis %}selected{% endif %}>{{ tipo.Descripcion }}</option>
                                 {% endfor %}
                             </select>
+                        </td>
+                        <td>
+                            {% for turno in turnos %}
+                                {% if turno.id == empleado.id_turno %}
+                                    <div>Turno: {{ turno.nombre }}</div>
+                                    <div>Horario: {{ turno.horario }}</div>
+                                    <div>Descanso: {{ turno.descanso }}</div>
+                                {% endif %}
+                            {% endfor %}
                         </td>
                         {% for i in rango_procesos %}
                         <td>
@@ -426,11 +450,11 @@
                 </tbody>
                 <tfoot>
                     <tr>
-                        <td colspan="5" class="text-end"><strong>Total Horas:</strong></td>
+                        <td colspan="6" class="text-end"><strong>Total Horas:</strong></td>
                         {% for i in rango_procesos %}
                         <td id="total_proceso{{ i }}" class="text-center">0.00</td>
                         {% endfor %}
-                        <td colspan="2"></td>
+                        <td colspan="3"></td>
                     </tr>
                 </tfoot>
             </table>

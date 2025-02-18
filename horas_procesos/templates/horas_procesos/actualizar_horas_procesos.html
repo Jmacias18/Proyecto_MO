@@ -542,7 +542,7 @@
             "Código Producto", "Nombre Producto", "Cliente",
             "Fecha", "Hora Entrada", "Hora Salida", 
             "Horas", "Total Horas", "Horas Extras", 
-            "Inasistencia", "Creado Por", "Modificado Por", "F/Modificación"
+            "Inasistencia", "Horarios", "Creado Por", "Modificado Por", "F/Modificación"
         ];
     
         // Definir la estructura esperada de los datos
@@ -594,12 +594,12 @@
                 datosAcomodados.push(encabezados); // Agregar encabezados
             } else if (index !== 1) { // Omitir la fila en el índice 1
                 let adjustedFila = fila;
-                if (fila.length < 18) {
-                    // Agregar espacios vacíos al principio solo si la fila tiene menos de 18 elementos
-                    const emptyCellsToAdd = 18 - fila.length;
+                if (fila.length < 19) {
+                    // Agregar espacios vacíos al principio solo si la fila tiene menos de 19 elementos
+                    const emptyCellsToAdd = 19 - fila.length;
                     adjustedFila = Array(emptyCellsToAdd).fill('').concat(fila);
                 }
-                adjustedFila.length = 18; // Asegurar que la fila tenga 18 elementos
+                adjustedFila.length = 19; // Asegurar que la fila tenga 19 elementos
                 adjustedFila = adjustedFila.map((celda, celdaIndex) => {
                     if (['Horas', 'Total Horas', 'Horas Extras'].includes(encabezados[celdaIndex]) && !isNaN(parseFloat(celda))) {
                         return parseFloat(celda);
@@ -611,7 +611,7 @@
         });
     
         // Agregar el resumen de asistencia en la primera fila
-        datosAcomodados.unshift([resumenAsistencia, ...Array(17).fill('')]);
+        datosAcomodados.unshift([resumenAsistencia, ...Array(18).fill('')]);
     
         // Declarar mergeRanges antes de su uso
         const mergeRanges = [];
@@ -623,8 +623,8 @@
             const penultimaFilaTexto = penultimaFila.find(cell => cell.trim() !== '');
             console.log("Texto de la penúltima fila:", penultimaFilaTexto); // Log para ver el texto de la penúltima fila
             if (penultimaFilaTexto) {
-                datosAcomodados[datosAcomodados.length - 2] = [penultimaFilaTexto, ...Array(17).fill('')];
-                mergeRanges.push({ s: { r: datosAcomodados.length - 2, c: 0 }, e: { r: datosAcomodados.length - 2, c: 17 } });
+                datosAcomodados[datosAcomodados.length - 2] = [penultimaFilaTexto, ...Array(18).fill('')];
+                mergeRanges.push({ s: { r: datosAcomodados.length - 2, c: 0 }, e: { r: datosAcomodados.length - 2, c: 18 } });
             }
         }
     
@@ -632,15 +632,15 @@
         if (datosAcomodados.length > 1) {
             const ultimaFila = datosAcomodados[datosAcomodados.length - 1];
             const totalHoras = parseFloat(document.getElementById('total_proceso').textContent.replace('Total Horas: ', ''));
-            datosAcomodados[datosAcomodados.length - 1] = ['', ...Array(14).fill(''), 'Total:', totalHoras, ''];
-            datosAcomodados[datosAcomodados.length - 1].length = 18; // Asegurar que la fila tenga 18 elementos
+            datosAcomodados[datosAcomodados.length - 1] = ['', ...Array(15).fill(''), 'Total:', totalHoras, ''];
+            datosAcomodados[datosAcomodados.length - 1].length = 19; // Asegurar que la fila tenga 19 elementos
         }
     
         // Modificar la fila 18 para combinar las celdas hacia la derecha
         if (datosAcomodados.length > 18) {
             const fila18 = datosAcomodados[18];
-            datosAcomodados[18] = [fila18[0], ...Array(17).fill('')];
-            mergeRanges.push({ s: { r: 18, c: 0 }, e: { r: 18, c: 17 } });
+            datosAcomodados[18] = [fila18[0], ...Array(18).fill('')];
+            mergeRanges.push({ s: { r: 18, c: 0 }, e: { r: 18, c: 18 } });
         }
     
         // Crear el archivo Excel
@@ -663,6 +663,7 @@
             { wch: 10 }, // Total Horas
             { wch: 10 }, // Horas Extras
             { wch: 10 }, // Inasistencia
+            { wch: 20 }, // Horarios
             { wch: 10 }, // Creado Por
             { wch: 13 }, // Modificado Por
             { wch: 17 }  // F/Modificación
@@ -684,7 +685,7 @@
             });
         });
     
-         // Fusionar celdas para "Código Emp", "Empleado" y "Departamento"
+        // Fusionar celdas para "Código Emp", "Empleado" y "Departamento"
         let startRow = 1;
     
         datosAcomodados.forEach((fila, index) => {
@@ -709,10 +710,10 @@
         }
     
         // Fusionar las celdas de la primera fila para el resumen de asistencia
-        mergeRanges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: 17 } });
+        mergeRanges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: 18 } });
     
         // Fusionar las celdas de la fila 18
-        mergeRanges.push({ s: { r: 18, c: 0 }, e: { r: 18, c: 17 } });
+        mergeRanges.push({ s: { r: 18, c: 0 }, e: { r: 18, c: 18 } });
     
         ws['!merges'] = mergeRanges;
     
@@ -875,6 +876,7 @@
                         <th>Total Horas</th>
                         <th>Horas Extras</th>
                         <th>Inasistencia</th>
+                        <th>Horarios</th> <!-- Nueva columna para los horarios -->
                         <th>Creado Por:</th>
                         <th>Modificado Por:</th>
                         <th>F/Modificacion</th>
@@ -938,6 +940,15 @@
                                 <option value="{{ tipo.ID_Asis }}" {% if proceso.ID_Asis == tipo.ID_Asis %}selected{% endif %}>{{ tipo.Descripcion }}</option>
                                 {% endfor %}
                             </select>
+                        </td>
+                        <td>
+                            {% for turno in turnos %}
+                                {% if turno.id == registro.id_turno %}
+                                    <div>Turno: {{ turno.nombre }}</div>
+                                    <div>Horario: {{ turno.horario }}</div>
+                                    <div>Descanso: {{ turno.descanso }}</div>
+                                {% endif %}
+                            {% endfor %}
                         </td>
                         <td>
                             <p class="form-control-plaintext mb-2">{{ proceso.ucreado }}</p>
