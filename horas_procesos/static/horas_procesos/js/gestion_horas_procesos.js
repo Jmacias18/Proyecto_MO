@@ -1099,7 +1099,7 @@ function restorePreviousState() {
         console.log('Restaurando estado anterior...');
         const previousState = stateStack.pop();
         const form = document.getElementById('horas-procesos-form');
-        const inputs = form.querySelectorAll('input[type="time"], input[type="checkbox"].comida-checkbox, input[type="checkbox"].delete-checkbox, input[type="text"]');
+        const inputs = form.querySelectorAll('input[type="time"], input[type="checkbox"].comida-checkbox, input[type="text"]');
         inputs.forEach(input => {
             if (previousState.hasOwnProperty(input.name)) {
                 if (input.type === 'checkbox') {
@@ -1110,9 +1110,9 @@ function restorePreviousState() {
             }
         });
 
-        // Desmarcar los checkboxes de comida y borrar
-        const checkboxes = form.querySelectorAll('input[type="checkbox"].comida-checkbox, input[type="checkbox"].delete-checkbox');
-        checkboxes.forEach(checkbox => {
+        // Desmarcar los checkboxes de comida
+        const comidaCheckboxes = form.querySelectorAll('input[type="checkbox"].comida-checkbox');
+        comidaCheckboxes.forEach(checkbox => {
             checkbox.checked = false;
         });
 
