@@ -672,6 +672,7 @@ def actualizar_horas_procesos(request):
     tipos_inasistencia = cursor.fetchall()
     spf_info_conn.close()
 
+
     # Obtener los turnos
     turnos = cache.get('turnos')
     if not turnos:

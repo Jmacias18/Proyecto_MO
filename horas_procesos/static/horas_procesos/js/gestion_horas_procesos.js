@@ -1046,29 +1046,6 @@ function buscarEmpleado() {
 let stateStack = [];
 const MAX_STACK_SIZE = 50; // Limitar el tamaño de stateStack
 
-function saveCurrentState() {
-    const form = document.getElementById('horas-procesos-form');
-    const inputs = form.querySelectorAll('input[type="time"], input[type="checkbox"].comida-checkbox, input[type="checkbox"].delete-checkbox, input[type="text"]');
-    let currentState = {};
-    inputs.forEach(input => {
-        if (input.type === 'checkbox') {
-            currentState[input.name] = input.checked;
-        } else {
-            currentState[input.name] = input.value;
-        }
-    });
-
-    // Comparar el estado actual con el último estado guardado
-    if (stateStack.length === 0 || JSON.stringify(currentState) !== JSON.stringify(stateStack[stateStack.length - 1])) {
-        stateStack.push(JSON.parse(JSON.stringify(currentState))); // Deep copy to avoid reference issues
-        if (stateStack.length > MAX_STACK_SIZE) {
-            stateStack.shift(); // Eliminar el estado más antiguo si se supera el tamaño máximo
-        }
-        console.log('Estado guardado:', currentState);
-    } else {
-        console.log('No hay cambios, no se guarda el estado.');
-    }
-}
 
 function guardarEstadoAnterior(codigoEmp) {
     const form = document.getElementById('horas-procesos-form');
@@ -1094,26 +1071,53 @@ function guardarEstadoAnterior(codigoEmp) {
     }
 }
 
+function saveCurrentState() {
+    const form = document.getElementById('horas-procesos-form');
+    const inputs = form.querySelectorAll('input[type="time"], input[type="checkbox"].comida-checkbox, input[type="checkbox"].delete-checkbox, input[type="text"]');
+    let currentState = {};
+    inputs.forEach(input => {
+        if (input.id !== 'search') { // Excluir el campo de búsqueda
+            if (input.type === 'checkbox') {
+                currentState[input.name] = input.checked;
+            } else {
+                currentState[input.name] = input.value;
+            }
+        }
+    });
+
+    // Comparar el estado actual con el último estado guardado
+    if (stateStack.length === 0 || JSON.stringify(currentState) !== JSON.stringify(stateStack[stateStack.length - 1])) {
+        stateStack.push(JSON.parse(JSON.stringify(currentState))); // Deep copy to avoid reference issues
+        if (stateStack.length > MAX_STACK_SIZE) {
+            stateStack.shift(); // Eliminar el estado más antiguo si se supera el tamaño máximo
+        }
+        console.log('Estado guardado:', currentState);
+    } else {
+        console.log('No hay cambios, no se guarda el estado.');
+    }
+}
+
 function restorePreviousState() {
     if (stateStack.length > 0) {
         console.log('Restaurando estado anterior...');
         const previousState = stateStack.pop();
         const form = document.getElementById('horas-procesos-form');
-        const inputs = form.querySelectorAll('input[type="time"], input[type="checkbox"].comida-checkbox, input[type="text"]');
+        const inputs = form.querySelectorAll('input[type="time"], input[type="checkbox"].comida-checkbox, input[type="checkbox"].delete-checkbox, input[type="text"]');
+        
         inputs.forEach(input => {
-            if (previousState.hasOwnProperty(input.name)) {
-                if (input.type === 'checkbox') {
-                    input.checked = previousState[input.name];
+            if (input.id !== 'search' && previousState.hasOwnProperty(input.name)) { // Excluir el campo de búsqueda
+                const deleteCheckbox = form.querySelector(`input[type="checkbox"].delete-checkbox[data-proceso="${input.dataset.proceso}"][data-emp="${input.dataset.emp}"]`);
+                if (deleteCheckbox && deleteCheckbox.checked) {
+                    // No restaurar el estado si el checkbox de borrar está marcado
+                    console.log(`No se restaura el campo ${input.name} porque el checkbox de borrar está marcado.`);
                 } else {
-                    input.value = previousState[input.name];
+                    if (input.type === 'checkbox') {
+                        input.checked = previousState[input.name];
+                    } else {
+                        input.value = previousState[input.name];
+                    }
                 }
             }
-        });
-
-        // Desmarcar los checkboxes de comida
-        const comidaCheckboxes = form.querySelectorAll('input[type="checkbox"].comida-checkbox');
-        comidaCheckboxes.forEach(checkbox => {
-            checkbox.checked = false;
         });
 
         // Rehabilitar los campos deshabilitados por los checkboxes de borrar
@@ -1147,7 +1151,6 @@ function restorePreviousState() {
         console.log('No hay estados anteriores para restaurar.');
     }
 }
-
 function recalcularTotales() {
     console.log('Iniciando recalculo de totales...');
     const filasEmpleados = document.querySelectorAll('#empleados_tbody tr');

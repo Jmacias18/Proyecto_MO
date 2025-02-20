@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django import forms
 from django.db import OperationalError
+from django.db.models import Max
 from django.contrib import messages
 from .models import ParosProduccion, Procesos, Maquinaria, Productos, Clientes
 from .forms import ParosProduccionForm, ProcesosForm, MaquinariaForm, ParoMantForm, ConceptosForm
@@ -368,6 +369,11 @@ def registro_maquinaria(request):
         if maquinaria_form.is_valid():
             # Crea una instancia de Maquinaria usando el formulario
             maquinaria = maquinaria_form.save(commit=False)
+            # Verifica si ID_Maquinaria necesita ser asignado manualmente
+            if not maquinaria.ID_Maquinaria:
+                # Asigna un ID único si es necesario
+                max_id = Maquinaria.objects.using('spf_info').aggregate(Max('ID_Maquinaria'))['ID_Maquinaria__max']
+                maquinaria.ID_Maquinaria = (max_id or 0) + 1
             # Guarda en la base de datos spf_info
             maquinaria.save(using='spf_info')
             messages.success(request, 'Maquinaria registrada exitosamente.')
@@ -382,7 +388,6 @@ def registro_maquinaria(request):
         'maquinaria_form': maquinaria_form,
         'maquinarias': maquinarias,
     })
-
 
 
 # Modificar un proceso existente

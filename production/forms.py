@@ -93,8 +93,8 @@ class ProcesosForm(forms.ModelForm):
 class MaquinariaForm(forms.ModelForm):
     class Meta:
         model = Maquinaria
-        fields = ['DescripcionMaq', 'AreaMaq']
-
+        fields = ['ID_Maquinaria', 'DescripcionMaq', 'AreaMaq']
+        
 class ConceptosForm(forms.ModelForm):
     class Meta:
         model = Conceptos
