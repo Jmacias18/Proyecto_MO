@@ -286,6 +286,17 @@
         left: 20px; /* Ajusta este valor según sea necesario */
         z-index: 1000;
     }
+    .falta { background-color: red; }
+    .asistencia { background-color: green; }
+    .permiso { background-color: pink; }
+    .descanso { background-color: lightblue; }
+    .retardo { background-color: yellow; }
+    .vacaciones { background-color: fuchsia; }
+    .suspension { background-color: orange; }
+    .baja { background-color: cyan; }
+    .renuncia { background-color: cyan; }
+    .nuevo_ingreso { background-color: lightgreen; }
+    .incapacidad { background-color: brown; }
 </style>
 <!-- filepath: /c:/proyecto_Moo/horas_procesos/templates/horas_procesos/gestion_horas_procesos.html -->
 <div class="container mt-4">
@@ -401,11 +412,11 @@
                                     tipo.ID_Asis: {{ tipo.ID_Asis }},
                                 {% endfor %}
                             </div>
-                            <select class="form-select form-select-sm" name="tipo_inasistencia_{{ empleado.codigo_emp }}" onchange="toggleInputs('{{ empleado.codigo_emp }}')">
+                            <select class="form-select form-select-sm" name="tipo_inasistencia_{{ empleado.codigo_emp }}" onchange="toggleInputs('{{ empleado.codigo_emp }}'); applyColorClass(this);">
                                 {% for tipo in tipos_inasistencia %}
                                     <option value="{{ tipo.ID_Asis }}" {% if empleado.tipo_inasistencia == tipo.ID_Asis %}selected{% endif %}>{{ tipo.Descripcion }}</option>
                                 {% endfor %}
-                            </select>
+                            </select>   
                         </td>
                         <td>
                             {% for turno in turnos %}
@@ -431,7 +442,7 @@
                             <input type="time" class="form-control form-control-sm mb-2" name="inicio_proceso{{ i }}_{{ empleado.codigo_emp }}" placeholder="Inicio" disabled step="60" onchange="ajustarHoraFin('{{ empleado.codigo_emp }}', {{ i }})">
                             <input type="time" class="form-control form-control-sm mb-2" name="fin_proceso{{ i }}_{{ empleado.codigo_emp }}" placeholder="Fin" disabled step="60" onchange="calcularTotalHoras('{{ empleado.codigo_emp }}', {{ i }})">
                             <input type="text" class="form-control form-control-sm mb-2" name="total_proceso{{ i }}_{{ empleado.codigo_emp }}" readonly>
-                            <input type="checkbox" class="form-check-input delete-checkbox" data-proceso="{{ i }}" data-emp="{{ empleado.codigo_emp }}" onchange="handleDeleteCheckboxChange(event)">
+                            <input type="checkbox" class="form-check-input delete-checkbox" id="delete-checkbox-{{ i }}-{{ empleado.codigo_emp }}" data-proceso="{{ i }}" data-emp="{{ empleado.codigo_emp }}" onchange="handleDeleteCheckboxChange(event)">
                             <label for="delete-checkbox">
                                 <img src="/static/icons/borrar.png" alt="Borrar Horas" style="width: 15px; height: 15px;">
                             </label>

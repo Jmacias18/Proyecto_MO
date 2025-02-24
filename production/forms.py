@@ -101,6 +101,7 @@ class ConceptosForm(forms.ModelForm):
         fields = ['ID_Concepto', 'Desc_Concepto']
 
 
+
 """ 
 # Formulario para registrar un proceso
 class ProcesosForm(forms.ModelForm):

@@ -400,8 +400,17 @@ def gestion_horas_procesos(request):
         cache.set('turnos', turnos, 3600)  # Cachear por 1 hora
 
     # Crear un diccionario para mapear el ID del turno a los días de descanso
-    descanso_por_turno = {turno[0]: [dia.strip().capitalize() for dia in turno[3].split('/')] if turno[3] else [] for turno in turnos}
+    descanso_por_turno = {}
+    for turno in turnos:
+        # Verificar que el turno tenga al menos 4 elementos y que el cuarto elemento sea una cadena
+        if len(turno) > 3 and isinstance(turno[3], str):
+            # Dividir la cadena de días de descanso y capitalizar cada día
+            descanso_por_turno[turno[0]] = [dia.strip().capitalize() for dia in turno[3].split('/')]
+        else:
+            # Si no tiene al menos 4 elementos o el cuarto elemento no es una cadena, asignar una lista vacía
+            descanso_por_turno[turno[0]] = []
 
+    print(f"Descanso por turno: {descanso_por_turno}")
     # Obtener los datos de TempusAccesos
     registros_entrada = obtener_datos_tempus_accesos(fecha_actual.date())
 
@@ -635,13 +644,23 @@ def actualizar_horas_procesos(request):
                     proceso.id_producto = request.POST.get(f'producto_{id_hrspro}')  # Actualizar el producto
                     proceso.umod = request.user.username  # Guardar el usuario que modificó el registro
                     proceso.fmod = date.today()  # Guardar la fecha de modificación
-                    if proceso.ID_Asis in ['F', 'D', 'P', 'V', 'INC', 'S', 'B', 'R']:
+                    if proceso.ID_Asis in ['F', 'D', 'V', 'INC', 'S', 'B', 'R']:
                         proceso.horaentrada = '00:00:00.0000000'
                         proceso.horasalida = '00:00:00.0000000'
                         proceso.hrs = 0
                         proceso.totalhrs = 0
                         proceso.hrsextras = 0
                         proceso.id_pro = 0
+                    proceso.save()
+                except Horasprocesos.DoesNotExist:
+                    messages.error(request, f'El proceso con ID {id_hrspro} no existe.')
+            elif key.startswith('hrsextras_'):
+                id_hrspro = key.split('_')[1]
+                try:
+                    proceso = Horasprocesos.objects.get(id_hrspro=id_hrspro)
+                    proceso.hrsextras = request.POST.get(f'hrsextras_{id_hrspro}')
+                    proceso.umod = request.user.username  # Guardar el usuario que modificó el registro
+                    proceso.fmod = date.today()  # Guardar la fecha de modificación
                     proceso.save()
                 except Horasprocesos.DoesNotExist:
                     messages.error(request, f'El proceso con ID {id_hrspro} no existe.')
@@ -664,7 +683,7 @@ def actualizar_horas_procesos(request):
         SELECT p.ID_Producto, p.DescripcionProd, COALESCE(c.Cliente, 'Sin Cliente') as Cliente
         FROM Productos p
         LEFT JOIN Clientes c ON p.ID_Cliente = c.ID_Cliente
-        WHERE p.ID_Producto LIKE 'PT%'
+        WHERE p.ID_Producto LIKE 'PT%' OR p.ID_Producto NOT LIKE '%[^0-9]%'
     """)
     productos = cursor.fetchall()
     

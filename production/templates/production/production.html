@@ -194,7 +194,6 @@
         }
     </style>
 
-
 <script>
     function fetchProductos(clienteId) {
         fetch(`{% url 'production:get_productos' %}?cliente_id=${clienteId}`)
@@ -297,7 +296,7 @@
         function updateMO() {
             const downtimeMinutes = parseFloat(tiempoMuerto.value) || 0;
             const personas = parseFloat(personasAfectadas.value) || 0;
-            const moValue = (downtimeMinutes / 555) * personas;
+            const moValue = (downtimeMinutes / 675) * personas; // Update the divisor to 675 (11.25 hours * 60 minutes)
             mo.value = moValue.toFixed(2); // Update M.O value
         }
 

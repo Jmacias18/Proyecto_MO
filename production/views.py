@@ -390,6 +390,7 @@ def registro_maquinaria(request):
     })
 
 
+
 # Modificar un proceso existente
 @login_required
 def modificar_proceso(request, proceso_id):

@@ -402,6 +402,101 @@ function restablecerFormulario() {
 let deptoSelect;
 let tablaEmpleados;
 let totalEmpleadosElement;
+
+function filtrarEmpleados() {
+    var departamento = document.getElementById('depto_select').value;
+    
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', '/horas_procesos/gestion_horas_procesos/?departamento=' + departamento, true);
+    xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+    xhr.onreadystatechange = function () {
+        if (xhr.readyState === 4 && xhr.status === 200) {
+            var response = JSON.parse(xhr.responseText);
+            
+            var empleadosTbody = document.getElementById('empleados_tbody');
+            if (empleadosTbody) {
+                empleadosTbody.innerHTML = '';
+                response.empleados.forEach(function (empleado, index) {
+                    
+                    var row = document.createElement('tr');
+                    row.setAttribute('data-depto', empleado.id_departamento);
+                    row.setAttribute('data-depto-descripcion', empleado.descripcion_departamento);
+                    row.setAttribute('data-codigo_emp', empleado.codigo_emp);
+                    row.setAttribute('data-id_turno', empleado.id_turno);
+                    row.setAttribute('data-dias_descanso', empleado.dias_descanso.join(','));
+                    row.setAttribute('data-es_descanso', empleado.es_descanso);
+
+                    // Verifica que response.turnos esté definido y que tenga el formato esperado
+                    var turno = response.turnos ? response.turnos.find(t => t.id === empleado.id_turno) : null;
+
+                    row.innerHTML = `
+                        <td class="employee-number">${index + 1}</td>
+                        <td>${empleado.codigo_emp}</td>
+                        <td>${empleado.nombre_emp}</td>
+                        <td>${empleado.descripcion_departamento}</td>
+                        <td>
+                            <select class="form-select form-select-sm" name="tipo_inasistencia_${empleado.codigo_emp}" onchange="toggleInputs('${empleado.codigo_emp}'); actualizarResumenAsistencia(); applyColorClass(this);">
+                                ${response.tipos_inasistencia.map(tipo => `
+                                    <option value="${tipo.ID_Asis}" ${empleado.tipo_inasistencia == tipo.ID_Asis ? 'selected' : ''}>${tipo.Descripcion}</option>
+                                `).join('')}
+                            </select>
+                        </td>
+                        <td>
+                            ${turno ? `
+                                <div>Turno: ${turno.nombre}</div>
+                                <div>Horario: ${turno.horario}</div>
+                                <div>Descanso: ${turno.descanso}</div>
+                            ` : 'No asignado'}
+                        </td>
+                        ${Array.from({ length: 10 }, (_, i) => `
+                            <td>
+                                <input type="checkbox" class="form-check-input comida-checkbox" data-proceso="${i + 1}" data-emp="${empleado.codigo_emp}" name="comida_proceso${i + 1}_${empleado.codigo_emp}" onchange="handleComidaCheckboxChange(event)">
+                                <input type="hidden" name="comida_proceso${i + 1}_${empleado.codigo_emp}_hidden" value="off">
+                                <label for="comida-checkbox">
+                                    <img src="/static/icons/hora_comida.png" alt="Comida" style="width: 15px; height: 15px;">
+                                </label>
+                                <input type="time" class="form-control form-control-sm mb-2" name="inicio_proceso${i + 1}_${empleado.codigo_emp}" placeholder="Inicio" disabled step="60" onchange="ajustarHoraFin('${empleado.codigo_emp}', ${i + 1})">
+                                <input type="time" class="form-control form-control-sm mb-2" name="fin_proceso${i + 1}_${empleado.codigo_emp}" placeholder="Fin" disabled step="60" onchange="calcularTotalHoras('${empleado.codigo_emp}', ${i + 1})">
+                                <input type="text" class="form-control form-control-sm mb-2" name="total_proceso${i + 1}_${empleado.codigo_emp}" readonly>
+                                <input type="checkbox" class="form-check-input delete-checkbox" data-proceso="${i + 1}" data-emp="${empleado.codigo_emp}" onchange="handleDeleteCheckboxChange(event)">
+                                <label for="delete-checkbox">
+                                    <img src="/static/icons/borrar.png" alt="Borrar Horas" style="width: 15px; height: 15px;">
+                                </label>
+                            </td>
+                        `).join('')}
+                        <td>
+                            <input type="number" class="form-control form-control-sm mb-2" name="horas_extras_${empleado.codigo_emp}" step="0" onchange="calcularTotalHoras('${empleado.codigo_emp}')">
+                        </td>
+                        <td>
+                            <input type="text" class="form-control form-control-sm input-large" name="total_${empleado.codigo_emp}" readonly>
+                        </td>
+                        <td>${empleado.codigo_emp}</td>
+                    `;
+                    empleadosTbody.appendChild(row);
+
+                    // Aplicar color a los selectores de tipo de inasistencia
+                    const tipoInasistenciaSelect = row.querySelector(`select[name="tipo_inasistencia_${empleado.codigo_emp}"]`);
+                    if (tipoInasistenciaSelect) {
+                        console.log(`Aplicando color para el selector de tipo de inasistencia del empleado ${empleado.codigo_emp}`);
+                        applyColorClass(tipoInasistenciaSelect);
+                    }
+                });
+                document.getElementById('tabla_empleados').style.display = 'block';
+                actualizarResumenAsistencia(); // Llamar a la función para actualizar el resumen de asistencia
+
+                // Actualizar el total de empleados
+                var totalEmpleados = response.empleados.length;
+                var totalEmpleadosElement = document.getElementById('total_empleados');
+                totalEmpleadosElement.textContent = `Total de Empleados: ${totalEmpleados}`;
+                totalEmpleadosElement.style.display = 'block';
+            } else {
+                console.error('No se encontró el cuerpo de la tabla de empleados.');
+            }
+        }
+    };
+    xhr.send();
+}
+
 function filtrarEmpleadosPorFecha() {
     var fecha = document.getElementById('fecha').value;
     var departamento = document.getElementById('depto_select').value;
@@ -445,7 +540,7 @@ function filtrarEmpleadosPorFecha() {
                         <td>${empleado.nombre_emp}</td>
                         <td>${empleado.descripcion_departamento}</td>
                         <td>
-                            <select class="form-select form-select-sm" name="tipo_inasistencia_${empleado.codigo_emp}" onchange="toggleInputs('${empleado.codigo_emp}'); actualizarResumenAsistencia();">
+                            <select class="form-select form-select-sm" name="tipo_inasistencia_${empleado.codigo_emp}" onchange="toggleInputs('${empleado.codigo_emp}'); actualizarResumenAsistencia(); applyColorClass(this);">
                                 ${response.tipos_inasistencia.map(tipo => `
                                     <option value="${tipo.ID_Asis}" ${empleado.tipo_inasistencia == tipo.ID_Asis ? 'selected' : ''}>${tipo.Descripcion}</option>
                                 `).join('')}
@@ -483,92 +578,13 @@ function filtrarEmpleadosPorFecha() {
                         <td>${empleado.codigo_emp}</td>
                     `;
                     empleadosTbody.appendChild(row);
-                });
-                document.getElementById('tabla_empleados').style.display = 'block';
-                actualizarResumenAsistencia(); // Llamar a la función para actualizar el resumen de asistencia
 
-                // Actualizar el total de empleados
-                var totalEmpleados = response.empleados.length;
-                var totalEmpleadosElement = document.getElementById('total_empleados');
-                totalEmpleadosElement.textContent = `Total de Empleados: ${totalEmpleados}`;
-                totalEmpleadosElement.style.display = 'block';
-            } else {
-                console.error('No se encontró el cuerpo de la tabla de empleados.');
-            }
-        }
-    };
-    xhr.send();
-}
-function filtrarEmpleados() {
-    var departamento = document.getElementById('depto_select').value;
-    
-    var xhr = new XMLHttpRequest();
-    xhr.open('GET', '/horas_procesos/gestion_horas_procesos/?departamento=' + departamento, true);
-    xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-    xhr.onreadystatechange = function () {
-        if (xhr.readyState === 4 && xhr.status === 200) {
-            var response = JSON.parse(xhr.responseText);
-            
-            var empleadosTbody = document.getElementById('empleados_tbody');
-            if (empleadosTbody) {
-                empleadosTbody.innerHTML = '';
-                response.empleados.forEach(function (empleado, index) {
-                    
-                    var row = document.createElement('tr');
-                    row.setAttribute('data-depto', empleado.id_departamento);
-                    row.setAttribute('data-depto-descripcion', empleado.descripcion_departamento);
-                    row.setAttribute('data-codigo_emp', empleado.codigo_emp);
-                    row.setAttribute('data-id_turno', empleado.id_turno);
-                    row.setAttribute('data-dias_descanso', empleado.dias_descanso.join(','));
-                    row.setAttribute('data-es_descanso', empleado.es_descanso);
-
-                    // Verifica que response.turnos esté definido y que tenga el formato esperado
-                    var turno = response.turnos ? response.turnos.find(t => t.id === empleado.id_turno) : null;
-
-                    row.innerHTML = `
-                        <td class="employee-number">${index + 1}</td>
-                        <td>${empleado.codigo_emp}</td>
-                        <td>${empleado.nombre_emp}</td>
-                        <td>${empleado.descripcion_departamento}</td>
-                        <td>
-                            <select class="form-select form-select-sm" name="tipo_inasistencia_${empleado.codigo_emp}" onchange="toggleInputs('${empleado.codigo_emp}'); actualizarResumenAsistencia();">
-                                ${response.tipos_inasistencia.map(tipo => `
-                                    <option value="${tipo.ID_Asis}" ${empleado.tipo_inasistencia == tipo.ID_Asis ? 'selected' : ''}>${tipo.Descripcion}</option>
-                                `).join('')}
-                            </select>
-                        </td>
-                        <td>
-                            ${turno ? `
-                                <div>Turno: ${turno.nombre}</div>
-                                <div>Horario: ${turno.horario}</div>
-                                <div>Descanso: ${turno.descanso}</div>
-                            ` : 'No asignado'}
-                        </td>
-                        ${Array.from({ length: 10 }, (_, i) => `
-                            <td>
-                                <input type="checkbox" class="form-check-input comida-checkbox" data-proceso="${i + 1}" data-emp="${empleado.codigo_emp}" name="comida_proceso${i + 1}_${empleado.codigo_emp}" onchange="handleComidaCheckboxChange(event)">
-                                <input type="hidden" name="comida_proceso${i + 1}_${empleado.codigo_emp}_hidden" value="off">
-                                <label for="comida-checkbox">
-                                    <img src="/static/icons/hora_comida.png" alt="Comida" style="width: 15px; height: 15px;">
-                                </label>
-                                <input type="time" class="form-control form-control-sm mb-2" name="inicio_proceso${i + 1}_${empleado.codigo_emp}" placeholder="Inicio" disabled step="60" onchange="ajustarHoraFin('${empleado.codigo_emp}', ${i + 1})">
-                                <input type="time" class="form-control form-control-sm mb-2" name="fin_proceso${i + 1}_${empleado.codigo_emp}" placeholder="Fin" disabled step="60" onchange="calcularTotalHoras('${empleado.codigo_emp}', ${i + 1})">
-                                <input type="text" class="form-control form-control-sm mb-2" name="total_proceso${i + 1}_${empleado.codigo_emp}" readonly>
-                                <input type="checkbox" class="form-check-input delete-checkbox" data-proceso="${i + 1}" data-emp="${empleado.codigo_emp}" onchange="handleDeleteCheckboxChange(event)">
-                                <label for="delete-checkbox">
-                                    <img src="/static/icons/borrar.png" alt="Borrar Horas" style="width: 15px; height: 15px;">
-                                </label>
-                            </td>
-                        `).join('')}
-                        <td>
-                            <input type="number" class="form-control form-control-sm mb-2" name="horas_extras_${empleado.codigo_emp}" step="0" onchange="calcularTotalHoras('${empleado.codigo_emp}')">
-                        </td>
-                        <td>
-                            <input type="text" class="form-control form-control-sm input-large" name="total_${empleado.codigo_emp}" readonly>
-                        </td>
-                        <td>${empleado.codigo_emp}</td>
-                    `;
-                    empleadosTbody.appendChild(row);
+                    // Aplicar color a los selectores de tipo de inasistencia
+                    const tipoInasistenciaSelect = row.querySelector(`select[name="tipo_inasistencia_${empleado.codigo_emp}"]`);
+                    if (tipoInasistenciaSelect) {
+                        console.log(`Aplicando color para el selector de tipo de inasistencia del empleado ${empleado.codigo_emp}`);
+                        applyColorClass(tipoInasistenciaSelect);
+                    }
                 });
                 document.getElementById('tabla_empleados').style.display = 'block';
                 actualizarResumenAsistencia(); // Llamar a la función para actualizar el resumen de asistencia
@@ -1235,6 +1251,73 @@ document.addEventListener('DOMContentLoaded', function() {
     inputs.forEach(input => {
         input.addEventListener('change', () => {
             saveCurrentState();
+        });
+    });
+});
+
+function applyColorClass(selectElement) {
+    const value = selectElement.value;
+    console.log(`Aplicando color para el valor: ${value}`); // Log para verificar el valor seleccionado
+    selectElement.classList.remove('falta', 'asistencia', 'permiso', 'descanso', 'retardo', 'vacaciones', 'suspension', 'baja', 'renuncia', 'nuevo_ingreso');
+    
+    switch (value) {
+        case 'F':
+            selectElement.classList.add('falta');
+            console.log('Clase "falta" aplicada'); // Log para verificar la clase aplicada
+            break;
+        case 'ASI':
+            selectElement.classList.add('asistencia');
+            console.log('Clase "asistencia" aplicada'); // Log para verificar la clase aplicada
+            break;
+        case 'P':
+            selectElement.classList.add('permiso');
+            console.log('Clase "permiso" aplicada'); // Log para verificar la clase aplicada
+            break;
+        case 'D':
+            selectElement.classList.add('descanso');
+            console.log('Clase "descanso" aplicada'); // Log para verificar la clase aplicada
+            break;
+        case 'RT':
+            selectElement.classList.add('retardo');
+            console.log('Clase "retardo" aplicada'); // Log para verificar la clase aplicada
+            break;
+        case 'V':
+            selectElement.classList.add('vacaciones');
+            console.log('Clase "vacaciones" aplicada'); // Log para verificar la clase aplicada
+            break;
+        case 'S':
+            selectElement.classList.add('suspension');
+            console.log('Clase "suspension" aplicada'); // Log para verificar la clase aplicada
+            break;
+        case 'B':
+            selectElement.classList.add('baja');
+            console.log('Clase "baja" aplicada'); // Log para verificar la clase aplicada
+            break;
+        case 'R':
+            selectElement.classList.add('renuncia');
+            console.log('Clase "renuncia" aplicada'); // Log para verificar la clase aplicada
+            break;
+        case 'NI':
+            selectElement.classList.add('nuevo_ingreso');
+            console.log('Clase "nuevo_ingreso" aplicada'); // Log para verificar la clase aplicada
+            break;
+        case 'INC':
+            selectElement.classList.add('incapacidad');
+            console.log('Clase "incapacidad" aplicada'); // Log para verificar la clase aplicada
+            break;
+        default:
+            console.log('No se aplicó ninguna clase'); // Log para verificar si no se aplicó ninguna clase
+            break;
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Documento cargado, aplicando colores a los selectores de tipo de inasistencia'); // Log para verificar que el DOM está cargado
+    document.querySelectorAll('select[name^="tipo_inasistencia_"]').forEach(select => {
+        applyColorClass(select);
+        select.addEventListener('change', function() {
+            console.log(`Cambio detectado en el selector: ${select.name}`); // Log para verificar el cambio en el selector
+            applyColorClass(select);
         });
     });
 });

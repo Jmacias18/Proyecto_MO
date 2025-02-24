@@ -51,6 +51,14 @@
         color: #333;
     }
 
+    .td-hrsextras {
+        width: 300px; /* Ajusta este valor según sea necesario */
+    }
+
+    .input-hrsextras {
+        width: 100%; /* Asegura que el input ocupe todo el ancho del td */
+    }
+
     .alerta-centrada {
         position: fixed;
         top: 50%;
@@ -106,28 +114,6 @@
         margin: 0;
     }
 
-    #resumen-asistencia li {
-        margin-right: 15px;
-        font-size: 1rem; /* Ajustar el tamaño de fuente para que coincida con el encabezado <h4> */
-    }
-
-    .nav-item {
-        margin-right: 15px; /* Ajusta este valor según sea necesario */
-    }
-    #resumen-asistencia {
-        display: none; /* Ocultar por defecto */
-        margin-top: 20px;
-    }
-    #resumen-asistencia h4 {
-        font-size: 1rem; /* Ajustar el tamaño de fuente para que coincida con los elementos <li> */
-        margin: 0;
-    }
-    #resumen-asistencia ul {
-        display: flex;
-        list-style: none;
-        padding: 0;
-        margin: 0;
-    }
     #resumen-asistencia li {
         margin-right: 15px;
         font-size: 1rem; /* Ajustar el tamaño de fuente para que coincida con el encabezado <h4> */
@@ -332,114 +318,248 @@
             });
         }
         // Configurar todos los campos como solo lectura al cargar la página, excepto los campos de selección de departamento y filtrado por fecha
+    document.querySelectorAll('input, select').forEach(input => {
+        if (input.name !== 'departamento' && input.name !== 'fecha') {
+            input.setAttribute('readonly', true);
+            input.setAttribute('disabled', true);
+        }
+    });
+
+    // Agregar evento al botón "Editar"
+    document.getElementById('editar-btn').addEventListener('click', () => {
         document.querySelectorAll('input, select').forEach(input => {
             if (input.name !== 'departamento' && input.name !== 'fecha') {
-                input.setAttribute('readonly', true);
-                input.setAttribute('disabled', true);
+                input.removeAttribute('readonly');
+                input.removeAttribute('disabled');
             }
         });
-    
-        // Agregar evento al botón "Editar"
-        document.getElementById('editar-btn').addEventListener('click', () => {
-            document.querySelectorAll('input, select').forEach(input => {
-                if (input.name !== 'departamento' && input.name !== 'fecha') {
-                    input.removeAttribute('readonly');
-                    input.removeAttribute('disabled');
+        document.getElementById('guardar-btn').removeAttribute('disabled');
+    });
+
+    // Agregar evento al botón "Exportar a Excel"
+    document.getElementById('exportar-btn').addEventListener('click', () => {
+        exportarTablaAExcel('tabla-horas-procesos', 'HorasProcesos.xlsx');
+    });
+
+    document.querySelectorAll('input[name^="horaentrada_"], input[name^="horasalida_"]').forEach(input => {
+        input.setAttribute('data-original-value', input.value);
+        input.addEventListener('change', (event) => {
+            const id = event.target.name.split('_')[1];
+            if (event.target.tagName.toLowerCase() === 'select') {
+                actualizarProceso(id);
+            } else {
+                validarHoras(id);
+                actualizarHoras(id);
+            }
+            actualizarTotalHoras();
+        });
+    });
+
+    document.getElementById('guardar-btn').addEventListener('click', (event) => {
+        let valid = true;
+        document.querySelectorAll('input[name^="horaentrada_"], input[name^="horasalida_"]').forEach(input => {
+            const id = input.name.split('_')[1];
+            const inasistencia = ['F', 'D', 'V', 'INC', 'S', 'B', 'R'].includes(document.querySelector(`select[name="tipo_inasistencia_${id}"]`).value);
+            if (!inasistencia && !validarHoras(id)) {
+                valid = false;
+            }
+        });
+
+        if (!valid) {
+            showAlert('Corrige los errores antes de guardar.', 'danger');
+            return;
+        }
+
+        const { borrados } = contarCambiosYBorrados();
+        const mensaje = `Se eliminarán ${borrados} registros. ¿Deseas continuar?`;
+        document.getElementById('confirmMessage').textContent = mensaje;
+        const confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
+        confirmModal.show();
+
+        document.getElementById('confirmSubmit').addEventListener('click', () => {
+            // Asegurarse de que todos los procesos tengan el valor de TotalHrs antes de enviar el formulario
+            document.querySelectorAll('input[name^="totalhrs_"]').forEach(input => {
+                const codigoEmp = input.name.split('_')[1];
+                const totalHrs = document.querySelector(`input[name="totalhrs_${codigoEmp}"]`).value;
+                document.querySelectorAll(`tr[data-codigo-emp="${codigoEmp}"] input[name^="totalhrs_"]`).forEach(procesoInput => {
+                    procesoInput.value = totalHrs;
+                });
+            });
+
+            document.querySelectorAll('input[type="time"]').forEach(input => {
+                if (input.value === '') {
+                    input.value = '00:00:00.0000000';
                 }
             });
-            document.getElementById('guardar-btn').removeAttribute('disabled');
+
+            document.getElementById('form-actualizar').submit();
         });
+    });
+
+    // Llamar a actualizarTotalHoras al cargar la página
+    actualizarTotalHoras();
+});
+
     
-        // Agregar evento al botón "Exportar a Excel"
-        document.getElementById('exportar-btn').addEventListener('click', () => {
-            exportarTablaAExcel('tabla-horas-procesos', 'HorasProcesos.xlsx');
-        });
-    
-        document.querySelectorAll('input[name^="horaentrada_"], input[name^="horasalida_"], input[name^="hrsextras_"], select[name^="proceso_"]').forEach(input => {
-            input.setAttribute('data-original-value', input.value);
-            input.addEventListener('change', (event) => {
-                const id = event.target.name.split('_')[1];
-                if (event.target.tagName.toLowerCase() === 'select') {
-                    actualizarProceso(id);
-                } else {
-                    validarHoras(id);
-                    actualizarHoras(id);
-                }
-                actualizarTotalHoras();
-            });
-        });
-    
-        
-        document.getElementById('guardar-btn').addEventListener('click', (event) => {
-            let valid = true;
-            document.querySelectorAll('input[name^="horaentrada_"], input[name^="horasalida_"]').forEach(input => {
-                const id = input.name.split('_')[1];
-                const inasistencia = ['F', 'D', 'P', 'V', 'INC', 'S', 'B', 'R'].includes(document.querySelector(`select[name="tipo_inasistencia_${id}"]`).value);
-                if (!inasistencia && !validarHoras(id)) {
-                    valid = false;
-                }
-            });
-        
-            if (!valid) {
-                {% comment %} showAlert('Corrige los errores antes de guardar.', 'danger'); {% endcomment %}
+const validarHoras = (id) => {
+    const entrada = document.querySelector(`input[name="horaentrada_${id}"]`).value;
+    const salida = document.querySelector(`input[name="horasalida_${id}"]`).value;
+
+    const selectInasistencia = document.querySelector(`select[name="tipo_inasistencia_${id}"]`);
+    if (!selectInasistencia) {
+        console.error(`Select con name="tipo_inasistencia_${id}" no encontrado`);
+        return false;
+    }
+    const inasistencia = ['F', 'D', 'V', 'INC', 'S', 'B', 'R'].includes(selectInasistencia.value);
+    if (inasistencia) {
+        return true; // Saltar validación si está marcado como inasistencia
+    }
+
+    // Validar que si el tipo de inasistencia es NI, RT o ASI, haya un proceso seleccionado
+    const procesoSelect = document.querySelector(`select[name="proceso_${id}"]`);
+    if (['NI', 'RT', 'ASI'].includes(selectInasistencia.value) && procesoSelect.value === '0') {
+        showAlert('Debe seleccionar un proceso si el tipo de inasistencia es NUEVO INGRESO, RETARDO o ASISTENCIA.', 'danger');
+        return false;
+    }
+
+    if (!entrada || !salida) {
+        showAlert('Falta Agregar Hora Inicio o Fin en Algun Proceso', 'danger');
+        return false;
+    }
+
+    const [horaEntrada, minutoEntrada] = entrada.split(':').map(Number);
+    const [horaSalida, minutoSalida] = salida.split(':').map(Number);
+
+    const inicio = new Date(0, 0, 0, horaEntrada, minutoEntrada);
+    const fin = new Date(0, 0, 0, horaSalida, minutoSalida);
+    let diferencia = (fin - inicio) / 1000 / 60 / 60;
+
+    if (diferencia < 0) {
+        diferencia += 24;
+    }
+
+    if (diferencia >= 14) {
+        showAlert('La diferencia entre la hora de entrada y la hora de salida no puede ser igual o superior a 14 horas.', 'danger');
+        document.querySelector(`input[name="horasalida_${id}"]`).value = '';
+        return false;
+    }
+
+    if (entrada === salida) {
+        showAlert('La hora de entrada y la hora de salida no pueden ser iguales.', 'danger');
+        document.querySelector(`input[name="horasalida_${id}"]`).value = '';
+        return false;
+    }
+
+    return true;
+};
+
+const actualizarTotalHoras = () => {
+    try {
+        const totalHorasPorEmpleado = {};
+        const totalHorasPorProceso = {};
+        const totalHorasExtrasPorProceso = {};
+        const totalHorasComidaPorProceso = {};
+
+        // Sumar las horas de todos los procesos por empleado y proceso
+        document.querySelectorAll('input[name^="hrs_"]').forEach(input => {
+            const id = input.name.split('_')[1];
+            const row = document.querySelector(`tr[data-id="${id}"]`);
+            if (!row) {
+                console.error(`Fila con data-id="${id}" no encontrada`);
                 return;
             }
-        
-            const { borrados } = contarCambiosYBorrados();
-            const mensaje = `Se eliminarán ${borrados} registros. ¿Deseas continuar?`;
-            document.getElementById('confirmMessage').textContent = mensaje;
-            const confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
-            confirmModal.show();
-        
-            document.getElementById('confirmSubmit').addEventListener('click', () => {
-                // Asegurarse de que todos los procesos tengan el valor de TotalHrs antes de enviar el formulario
-                document.querySelectorAll('input[name^="totalhrs_"]').forEach(input => {
-                    const codigoEmp = input.name.split('_')[1];
-                    const totalHrs = document.querySelector(`input[name="totalhrs_${codigoEmp}"]`).value;
-                    document.querySelectorAll(`tr[data-codigo-emp="${codigoEmp}"] input[name^="totalhrs_"]`).forEach(procesoInput => {
-                        procesoInput.value = totalHrs;
-                    });
-                });
-        
-                document.querySelectorAll('input[type="time"]').forEach(input => {
-                    if (input.value === '') {
-                        input.value = '00:00:00.0000000';
-                    }
-                });
-        
-                document.getElementById('form-actualizar').submit();
-            });
+            const codigoEmp = row.dataset.codigoEmp;
+            const proceso = document.querySelector(`select[name="proceso_${id}"]`).selectedOptions[0].textContent;
+            const horas = parseFloat(input.value) || 0;
+            const horasExtras = parseFloat(document.querySelector(`input[name="hrsextras_${id}"]`).value) || 0;
+            const hrComida = row.dataset.hrcomida === 'True';  // Convertir a booleano
+            const fechaProcesoTexto = row.querySelector('p.form-control-plaintext.mb-2').textContent.trim();
+            const fechaProceso = new Date(fechaProcesoTexto.split(' de ').reverse().join('-'));
+            const diaSemana = fechaProceso.getDay(); // 5 = Viernes, 6 = Sábado
+            const idTurno = parseInt(row.dataset.idTurno, 10);
+            let horasComida = hrComida ? 0.75 : 0; // 45 minutos de tiempo de comida si hrComida es True
+
+            console.log(`Fecha del proceso: ${fechaProceso}`);
+            console.log(`Día de la semana: ${diaSemana}`);
+            console.log(`ID Turno: ${idTurno}`);
+            console.log(`Horas Comida antes del ajuste: ${horasComida}`);
+
+            // Descontar 30 minutos de comida si es viernes o sábado y el turno es 100
+            if ((diaSemana === 5 || diaSemana === 6) && idTurno === 100) {
+                horasComida = 0.5; // Ajustar a 30 minutos
+            }
+
+            console.log(`ID: ${id}, CodigoEmp: ${codigoEmp}, Proceso: ${proceso}, Horas: ${horas}, HorasExtras: ${horasExtras}, HorasComida después del ajuste: ${horasComida}`);
+
+            if (!totalHorasPorEmpleado[codigoEmp]) {
+                totalHorasPorEmpleado[codigoEmp] = 0;
+            }
+
+            if (!totalHorasPorProceso[proceso]) {
+                totalHorasPorProceso[proceso] = 0;
+                totalHorasExtrasPorProceso[proceso] = 0;
+                totalHorasComidaPorProceso[proceso] = 0;
+            }
+
+            totalHorasPorEmpleado[codigoEmp] += horas;
+            totalHorasPorProceso[proceso] += horas;
+            totalHorasExtrasPorProceso[proceso] += horasExtras;
+            totalHorasComidaPorProceso[proceso] += horasComida;
+
+            console.log(`Total Horas Comida por Proceso (${proceso}): ${totalHorasComidaPorProceso[proceso]}`);
         });
-        
-        // Llamar a actualizarTotalHoras al cargar la página
+
+        console.log('Total Horas por Empleado:', totalHorasPorEmpleado);
+        console.log('Total Horas por Proceso:', totalHorasPorProceso);
+        console.log('Total Horas Extras por Proceso:', totalHorasExtrasPorProceso);
+        console.log('Total Horas Comida por Proceso:', totalHorasComidaPorProceso);
+
+        // Asignar el valor de TotalHrs a todos los procesos del empleado
+        document.querySelectorAll('input[name^="totalhrs_"]').forEach(input => {
+            const id = input.name.split('_')[1];
+            const codigoEmp = document.querySelector(`tr[data-id="${id}"]`).dataset.codigoEmp;
+            input.value = totalHorasPorEmpleado[codigoEmp].toFixed(2);
+            console.log(`Total Horas para Empleado ${codigoEmp}: ${totalHorasPorEmpleado[codigoEmp].toFixed(2)}`);
+        });
+
+        // Mostrar el detalle de horas, horas extras y horas de comida por proceso
+        const detalleProcesos = Object.entries(totalHorasPorProceso)
+            .filter(([proceso, horas]) => proceso !== "Sin Proceso")    // Filtrar el proceso "Sin Proceso"
+            .map(([proceso, horas]) => {
+                const horasExtras = totalHorasExtrasPorProceso[proceso].toFixed(2);
+                const horasComida = totalHorasComidaPorProceso[proceso].toFixed(2);
+                return `<td>${proceso}: ${horas.toFixed(2)} horas (Horas extras: ${horasExtras}, Horas comida: ${horasComida})</td>`;
+            })
+            .join('');
+        document.getElementById('detalle_procesos_container').innerHTML = `<table><tr>${detalleProcesos}</tr></table>`;
+
+        // Actualizar el total de horas de todos los empleados
+        const total = Object.values(totalHorasPorEmpleado).reduce((sum, value) => sum + value, 0);
+        document.getElementById('total_proceso').textContent = total.toFixed(2);
+        console.log('Total Horas de Todos los Empleados:', total.toFixed(2));
+
+    } catch (error) {
+        console.error("Error actualizando el total de horas:", error);
+    }
+};
+
+// Modificar el evento de cambio para los campos de horas extras
+document.querySelectorAll('input[name^="hrsextras_"]').forEach(input => {
+    input.addEventListener('change', (event) => {
+        const id = event.target.name.split('_')[1];
+        console.log(`Cambio detectado en hrsextras_${id}`);
         actualizarTotalHoras();
     });
-    
-    
-    const validarHoras = (id) => {
+});
+
+const actualizarHoras = (id) => {
+    try {
         const entrada = document.querySelector(`input[name="horaentrada_${id}"]`).value;
         const salida = document.querySelector(`input[name="horasalida_${id}"]`).value;
 
-        const selectInasistencia = document.querySelector(`select[name="tipo_inasistencia_${id}"]`);
-        if (!selectInasistencia) {
-            console.error(`Select con name="tipo_inasistencia_${id}" no encontrado`);
-            return false;
-        }
-        const inasistencia = ['F', 'D', 'P', 'V', 'INC', 'S', 'B', 'R'].includes(selectInasistencia.value);
-        if (inasistencia) {
-            return true; // Saltar validación si está marcado como inasistencia
-        }
-
-        // Validar que si el tipo de inasistencia es NI, RT o ASI, haya un proceso seleccionado
-        const procesoSelect = document.querySelector(`select[name="proceso_${id}"]`);
-        if (['NI', 'RT', 'ASI'].includes(selectInasistencia.value) && procesoSelect.value === '0') {
-            showAlert('Debe seleccionar un proceso si el tipo de inasistencia es NUEVO INGRESO, RETARDO o ASISTENCIA.', 'danger');
-            return false;
-        }
-
         if (!entrada || !salida) {
-            showAlert('Falta Agregar Hora Inicio o Fin en Algun Proceso', 'danger');
-            return false;
+            console.warn(`Faltan datos de hora en el proceso ${id}.`);
+            return;
         }
 
         const [horaEntrada, minutoEntrada] = entrada.split(':').map(Number);
@@ -453,86 +573,21 @@
             diferencia += 24;
         }
 
-        if (diferencia >= 14) {
-            showAlert('La diferencia entre la hora de entrada y la hora de salida no puede ser igual o superior a 14 horas.', 'danger');
-            document.querySelector(`input[name="horasalida_${id}"]`).value = '';
-            return false;
-        }
+        const hrsInput = document.querySelector(`input[name="hrs_${id}"]`);
+        hrsInput.value = diferencia.toFixed(2);
 
-        if (entrada === salida) {
-            showAlert('La hora de entrada y la hora de salida no pueden ser iguales.', 'danger');
-            document.querySelector(`input[name="horasalida_${id}"]`).value = '';
-            return false;
-        }
+        console.log(`Actualizando horas para el proceso ${id}: Entrada: ${entrada}, Salida: ${salida}, Diferencia: ${diferencia.toFixed(2)}`);
 
-        return true;
-    };
-   
-    const actualizarTotalHoras = () => {
-        try {
-            const totalHorasPorEmpleado = {};
-            const totalHorasPorProceso = {};
-            const totalHorasExtrasPorProceso = {};
-            const totalHorasComidaPorProceso = {};
+        actualizarTotalHoras();
+    } catch (error) {
+        console.error(`Error actualizando horas para el proceso ${id}:`, error);
+    }
+};
     
-            // Sumar las horas de todos los procesos por empleado y proceso
-            document.querySelectorAll('input[name^="hrs_"]').forEach(input => {
-                const id = input.name.split('_')[1];
-                const row = document.querySelector(`tr[data-id="${id}"]`);
-                if (!row) {
-                    console.error(`Fila con data-id="${id}" no encontrada`);
-                    return;
-                }
-                const codigoEmp = row.dataset.codigoEmp;
-                const proceso = document.querySelector(`select[name="proceso_${id}"]`).selectedOptions[0].textContent;
-                const horas = parseFloat(input.value) || 0;
-                const horasExtras = parseFloat(document.querySelector(`input[name="hrsextras_${id}"]`).value) || 0;
-                const hrComida = row.dataset.hrcomida === 'True';  // Convertir a booleano
-                const horasComida = hrComida ? 0.75 : 0; // 45 minutos de tiempo de comida si hrComida es True
     
-                if (!totalHorasPorEmpleado[codigoEmp]) {
-                    totalHorasPorEmpleado[codigoEmp] = 0;
-                }
     
-                if (!totalHorasPorProceso[proceso]) {
-                    totalHorasPorProceso[proceso] = 0;
-                    totalHorasExtrasPorProceso[proceso] = 0;
-                    totalHorasComidaPorProceso[proceso] = 0;
-                }
     
-                totalHorasPorEmpleado[codigoEmp] += horas;
-                totalHorasPorProceso[proceso] += horas;
-                totalHorasExtrasPorProceso[proceso] += horasExtras;
-                totalHorasComidaPorProceso[proceso] += horasComida;
-            });
-    
-            // Asignar el valor de TotalHrs a todos los procesos del empleado
-            document.querySelectorAll('input[name^="totalhrs_"]').forEach(input => {
-                const id = input.name.split('_')[1];
-                const codigoEmp = document.querySelector(`tr[data-id="${id}"]`).dataset.codigoEmp;
-                input.value = totalHorasPorEmpleado[codigoEmp].toFixed(2);
-            });
-    
-            // Mostrar el detalle de horas, horas extras y horas de comida por proceso
-            const detalleProcesos = Object.entries(totalHorasPorProceso)
-                .filter(([proceso, horas]) => proceso !== "Sin Proceso")    // Filtrar el proceso "Sin Proceso"
-                .map(([proceso, horas]) => {
-                    const horasExtras = totalHorasExtrasPorProceso[proceso].toFixed(2);
-                    const horasComida = totalHorasComidaPorProceso[proceso].toFixed(2);
-                    return `<td>${proceso}: ${horas.toFixed(2)} horas (Horas extras: ${horasExtras}, Horas comida: ${horasComida})</td>`;
-                })
-                .join('');
-            document.getElementById('detalle_procesos_container').innerHTML = `<table><tr>${detalleProcesos}</tr></table>`;
-    
-            // Actualizar el total de horas de todos los empleados
-            const total = Object.values(totalHorasPorEmpleado).reduce((sum, value) => sum + value, 0);
-            document.getElementById('total_proceso').textContent = total.toFixed(2);
-    
-        } catch (error) {
-            console.error("Error actualizando el total de horas:", error);
-        }
-    };
-    const exportarTablaAExcel = (idTabla, nombreArchivo) => {
+     exportarTablaAExcel = (idTabla, nombreArchivo) => {
         const tabla = document.getElementById(idTabla);
         const filas = Array.from(tabla.querySelectorAll('tr'));
     
@@ -744,7 +799,7 @@
     
     const toggleInasistencia = (id, codigoEmp) => {
         const select = document.querySelector(`select[name="tipo_inasistencia_${id}"]`);
-        const inasistencia = ['F', 'D', 'P', 'V', 'INC', 'S', 'B', 'R'].includes(select.value);
+        const inasistencia = ['F', 'D', 'V', 'INC', 'S', 'B', 'R'].includes(select.value);
     
         if (inasistencia) {
             document.querySelector(`input[name="horaentrada_${id}"]`).value = '00:00:00';
@@ -779,35 +834,7 @@
         return { borrados };
     };
 
-    const actualizarHoras = (id) => {
-        try {
-            const entrada = document.querySelector(`input[name="horaentrada_${id}"]`).value;
-            const salida = document.querySelector(`input[name="horasalida_${id}"]`).value;
-
-            if (!entrada || !salida) {
-                console.warn(`Faltan datos de hora en el proceso ${id}.`);
-                return;
-            }
-
-            const [horaEntrada, minutoEntrada] = entrada.split(':').map(Number);
-            const [horaSalida, minutoSalida] = salida.split(':').map(Number);
-
-            const inicio = new Date(0, 0, 0, horaEntrada, minutoEntrada);
-            const fin = new Date(0, 0, 0, horaSalida, minutoSalida);
-            let diferencia = (fin - inicio) / 1000 / 60 / 60;
-
-            if (diferencia < 0) {
-                diferencia += 24;
-            }
-
-            const hrsInput = document.querySelector(`input[name="hrs_${id}"]`);
-            hrsInput.value = diferencia.toFixed(2);
-
-            actualizarTotalHoras();
-        } catch (error) {
-            console.error(`Error actualizando horas para el proceso ${id}:`, error);
-        }
-    };
+    
 </script>
 {% endblock %}
 
@@ -889,7 +916,7 @@
                     <!-- filepath: /c:/proyecto_Moo/horas_procesos/templates/horas_procesos/actualizar_horas_procesos.html -->
                     {% for registro in registros_combinados %}
                     {% for proceso in registro.procesos %}
-                    <tr data-codigo-emp="{{ registro.codigo_emp }}" data-id="{{ proceso.id_hrspro }}" data-hrcomida="{{ proceso.hrcomida }}">
+                    <tr data-codigo-emp="{{ registro.codigo_emp }}" data-id="{{ proceso.id_hrspro }}" data-hrcomida="{{ proceso.hrcomida }}" data-id-turno="{{ registro.id_turno }}">
                         {% if forloop.first %}
                         <td rowspan="{{ registro.procesos|length }}">{{ registro.codigo_emp }}</td>
                         <td rowspan="{{ registro.procesos|length }}">{{ registro.nombre_emp }}</td>
@@ -930,8 +957,8 @@
                             <input type="text" name="totalhrs_{{ proceso.id_hrspro }}" class="form-control form-control-sm mb-2" 
                                 value="{{ proceso.totalhrs|floatformat:2 }}" readonly>
                         </td>
-                        <td>
-                            <input type="number" name="hrsextras_{{ proceso.id_hrspro }}" class="form-control form-control-sm mb-2" 
+                        <td class="td-hrsextras">
+                            <input type="number" name="hrsextras_{{ proceso.id_hrspro }}" class="form-control form-control-sm mb-2 input-hrsextras" 
                                 value="{{ proceso.hrsextras|floatformat:2 }}" min="0" step="0.01" data-original-value="{{ proceso.hrsextras|floatformat:2 }}">
                         </td>
                         <td>
