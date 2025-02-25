@@ -676,11 +676,9 @@ function filtrarEmpleadosPorFecha() {
             console.error('No se pudo encontrar el departamento seleccionado.');
             return;
         }
-        
-        
+    
         const rows = document.querySelectorAll(`tr[data-depto="${deptoActual}"]`);
-        
-        
+    
         let inicioValues = [];
         let finValues = [];
         let foundValidRow = false;
@@ -692,19 +690,15 @@ function filtrarEmpleadosPorFecha() {
                 const tipoInasistenciaSelect = row.querySelector(`select[name="tipo_inasistencia_${codigoEmp}"]`);
                 const tipoInasistencia = tipoInasistenciaSelect ? tipoInasistenciaSelect.value : null;
     
-                
-    
-                if (['ASI', 'RT', 'NI','P'].includes(tipoInasistencia)) {
+                if (['ASI', 'RT', 'NI', 'P'].includes(tipoInasistencia)) {
                     const inicioInput = row.querySelector(`input[name="inicio_proceso${i}_${codigoEmp}"]`);
                     const finInput = row.querySelector(`input[name="fin_proceso${i}_${codigoEmp}"]`);
                     const deleteCheckbox = row.querySelector(`.delete-checkbox[data-proceso="${i}"][data-emp="${codigoEmp}"]`);
     
-                   
                     if (inicioInput.value && finInput.value && (!deleteCheckbox || !deleteCheckbox.checked)) {
                         inicioValues[i - 1] = inicioInput.value;
                         finValues[i - 1] = finInput.value;
                         foundValidRow = true;
-                        
                         break;
                     }
                 }
@@ -715,8 +709,6 @@ function filtrarEmpleadosPorFecha() {
             console.error('No se encontraron filas con horas válidas para copiar.');
             return;
         }
-    
-        
     
         // Procesar cada proceso individualmente
         for (let i = 1; i <= 10; i++) {
@@ -740,10 +732,10 @@ function filtrarEmpleadosPorFecha() {
                 // Verificar si el checkbox delete-checkbox está marcado
                 const deleteCheckbox = row.querySelector(`.delete-checkbox[data-proceso="${i}"][data-emp="${codigoEmp}"]`);
                 if (deleteCheckbox && deleteCheckbox.checked) {
-                    
+                    // No hacer nada si el checkbox de borrar está marcado
                 } else if (tipoInasistencia === 'F' || tipoInasistencia === 'D') {
-                    
-                } else if (['ASI', 'RT', 'NI','P'].includes(tipoInasistencia)) {
+                    // No hacer nada si el tipo de inasistencia es 'F' o 'D'
+                } else if (['ASI', 'RT', 'NI', 'P'].includes(tipoInasistencia)) {
                     const inicioInput = row.querySelector(`input[name="inicio_proceso${i}_${codigoEmp}"]`);
                     const finInput = row.querySelector(`input[name="fin_proceso${i}_${codigoEmp}"]`);
     
@@ -752,17 +744,18 @@ function filtrarEmpleadosPorFecha() {
                         inicioInput.disabled = false;
                         finInput.disabled = false;
     
-                        // Copiar los valores de inicio y fin al resto de los empleados
-                        if (inicioValues[i - 1] && finValues[i - 1]) {
-                            inicioInput.value = inicioValues[i - 1];
-                            finInput.value = finValues[i - 1];
-                            
+                        // Copiar los valores de inicio y fin solo si están vacíos
+                        if (!inicioInput.value && !finInput.value) {
+                            if (inicioValues[i - 1] && finValues[i - 1]) {
+                                inicioInput.value = inicioValues[i - 1];
+                                finInput.value = finValues[i - 1];
     
-                            // Llamar a las funciones de ajuste y cálculo si es necesario
-                            ajustarHoraFin(codigoEmp, i);
-                            calcularTotalHoras(codigoEmp, i);
-                        } else {
-                            console.log(`No se copian valores vacíos para el proceso ${i} del empleado ${codigoEmp}`);
+                                // Llamar a las funciones de ajuste y cálculo si es necesario
+                                ajustarHoraFin(codigoEmp, i);
+                                calcularTotalHoras(codigoEmp, i);
+                            } else {
+                                console.log(`No se copian valores vacíos para el proceso ${i} del empleado ${codigoEmp}`);
+                            }
                         }
                     }
                 }

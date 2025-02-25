@@ -179,3 +179,4 @@ LOGIN_REDIRECT_URL = 'home'
 LOGOUT_REDIRECT_URL = 'login'
 LOGIN_URL = 'login'
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 1000000  # Ajusta este valor según tus necesidades
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles') 
