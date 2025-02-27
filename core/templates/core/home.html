@@ -37,35 +37,6 @@
                     alert('Error en la sincronización: ' + error.message);
                 });
             });
-        } else if (window.location.pathname === '/horas_procesos/gestion_horas_procesos/') {
-            const syncButton = document.createElement('li');
-            syncButton.className = 'nav-item';
-            syncButton.innerHTML = `
-                <a id="sync-to-server-button" class="nav-link" href="#">Sincronizar Procesos</a>
-            `;
-            navbarRight.insertBefore(syncButton, navbarRight.firstChild);
-
-            document.getElementById('sync-to-server-button').addEventListener('click', function(event) {
-                event.preventDefault();  // Evitar el comportamiento predeterminado del enlace
-                fetch("{% url 'core:sync_databases' %}", {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': '{{ csrf_token }}',
-                        'Content-Type': 'application/json'
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'success') {
-                        alert('Sincronización completada con éxito.');
-                    } else {
-                        alert('Error en la sincronización: ' + data.message);
-                    }
-                })
-                .catch(error => {
-                    alert('Error en la sincronización: ' + error.message);
-                });
-            });
         }
     });
 </script>
@@ -74,7 +45,6 @@
         margin-right: 15px; /* Ajusta este valor según sea necesario */
       }
 </style>
-    
 {% endblock %}
 {% block content %}
 <header class="text-white" style="background-image: url('{% static 'core/assets/fondoHome.png' %}'); background-repeat: repeat; background-position: center;">

@@ -373,8 +373,18 @@ def gestion_horas_procesos(request):
     cursor.execute("SELECT ID_Departamento, Descripcion FROM Departamentos WHERE ID_Departamento IN (12, 16, 17, 18, 19, 20, 21, 22, 23)")
     departamentos = cursor.fetchall()
 
-    # Obtener los productos
+    """ # Obtener los productos
     cursor.execute("SELECT ID_Producto, DescripcionProd FROM Productos")
+    productos = cursor.fetchall() """
+    
+    spf_info_conn = get_spf_info_connection()
+    cursor = spf_info_conn.cursor()
+    cursor.execute("""
+        SELECT p.ID_Producto, p.DescripcionProd, COALESCE(c.Cliente, 'Sin Cliente') as Cliente
+        FROM Productos p
+        LEFT JOIN Clientes c ON p.ID_Cliente = c.ID_Cliente
+        WHERE p.ID_Producto LIKE 'PT%' OR p.ID_Producto NOT LIKE '%[^0-9]%'
+    """)
     productos = cursor.fetchall()
     spf_info_conn.close()
 
@@ -557,6 +567,7 @@ def agregar_motivo(request):
         return redirect('horas_procesos:display_employees')
     print("Solicitud GET recibida en agregar_motivo")
     return redirect('horas_procesos:display_employees')
+
 def actualizar_horas_procesos(request):
     departamento_seleccionado = request.GET.get('departamento', None)
     fecha_seleccionada = request.GET.get('fecha', None)

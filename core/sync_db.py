@@ -57,6 +57,16 @@ def table_exists(conn, table_name):
     cursor.execute(query)
     return cursor.fetchone() is not None
 
+def has_identity_column(conn, table_name):
+    query = f"""
+    SELECT COLUMN_NAME 
+    FROM INFORMATION_SCHEMA.COLUMNS 
+    WHERE TABLE_NAME = '{table_name}' AND COLUMNPROPERTY(object_id(TABLE_NAME), COLUMN_NAME, 'IsIdentity') = 1
+    """
+    cursor = conn.cursor()
+    cursor.execute(query)
+    return cursor.fetchone() is not None
+
 def sync_table(remote_conn, local_conn, table_name, primary_key, where_clause=""):
     with remote_conn.cursor() as remote_cur, local_conn.cursor() as local_cur:
         # Obtener todos los datos de la tabla remota con la cláusula WHERE
@@ -76,6 +86,9 @@ def sync_table(remote_conn, local_conn, table_name, primary_key, where_clause=""
 
         local_data = {row[primary_key_index_local]: row for row in local_rows}
 
+        # Verificar si la tabla tiene una columna de identidad
+        identity_column = has_identity_column(local_conn, table_name)
+
         # Insertar o actualizar registros que están en la tabla remota
         placeholders = ', '.join(['?'] * len(remote_columns))
         update_set = ', '.join([f"{col}=?" for col in remote_columns if col != primary_key])
@@ -91,10 +104,14 @@ def sync_table(remote_conn, local_conn, table_name, primary_key, where_clause=""
                     )
             else:
                 # Insertar nuevo registro
+                if identity_column:
+                    local_cur.execute(f"SET IDENTITY_INSERT dbo.{table_name} ON")
                 local_cur.execute(
                     f"INSERT INTO dbo.{table_name} ({', '.join(remote_columns)}) VALUES ({placeholders})",
                     [remote_row[remote_columns.index(col)] for col in remote_columns]
                 )
+                if identity_column:
+                    local_cur.execute(f"SET IDENTITY_INSERT dbo.{table_name} OFF")
 
         # Eliminar registros que están en la tabla local pero no en la tabla remota
         for key in local_data.keys():
@@ -103,7 +120,6 @@ def sync_table(remote_conn, local_conn, table_name, primary_key, where_clause=""
 
         # Confirmar los cambios en la base de datos local
         local_conn.commit()
-
 def sync_databases():
     # Conectar a las bases de datos local y remota
     remote_hrs_conn = get_connection(remote_hrs_conn_info)

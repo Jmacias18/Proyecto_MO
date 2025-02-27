@@ -391,6 +391,10 @@
                                     <option value="{{ producto.ID_Producto }}">{{ producto.ID_Producto }} - {{ producto.DescripcionProd }} - {{ producto.Cliente }}</option>
                                     {% endfor %}
                                 </select>
+                                <input type="checkbox" class="form-check-input delete-checkbox-header" id="delete-checkbox-header-{{ i }}" data-proceso="{{ i }}" onchange="handleDeleteHeaderCheckboxChange(event)">
+                                <label for="delete-checkbox-header-{{ i }}">
+                                    <img src="/static/icons/borrar.png" alt="Borrar Horas" style="width: 15px; height: 15px;">
+                                </label>
                             </th>
                         {% endfor %}
                         <th class="sticky-header">Horas Extras</th>

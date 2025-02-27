@@ -477,7 +477,7 @@ function filtrarEmpleados() {
                     // Aplicar color a los selectores de tipo de inasistencia
                     const tipoInasistenciaSelect = row.querySelector(`select[name="tipo_inasistencia_${empleado.codigo_emp}"]`);
                     if (tipoInasistenciaSelect) {
-                        console.log(`Aplicando color para el selector de tipo de inasistencia del empleado ${empleado.codigo_emp}`);
+                        
                         applyColorClass(tipoInasistenciaSelect);
                     }
                 });
@@ -582,7 +582,7 @@ function filtrarEmpleadosPorFecha() {
                     // Aplicar color a los selectores de tipo de inasistencia
                     const tipoInasistenciaSelect = row.querySelector(`select[name="tipo_inasistencia_${empleado.codigo_emp}"]`);
                     if (tipoInasistenciaSelect) {
-                        console.log(`Aplicando color para el selector de tipo de inasistencia del empleado ${empleado.codigo_emp}`);
+                        
                         applyColorClass(tipoInasistenciaSelect);
                     }
                 });
@@ -1074,7 +1074,7 @@ function guardarEstadoAnterior(codigoEmp) {
         if (stateStack.length > MAX_STACK_SIZE) {
             stateStack.shift(); // Eliminar el estado más antiguo si se supera el tamaño máximo
         }
-        console.log('Estado anterior guardado para empleado', codigoEmp, ':', currentState);
+        
     } else {
         console.log('No hay cambios, no se guarda el estado.');
     }
@@ -1100,7 +1100,7 @@ function saveCurrentState() {
         if (stateStack.length > MAX_STACK_SIZE) {
             stateStack.shift(); // Eliminar el estado más antiguo si se supera el tamaño máximo
         }
-        console.log('Estado guardado:', currentState);
+        
     } else {
         console.log('No hay cambios, no se guarda el estado.');
     }
@@ -1108,7 +1108,7 @@ function saveCurrentState() {
 
 function restorePreviousState() {
     if (stateStack.length > 0) {
-        console.log('Restaurando estado anterior...');
+        
         const previousState = stateStack.pop();
         const form = document.getElementById('horas-procesos-form');
         const inputs = form.querySelectorAll('input[type="time"], input[type="checkbox"].comida-checkbox, input[type="checkbox"].delete-checkbox, input[type="text"]');
@@ -1118,7 +1118,7 @@ function restorePreviousState() {
                 const deleteCheckbox = form.querySelector(`input[type="checkbox"].delete-checkbox[data-proceso="${input.dataset.proceso}"][data-emp="${input.dataset.emp}"]`);
                 if (deleteCheckbox && deleteCheckbox.checked) {
                     // No restaurar el estado si el checkbox de borrar está marcado
-                    console.log(`No se restaura el campo ${input.name} porque el checkbox de borrar está marcado.`);
+                    
                 } else {
                     if (input.type === 'checkbox') {
                         input.checked = previousState[input.name];
@@ -1161,7 +1161,7 @@ function restorePreviousState() {
     }
 }
 function recalcularTotales() {
-    console.log('Iniciando recalculo de totales...');
+   
     const filasEmpleados = document.querySelectorAll('#empleados_tbody tr');
     const totalHorasPorProceso = Array(10).fill(0);
 
@@ -1182,18 +1182,18 @@ function recalcularTotales() {
         const totalProcesoField = document.querySelector(`#total_proceso${i + 1}`);
         if (totalProcesoField) {
             totalProcesoField.textContent = total.toFixed(2);
-            console.log(`Total para proceso ${i + 1}: ${total.toFixed(2)}`);
+            
         }
     });
 }
 
 function deshacerCambio() {
-    console.log('Deshaciendo cambio...');
+    
     restorePreviousState();
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Guardando estado inicial...');
+    
     saveCurrentState();
     const form = document.getElementById('horas-procesos-form');
     const inputs = form.querySelectorAll('input[type="time"], input[type="checkbox"].comida-checkbox, input[type="checkbox"].delete-checkbox');
@@ -1205,7 +1205,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function recalcularTotales() {
-    console.log('Iniciando recalculo de totales...');
+    
     const filasEmpleados = document.querySelectorAll('#empleados_tbody tr');
     const totalHorasPorProceso = Array(10).fill(0);
 
@@ -1217,7 +1217,7 @@ function recalcularTotales() {
             if (totalProceso && totalProceso.value && !totalProceso.disabled) {
                 const totalProcesoValue = parseFloat(totalProceso.value) || 0;
                 totalHorasPorProceso[i - 1] += totalProcesoValue;
-                console.log(`Sumando ${totalProcesoValue} horas al proceso ${i} para el empleado ${codigoEmp}`);
+                
             }
         }
     });
@@ -1226,18 +1226,18 @@ function recalcularTotales() {
         const totalProcesoField = document.querySelector(`#total_proceso${i + 1}`);
         if (totalProcesoField) {
             totalProcesoField.textContent = total.toFixed(2);
-            console.log(`Total para proceso ${i + 1}: ${total.toFixed(2)}`);
+            
         }
     });
 }
 
 function deshacerCambio() {
-    console.log('Deshaciendo cambio...');
+    
     restorePreviousState();
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Guardando estado inicial...');
+    
     saveCurrentState();
     const form = document.getElementById('horas-procesos-form');
     const inputs = form.querySelectorAll('input[type="time"], input[type="checkbox"].comida-checkbox, input[type="checkbox"].delete-checkbox');
@@ -1250,56 +1250,56 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function applyColorClass(selectElement) {
     const value = selectElement.value;
-    console.log(`Aplicando color para el valor: ${value}`); // Log para verificar el valor seleccionado
+   
     selectElement.classList.remove('falta', 'asistencia', 'permiso', 'descanso', 'retardo', 'vacaciones', 'suspension', 'baja', 'renuncia', 'nuevo_ingreso');
     
     switch (value) {
         case 'F':
             selectElement.classList.add('falta');
-            console.log('Clase "falta" aplicada'); // Log para verificar la clase aplicada
+           
             break;
         case 'ASI':
             selectElement.classList.add('asistencia');
-            console.log('Clase "asistencia" aplicada'); // Log para verificar la clase aplicada
+            
             break;
         case 'P':
             selectElement.classList.add('permiso');
-            console.log('Clase "permiso" aplicada'); // Log para verificar la clase aplicada
+            
             break;
         case 'D':
             selectElement.classList.add('descanso');
-            console.log('Clase "descanso" aplicada'); // Log para verificar la clase aplicada
+            
             break;
         case 'RT':
             selectElement.classList.add('retardo');
-            console.log('Clase "retardo" aplicada'); // Log para verificar la clase aplicada
+            
             break;
         case 'V':
             selectElement.classList.add('vacaciones');
-            console.log('Clase "vacaciones" aplicada'); // Log para verificar la clase aplicada
+    
             break;
         case 'S':
             selectElement.classList.add('suspension');
-            console.log('Clase "suspension" aplicada'); // Log para verificar la clase aplicada
+            
             break;
         case 'B':
             selectElement.classList.add('baja');
-            console.log('Clase "baja" aplicada'); // Log para verificar la clase aplicada
+            
             break;
         case 'R':
             selectElement.classList.add('renuncia');
-            console.log('Clase "renuncia" aplicada'); // Log para verificar la clase aplicada
+            
             break;
         case 'NI':
             selectElement.classList.add('nuevo_ingreso');
-            console.log('Clase "nuevo_ingreso" aplicada'); // Log para verificar la clase aplicada
+            
             break;
         case 'INC':
             selectElement.classList.add('incapacidad');
-            console.log('Clase "incapacidad" aplicada'); // Log para verificar la clase aplicada
+            
             break;
         default:
-            console.log('No se aplicó ninguna clase'); // Log para verificar si no se aplicó ninguna clase
+            
             break;
     }
 }
@@ -1314,3 +1314,32 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+function handleDeleteHeaderCheckboxChange(event) {
+    const checkbox = event.target;
+    const proceso = checkbox.getAttribute('data-proceso');
+    const checkboxes = document.querySelectorAll(`.delete-checkbox[data-proceso="${proceso}"]`);
+    let index = 0;
+
+    function processNextCheckbox() {
+        if (index >= checkboxes.length) {
+            return;
+        }
+
+        const cb = checkboxes[index];
+        const emp = cb.getAttribute('data-emp');
+        const inicioInput = document.querySelector(`input[name="inicio_proceso${proceso}_${emp}"]`);
+        const finInput = document.querySelector(`input[name="fin_proceso${proceso}_${emp}"]`);
+
+        if (!inicioInput.value && !finInput.value && !inicioInput.disabled && !finInput.disabled) {
+            cb.checked = checkbox.checked;
+            // Crear un evento de cambio y dispararlo en el checkbox
+            const changeEvent = new Event('change');
+            cb.dispatchEvent(changeEvent);
+        }
+
+        index++;
+        requestAnimationFrame(processNextCheckbox);
+    }
+
+    requestAnimationFrame(processNextCheckbox);
+}

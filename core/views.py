@@ -26,8 +26,12 @@ class SamplePageView(TemplateView):
 def sync_databases_view(request):
     if request.method == 'POST':
         try:
-            # Ejecutar el script de sincronización
+            # Ejecutar el script de sincronización de bases de datos
             subprocess.run(['python', 'core/sync_db.py'], check=True)
+            
+            # Ejecutar el script de sincronización de checadas
+            subprocess.run(['python', 'core/sync_checada.py'], check=True)
+            
             return JsonResponse({'status': 'success', 'message': 'Sincronización completada con éxito.'})
         except subprocess.CalledProcessError as e:
             return JsonResponse({'status': 'error', 'message': str(e)})
