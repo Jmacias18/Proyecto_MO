@@ -518,7 +518,7 @@ const actualizarTotalHoras = () => {
                 productosPorProceso[procesoNombre][productoNombre].horasComida += horasComida;
 
                 // Calcular MO dependiendo del día de la semana
-                const divisorMO = (diaSemana === 6) ? 7.50 : 11.25; // 7.50 si es sábado, 11.25 para otros días
+                const divisorMO = (diaSemana === 6) ? 7.25 : 11.25; // 7.50 si es sábado, 11.25 para otros días
                 productosPorProceso[procesoNombre][productoNombre].mo = (productosPorProceso[procesoNombre][productoNombre].horas / divisorMO).toFixed(2);
             }
         });
