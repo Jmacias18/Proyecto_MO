@@ -40,6 +40,7 @@
                                 <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
                                     <li><a class="dropdown-item" href="{% url 'production:production' %}">Registros de Paros de Producción</a></li>
                                     <li><a class="dropdown-item" href="{% url 'horas_procesos:gestion_horas_procesos' %}">Horas Procesos</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'horas_procesos:empleados_por_departamento' %}">Lista De Asistencia</a></li>
                                     {% if request.user.is_staff %}
                                     <li><a class="dropdown-item" href="{% url 'production:registro' %}">Catalogo De Procesos</a></li>
                                     {% endif %}

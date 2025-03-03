@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import gestion_horas_procesos, actualizar_horas_procesos, sync_to_server_view, eliminar_proceso,actualizar_horas_procesos,eliminar_proceso,display_employees,agregar_motivo,eliminar_motivo,actualizar_motivo
+from .views import gestion_horas_procesos, actualizar_horas_procesos, sync_to_server_view, eliminar_proceso,actualizar_horas_procesos,eliminar_proceso,display_employees,agregar_motivo,eliminar_motivo,actualizar_motivo,empleados_por_departamento
 app_name = 'horas_procesos'
 
 urlpatterns = [
@@ -13,7 +13,7 @@ urlpatterns = [
     path('agregar_motivo/', agregar_motivo, name='agregar_motivo'),
     path('eliminar_motivo/<int:id>/', eliminar_motivo, name='eliminar_motivo'),
     path('actualizar_motivo/<int:id>/', actualizar_motivo, name='actualizar_motivo'),
-    
+    path('empleados_por_departamento/', empleados_por_departamento, name='empleados_por_departamento'),
     
 ]
     

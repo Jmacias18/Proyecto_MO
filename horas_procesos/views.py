@@ -15,6 +15,7 @@ from django.contrib import messages
 import pyodbc
 from collections import defaultdict
 from django.core.cache import cache
+from django.db.models import Q 
 
 from babel.dates import format_date
 
@@ -420,7 +421,7 @@ def gestion_horas_procesos(request):
             # Si no tiene al menos 4 elementos o el cuarto elemento no es una cadena, asignar una lista vacía
             descanso_por_turno[turno[0]] = []
 
-    print(f"Descanso por turno: {descanso_por_turno}")
+    """ print(f"Descanso por turno: {descanso_por_turno}") """
     # Obtener los datos de TempusAccesos
     registros_entrada = obtener_datos_tempus_accesos(fecha_actual.date())
 
@@ -438,6 +439,152 @@ def gestion_horas_procesos(request):
         'turnos': [{'id': turno[0], 'nombre': turno[1], 'horario': turno[2], 'descanso': turno[3]} for turno in turnos],  # Pasar los turnos al contexto
         'departamentos_a_mostrar': [12, 16, 17, 18, 19, 20, 21, 22, 23],  # Pasar la lista de IDs de departamentos a mostrar al contexto
         'empleados_motivo': list(Motivo.objects.values_list('codigo_emp', flat=True))  # Pasar la lista de empleados de la tabla Motivo al contexto
+    })
+
+
+def obtener_primera_checada(fecha):
+    conn = get_tempus_accesos_connection()
+    cursor = conn.cursor()
+
+    # Obtener los datos de la tabla USERINFO
+    cursor.execute("SELECT USERID, Badgenumber FROM USERINFO WHERE Badgenumber LIKE '13%'")
+    userinfo = cursor.fetchall()
+
+    # Crear un diccionario para mapear USERID a Badgenumber
+    userid_to_badgenumber = {row.USERID: str(row.Badgenumber).strip() for row in userinfo}
+
+    # Obtener los datos de la tabla CHECKINOUT para la fecha seleccionada
+    cursor.execute("SELECT USERID, MIN(CHECKTIME) as CHECKTIME FROM CHECKINOUT WHERE CAST(CHECKTIME AS DATE) = ? GROUP BY USERID", fecha)
+    checkinout = cursor.fetchall()
+
+    # Crear un diccionario para almacenar los registros de entrada de la fecha seleccionada
+    registros_entrada = {}
+    for row in checkinout:
+        if row.USERID in userid_to_badgenumber:
+            badgenumber = userid_to_badgenumber[row.USERID]
+            # Eliminar el prefijo '130' si está presente
+            if badgenumber.startswith('130'):
+                badgenumber = badgenumber[3:]
+            # Mantener solo los últimos 4 dígitos
+            badgenumber = badgenumber[-4:]
+            registros_entrada[badgenumber] = row.CHECKTIME
+
+    conn.close()
+    return registros_entrada
+
+def obtener_ultima_checada(fecha):
+    conn = get_tempus_accesos_connection()
+    cursor = conn.cursor()
+
+    # Obtener los datos de la tabla USERINFO
+    cursor.execute("SELECT USERID, Badgenumber FROM USERINFO WHERE Badgenumber LIKE '13%'")
+    userinfo = cursor.fetchall()
+
+    # Crear un diccionario para mapear USERID a Badgenumber
+    userid_to_badgenumber = {row.USERID: str(row.Badgenumber).strip() for row in userinfo}
+
+    # Obtener los datos de la tabla CHECKINOUT para la fecha seleccionada
+    cursor.execute("SELECT USERID, MAX(CHECKTIME) as CHECKTIME FROM CHECKINOUT WHERE CAST(CHECKTIME AS DATE) = ? GROUP BY USERID", fecha)
+    checkinout = cursor.fetchall()
+
+    # Crear un diccionario para almacenar los registros de salida de la fecha seleccionada
+    registros_salida = {}
+    for row in checkinout:
+        if row.USERID in userid_to_badgenumber:
+            badgenumber = userid_to_badgenumber[row.USERID]
+            # Eliminar el prefijo '130' si está presente
+            if badgenumber.startswith('130'):
+                badgenumber = badgenumber[3:]
+            # Mantener solo los últimos 4 dígitos
+            badgenumber = badgenumber[-4:]
+            registros_salida[badgenumber] = row.CHECKTIME
+
+    conn.close()
+    return registros_salida
+
+
+def empleados_por_departamento(request):
+    departamento_id = request.GET.get('departamento', None)
+    search_query = request.GET.get('search', '')
+    fecha_filtro = request.GET.get('fecha', datetime.now().date().strftime('%Y-%m-%d'))
+    fecha_filtro = datetime.strptime(fecha_filtro, '%Y-%m-%d').date()
+    empleados = Empleados.objects.none()
+    total_empleados = 0
+
+    if departamento_id:
+        empleados = Empleados.objects.filter(id_departamento=departamento_id)
+        total_empleados = empleados.count()
+
+    if search_query:
+        empleados = empleados.filter(
+            Q(codigo_emp__icontains=search_query) |
+            Q(nombre_emp__icontains=search_query)
+        )
+
+    # Obtener la descripción de los departamentos
+    spf_info_conn = get_spf_info_connection()
+    cursor = spf_info_conn.cursor()
+    cursor.execute("SELECT ID_Departamento, Descripcion FROM Departamentos WHERE Descripcion LIKE '%PRODUCCION%'")
+    departamentos = cursor.fetchall()
+    spf_info_conn.close()
+
+    departamentos_dict = {depto[0]: depto[1] for depto in departamentos}
+
+    # Obtener los datos de TempusAccesos
+    registros_entrada = obtener_primera_checada(fecha_filtro)
+    registros_salida = obtener_ultima_checada(fecha_filtro)
+
+    # Obtener los turnos y días de descanso
+    turnos = cache.get('turnos')
+    if not turnos:
+        spf_info_conn = get_spf_info_connection()
+        cursor = spf_info_conn.cursor()
+        cursor.execute("SELECT ID_Turno, Turno, Horario, Descanso FROM Turnos")
+        turnos = cursor.fetchall()
+        spf_info_conn.close()
+        cache.set('turnos', turnos, 3600)  # Cachear por 1 hora
+
+    turnos_dict = {turno[0]: {'nombre': turno[1], 'horario': turno[2], 'descanso': turno[3]} for turno in turnos}
+
+    # Diccionario de traducción de días de la semana de español con acentos a sin acentos
+    dias_semana_sin_acentos = {
+        'lunes': 'Lunes',
+        'martes': 'Martes',
+        'miércoles': 'Miercoles',
+        'jueves': 'Jueves',
+        'viernes': 'Viernes',
+        'sábado': 'Sabado',
+        'domingo': 'Domingo'
+    }
+
+    # Formatear y mostrar el día actual en español usando babel
+    dia_actual_con_acento = format_date(fecha_filtro, 'EEEE', locale='es_ES').lower()
+    dia_actual_sin_acento = dias_semana_sin_acentos[dia_actual_con_acento]
+
+    empleados_con_descripcion = [
+        {
+            'codigo_emp': emp.codigo_emp,
+            'nombre_emp': emp.nombre_emp,
+            'descripcion_departamento': departamentos_dict.get(emp.id_departamento, ''),
+            'tipo_asistencia': 'ASISTENCIA' if str(emp.codigo_emp).strip()[-4:] in registros_entrada else 'DESCANSO' if dia_actual_sin_acento in turnos_dict.get(emp.id_turno, {}).get('descanso', '').split('/') else 'FALTA',
+            'hora_entrada': registros_entrada.get(str(emp.codigo_emp).strip()[-4:], '').strftime('%I:%M %p') if str(emp.codigo_emp).strip()[-4:] in registros_entrada else '',
+            'hora_salida': registros_salida.get(str(emp.codigo_emp).strip()[-4:], '').strftime('%I:%M %p') if str(emp.codigo_emp).strip()[-4:] in registros_salida else '',
+            'turno': turnos_dict.get(emp.id_turno, {}).get('nombre', ''),
+            'horario': turnos_dict.get(emp.id_turno, {}).get('horario', ''),
+            'descanso': turnos_dict.get(emp.id_turno, {}).get('descanso', '')
+        }
+        for emp in empleados
+    ]
+
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({'empleados': empleados_con_descripcion})
+
+    return render(request, 'horas_procesos/empleados_por_departamento.html', {
+        'empleados': empleados_con_descripcion,
+        'departamentos': [{'id_departamento': depto[0], 'descripcion': depto[1]} for depto in departamentos],
+        'total_empleados': total_empleados,
+        'search_query': search_query,
+        'fecha_filtro': fecha_filtro.strftime('%Y-%m-%d')
     })
 @csrf_exempt
 def sync_to_server_view(request):

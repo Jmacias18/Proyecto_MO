@@ -1,0 +1,169 @@
+{% extends 'core/base.html' %}
+
+{% load static %}
+    
+    {% block title %}Lista De Asistencia{% endblock %}
+
+{% block content %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Lista De Asistencia</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .asistencia {
+            color: green !important;
+        }
+        .falta {
+            color: red !important;
+        }
+        .descanso {
+            color: lightblue !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <br><br>
+        <h4 class="text-center my-4">Lista De Asistencia</h4>
+        <form method="get" action="{% url 'horas_procesos:empleados_por_departamento' %}" class="mb-4">
+            <div class="row">
+                <div class="mb-4">
+                    <label for="departamento" class="form-label">Seleccionar Departamento:</label>
+                    <select name="departamento" id="departamento" class="form-select">
+                        <option value="">Seleccione un departamento</option>
+                        {% for depto in departamentos %}
+                            <option value="{{ depto.id_departamento }}">{{ depto.descripcion }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label for="fecha" class="form-label">Seleccionar Fecha:</label>
+                    <input type="date" name="fecha" id="fecha" class="form-control" value="{{ fecha_filtro }}">
+                </div>
+                <div class="mb-4 text-center">
+                    <button type="submit" class="btn btn-primary">Filtrar</button>
+                </div>
+            </div>
+            <div class="mb-4">
+                <div class="col-md-12">
+                    <label for="search" class="form-label">Buscar por Código de Empleado o Nombre:</label>
+                    <input type="text" name="search" id="search" class="form-control" placeholder="Buscar por nombre o No.Emp" onkeyup="buscarEmpleado()">
+                </div>
+            </div>
+        </form>
+
+        {% if total_empleados %}
+            <p>Total de empleados en el departamento: {{ total_empleados }}</p>
+        {% endif %}
+
+        {% if empleados %}
+            <div class="table-responsive">
+                <table id="tabla_empleados" class="table table-bordered table-striped">
+                    
+                    <thead class="table table-bordered table-sm">
+                        <tr>
+                            <th>Código de Empleado</th>
+                            <th>Nombre Completo</th>
+                            <th>Departamento</th>
+                            <th>Turno</th>
+                            <th>Horario</th>
+                            <th>Descanso</th>
+                            <th>Tipo de Asistencia</th>
+                            <th>Hora de Entrada</th>
+                            <th>Hora de Salida</th>
+                        </tr>
+                    </thead>
+                    <tbody id="empleados-tbody">
+                        {% for empleado in empleados %}
+                            <tr>
+                                <td>{{ empleado.codigo_emp }}</td>
+                                <td>{{ empleado.nombre_emp }}</td>
+                                <td>{{ empleado.descripcion_departamento }}</td>
+                                <td>{{ empleado.turno }}</td>
+                                <td>{{ empleado.horario }}</td>
+                                <td>{{ empleado.descanso }}</td>
+                                <td class="{% if empleado.tipo_asistencia == 'ASISTENCIA' %}asistencia{% elif empleado.tipo_asistencia == 'FALTA' %}falta{% elif empleado.tipo_asistencia == 'DESCANSO' %}descanso{% endif %}">
+                                    {{ empleado.tipo_asistencia }}
+                                </td>
+                                <td>
+                                    {% if empleado.tipo_asistencia == 'ASISTENCIA' %}
+                                        {{ empleado.hora_entrada }}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if empleado.tipo_asistencia == 'ASISTENCIA' %}
+                                        {{ empleado.hora_salida }}
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="alert alert-warning">No hay empleados para mostrar.</p>
+        {% endif %}
+    </div>
+
+    <script>
+        function buscarEmpleado() {
+            const input = document.getElementById('search');
+            const filter = input.value.toLowerCase();
+            const table = document.getElementById('tabla_empleados');
+            const tr = table.getElementsByTagName('tr');
+
+            for (let i = 1; i < tr.length; i++) { // Empieza en 1 para saltar el encabezado
+                const tdCodigoEmp = tr[i].getElementsByTagName('td')[0];
+                const tdNombre = tr[i].getElementsByTagName('td')[1];
+                if (tdCodigoEmp || tdNombre) {
+                    const txtValueCodigoEmp = tdCodigoEmp.textContent || tdCodigoEmp.innerText;
+                    const txtValueNombre = tdNombre.textContent || tdNombre.innerText;
+                    if (txtValueCodigoEmp.toLowerCase().indexOf(filter) > -1 || txtValueNombre.toLowerCase().indexOf(filter) > -1) {
+                        tr[i].style.display = '';
+                    } else {
+                        tr[i].style.display = 'none';
+                    }
+                }
+            }
+        }
+
+        document.getElementById('fecha').addEventListener('change', function() {
+            const fecha = this.value;
+            const departamento = document.getElementById('departamento').value;
+            const search = document.getElementById('search').value;
+
+            fetch(`{% url 'horas_procesos:empleados_por_departamento' %}?fecha=${fecha}&departamento=${departamento}&search=${search}`, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                const empleadosTbody = document.getElementById('empleados-tbody');
+                empleadosTbody.innerHTML = '';
+                data.empleados.forEach(empleado => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${empleado.codigo_emp}</td>
+                        <td>${empleado.nombre_emp}</td>
+                        <td>${empleado.descripcion_departamento}</td>
+                        <td>${empleado.turno}</td>
+                        <td>${empleado.horario}</td>
+                        <td>${empleado.descanso}</td>
+                        <td class="${empleado.tipo_asistencia === 'ASISTENCIA' ? 'asistencia' : empleado.tipo_asistencia === 'FALTA' ? 'falta' : 'descanso'}">
+                            ${empleado.tipo_asistencia}
+                        </td>
+                        <td>${empleado.hora_entrada}</td>
+                        <td>${empleado.hora_salida}</td>
+                    `;
+                    empleadosTbody.appendChild(row);
+                });
+            });
+        });
+    </script>
+</body>
+</html>
+{% endblock %}
